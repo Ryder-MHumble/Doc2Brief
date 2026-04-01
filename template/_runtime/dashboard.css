@@ -1,0 +1,80 @@
+:root {
+  --accent: #4f46e5;
+  --bg: #0b1220;
+  --surface: #111a30;
+  --surface-soft: #0f172a;
+  --text: #e2e8f0;
+  --muted: #9fb0c8;
+  --line: rgba(148, 163, 184, 0.24);
+  --radius: 16px;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: radial-gradient(circle at 80% -10%, rgba(79,70,229,0.24), transparent 34%), var(--bg);
+  color: var(--text);
+  font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+.tpl-page { max-width: 1240px; margin: 0 auto; padding: 22px; display: grid; gap: 12px; }
+.hero, .panel, .kpi-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+.hero { padding: 18px; }
+.hero-head { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.hero .chip {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 24%, #0f172a);
+  color: #dbeafe;
+}
+.hero h1 { margin: 10px 0 6px; font-size: clamp(28px, 4.5vw, 38px); }
+.hero .summary { margin: 0; color: #cbd5e1; line-height: 1.7; }
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+}
+.kpi-card { padding: 12px; background: var(--surface-soft); }
+.kpi-card h3 { margin: 0; color: var(--muted); font-size: 12px; }
+.kpi-card strong { display: block; margin-top: 6px; font-size: 28px; color: #f8fafc; }
+.kpi-card p { margin: 6px 0 0; color: var(--muted); font-size: 12px; }
+
+.quad-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.panel { padding: 14px; }
+.panel h2 { margin: 0 0 10px; font-size: 17px; }
+.row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px;
+  margin-bottom: 8px;
+  background: rgba(15, 23, 42, 0.8);
+}
+.row b { color: #e2e8f0; }
+.row p { margin: 6px 0 0; color: var(--muted); }
+.row .status { color: #c7d2fe; white-space: nowrap; }
+.row[class*='risk-'] { border-left: 4px solid #f59e0b; }
+.row.risk-high { border-left-color: #ef4444; }
+.row.risk-low { border-left-color: #22c55e; }
+
+.bullet-list { margin: 0; padding-left: 18px; color: #cbd5e1; }
+.bullet-list li { margin: 6px 0; }
+
+@media (max-width: 960px) {
+  .tpl-page { padding: 12px; }
+  .quad-grid { grid-template-columns: 1fr; }
+  .row { flex-direction: column; }
+}

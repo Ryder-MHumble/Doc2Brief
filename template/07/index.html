@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>file2web 模板 07 预览</title>
+  <style id="template-inline-style">__TEMPLATE_STYLE__</style>
+</head>
+<body data-template-id="template-07">
+  <div id="template-root"></div>
+  <script id="template-data" type="application/json">__TEMPLATE_DATA__</script>
+  <script id="template-script" type="application/json">__TEMPLATE_SCRIPT__</script>
+  <script>
+    (() => {
+      const styleNode = document.getElementById('template-inline-style');
+      const dataNode = document.getElementById('template-data');
+      const scriptNode = document.getElementById('template-script');
+      const isLivePreview =
+        styleNode?.textContent.includes('__TEMPLATE_STYLE__') ||
+        dataNode?.textContent.includes('__TEMPLATE_DATA__') ||
+        scriptNode?.textContent.includes('__TEMPLATE_SCRIPT__');
+
+      if (isLivePreview) {
+        const loader = document.createElement('script');
+        loader.src = '../_runtime/live-preview.js';
+        loader.dataset.templateId = document.body.dataset.templateId || '';
+        loader.dataset.styleHref = './style.css';
+        loader.dataset.scriptSrc = './app.js';
+        document.body.appendChild(loader);
+        return;
+      }
+
+      const runtimeScript = document.createElement('script');
+      runtimeScript.textContent = scriptNode?.textContent || '';
+      document.body.appendChild(runtimeScript);
+    })();
+  </script>
+</body>
+</html>

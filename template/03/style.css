@@ -1,0 +1,238 @@
+:root {
+  --accent: #1d4ed8;
+  --accent-soft: #0f766e;
+  --bg: #f3efe6;
+  --surface: rgba(255, 253, 248, 0.96);
+  --surface-strong: #fffdfa;
+  --text: #1f2a37;
+  --muted: #6b7280;
+  --line: rgba(29, 78, 216, 0.12);
+  --line-strong: rgba(31, 41, 55, 0.12);
+  --shadow: 0 20px 50px rgba(51, 65, 85, 0.1);
+  --radius-xl: 24px;
+  --radius-lg: 18px;
+  --radius-md: 14px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  color: var(--text);
+  font-family: 'Source Han Serif SC', 'Songti SC', 'STSong', serif;
+  background:
+    radial-gradient(circle at 12% 10%, rgba(29, 78, 216, 0.06), transparent 24%),
+    linear-gradient(180deg, #f6f2ea 0%, #f1ece2 100%);
+}
+
+.tpl-page {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 28px 24px 40px;
+  display: grid;
+  gap: 18px;
+}
+
+.brief-header,
+.panel,
+.brief-item,
+.abstract-card {
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+
+.brief-header {
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+  padding: 24px;
+}
+
+.masthead,
+.panel-head,
+.item-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.doc-chip,
+.doc-meta,
+.item-index,
+.item-value {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  font-size: 12px;
+  font-family: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+}
+
+.doc-chip {
+  padding: 7px 12px;
+  background: rgba(29, 78, 216, 0.08);
+  color: var(--accent);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.doc-meta {
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.78);
+  color: var(--muted);
+  border: 1px solid rgba(29, 78, 216, 0.08);
+}
+
+.brief-header h1 {
+  margin: 18px 0 8px;
+  font-size: clamp(34px, 4.8vw, 52px);
+  line-height: 1.08;
+  letter-spacing: -0.04em;
+}
+
+.subtitle {
+  margin: 0;
+  color: #475569;
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+.panel {
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  background: var(--surface);
+}
+
+.panel-head h2,
+.summary-panel h2 {
+  margin: 0;
+  font-size: 24px;
+}
+
+.panel-head span {
+  font-size: 13px;
+  color: var(--muted);
+  font-family: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+}
+
+.summary-text {
+  margin: 12px 0 0;
+  padding-left: 16px;
+  border-left: 3px solid var(--accent);
+  color: #344256;
+  line-height: 1.9;
+  font-size: 17px;
+}
+
+.brief-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+}
+
+.highlight-list,
+.abstract-list {
+  display: grid;
+  gap: 12px;
+}
+
+.brief-item,
+.abstract-card {
+  border-radius: var(--radius-md);
+  background: var(--surface-strong);
+}
+
+.brief-item {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  gap: 14px;
+  padding: 16px;
+}
+
+.item-index {
+  min-height: 56px;
+  background: rgba(29, 78, 216, 0.08);
+  color: var(--accent);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.item-body strong,
+.abstract-card h3 {
+  margin: 0;
+  font-size: 19px;
+}
+
+.item-value {
+  padding: 6px 10px;
+  background: rgba(15, 118, 110, 0.08);
+  color: var(--accent-soft);
+  font-weight: 700;
+}
+
+.item-body p,
+.abstract-card p,
+.key-list li {
+  color: #475569;
+  line-height: 1.84;
+}
+
+.item-body p,
+.abstract-card p {
+  margin: 10px 0 0;
+}
+
+.abstract-card {
+  padding: 16px;
+  border-left: 3px solid rgba(29, 78, 216, 0.18);
+}
+
+.key-list {
+  margin: 12px 0 0;
+  padding-left: 22px;
+}
+
+@media print {
+  body {
+    background: #ffffff;
+  }
+
+  .tpl-page {
+    max-width: none;
+    padding: 0;
+  }
+
+  .brief-header,
+  .panel,
+  .brief-item,
+  .abstract-card {
+    box-shadow: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .tpl-page {
+    padding: 14px 12px 24px;
+  }
+
+  .brief-header,
+  .panel {
+    padding: 16px;
+  }
+
+  .brief-grid,
+  .brief-item {
+    grid-template-columns: 1fr;
+  }
+
+  .item-index {
+    min-height: 40px;
+    width: fit-content;
+    padding: 0 14px;
+  }
+}

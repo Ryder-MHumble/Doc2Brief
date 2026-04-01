@@ -1,0 +1,82 @@
+:root {
+  --accent: #2563eb;
+  --bg: #0a1020;
+  --surface: #101a33;
+  --text: #e2e8f0;
+  --muted: #94a3b8;
+  --line: rgba(148, 163, 184, 0.24);
+  --radius: 14px;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: radial-gradient(circle at 85% -20%, rgba(37,99,235,0.24), transparent 38%), var(--bg);
+  color: var(--text);
+  font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+.tpl-page { max-width: 1200px; margin: 0 auto; padding: 22px; display: grid; gap: 12px; }
+.hero, .panel, .kpi-card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.hero { padding: 18px; }
+.hero-top { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+.hero .chip {
+  font-size: 12px;
+  border-radius: 999px;
+  padding: 4px 10px;
+  background: color-mix(in srgb, var(--accent) 24%, #111827);
+  color: #dbeafe;
+}
+.hero h1 { margin: 10px 0 6px; font-size: clamp(30px, 4.5vw, 40px); }
+.hero .summary { margin: 0; color: #cbd5e1; line-height: 1.7; }
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+}
+.kpi-card { padding: 12px; }
+.kpi-card h3 { margin: 0; font-size: 12px; color: var(--muted); }
+.kpi-card strong { display: block; margin-top: 5px; font-size: 28px; }
+.kpi-card p { margin: 6px 0 0; color: var(--muted); }
+
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.panel { padding: 14px; }
+.panel h2 { margin: 0 0 10px; }
+.row {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px;
+  background: rgba(15, 23, 42, 0.8);
+  margin-bottom: 8px;
+}
+.row b { display: block; color: #f8fafc; }
+.row p { margin: 6px 0 0; color: var(--muted); }
+.row span { display: block; margin-top: 6px; color: #bfdbfe; font-size: 12px; }
+.row.risk { border-left: 4px solid #f59e0b; }
+
+.chip-list { display: flex; gap: 8px; flex-wrap: wrap; }
+.chip-item {
+  display: inline-flex;
+  border-radius: 999px;
+  padding: 5px 10px;
+  border: 1px solid var(--line);
+  background: rgba(148, 163, 184, 0.12);
+  color: #dbeafe;
+  font-size: 12px;
+}
+
+@media (max-width: 920px) {
+  .tpl-page { padding: 12px; }
+  .two-col { grid-template-columns: 1fr; }
+}

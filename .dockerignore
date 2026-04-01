@@ -1,0 +1,15 @@
+.git
+.DS_Store
+.env
+.env.*
+!.env.example
+backend/.venv
+backend/__pycache__
+backend/**/*.pyc
+backend/**/*.pyo
+backend/**/*.pyd
+frontend/node_modules
+frontend/dist
+weeklyreport
+weekly-report-skill
+*.log
