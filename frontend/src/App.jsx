@@ -4,6 +4,7 @@ import { GenerateSection } from './components/GenerateSection'
 import { PreferenceSection } from './components/PreferenceSection'
 import { PreviewPane } from './components/PreviewPane'
 import { SourceSection } from './components/SourceSection'
+import { TemplateThumbnail } from './components/TemplateThumbnail'
 import {
   audienceCatalog,
   departmentCatalog,
@@ -47,11 +48,13 @@ export default function App() {
   const [logs, setLogs] = useState([])
   const [isReportReady, setIsReportReady] = useState(false)
   const [showSuccessToast, setShowSuccessToast] = useState(false)
+  const [copiedReady, setCopiedReady] = useState(false)
   const [reportLink, setReportLink] = useState('')
   const [recentReports, setRecentReports] = useState(() => loadRecentReports(recentReportStorageKey))
   const [isFullscreen, setIsFullscreen] = useState(false)
 
   const previewStageRef = useRef(null)
+  const templateBridgeListRef = useRef(null)
 
   const selectedTemplate = useMemo(
     () => templateOptionCatalog.find((item) => item.id === selectedTemplateId) ?? templateOptionCatalog[0] ?? null,
@@ -63,7 +66,8 @@ export default function App() {
   const hasContent = inputMode === 'file' ? Boolean(selectedFile) : Boolean(manualText.trim())
   const canGenerate = Boolean(hasContent && (generationMode === 'llm-html' || selectedTemplate)) && !isGenerating
   const exportReady = Boolean(isReportReady && reportLink)
-  const fullscreenReady = generationMode === 'llm-html' ? Boolean(isReportReady) : Boolean(selectedTemplate || isReportReady)
+  const copyReady = Boolean(isReportReady && reportLink)
+  const fullscreenReady = Boolean(isReportReady)
 
   const context = {
     department,
@@ -72,13 +76,8 @@ export default function App() {
     generationMode,
   }
 
-  const previewState = isGenerating
-    ? 'generating'
-    : isReportReady
-      ? 'done'
-      : generationMode === 'structured-template' && selectedTemplate
-        ? 'template'
-        : 'idle'
+  const previewState = isGenerating ? 'generating' : isReportReady ? 'done' : 'idle'
+  const showTemplateBridge = generationMode === 'structured-template' && Boolean(selectedTemplate)
 
   const previewHtml = useMemo(() => {
     if (generationMode === 'llm-html') {
@@ -89,13 +88,12 @@ export default function App() {
       return generatedHtml || ''
     }
 
-    if (!selectedTemplate) {
+    if (!selectedTemplate || !isReportReady) {
       return ''
     }
 
     const stamp = generatedAt || new Date().toLocaleString('zh-CN')
-    const data = isReportReady ? documentData : demoDocument
-    return renderTemplateHtml(selectedTemplate.templateMeta.id, data, stamp)
+    return renderTemplateHtml(selectedTemplate.templateMeta.id, documentData, stamp)
   }, [documentData, generatedAt, generatedHtml, generationMode, isReportReady, selectedTemplate])
 
   const iframeKey = `${previewState}-${selectedTemplate?.id || 'none'}-${generatedAt || 'preview'}-${isFullscreen ? 'fullscreen' : 'default'}`
@@ -144,6 +142,7 @@ export default function App() {
     setRequestPayload(null)
     setResponsePayload(null)
     setShowSuccessToast(false)
+    setCopiedReady(false)
     setDocumentData(demoDocument)
   }
 
@@ -261,18 +260,17 @@ export default function App() {
     }
   }
 
-  const handleTemplateSwitch = (step) => {
-    if (templateOptionCatalog.length === 0) {
+  const handleTemplateSelect = (templateId) => {
+    if (!templateId) {
       return
     }
 
-    const currentId = selectedTemplate?.id ?? templateOptionCatalog[0].id
-    const currentIndex = templateOptionCatalog.findIndex((item) => item.id === currentId)
-    const safeIndex = currentIndex >= 0 ? currentIndex : 0
-    const nextIndex = (safeIndex + step + templateOptionCatalog.length) % templateOptionCatalog.length
+    if (selectedTemplate?.id === templateId && selectedTemplateId === templateId) {
+      return
+    }
 
     resetGeneratedOutput()
-    setSelectedTemplateId(templateOptionCatalog[nextIndex].id)
+    setSelectedTemplateId(templateId)
   }
 
   const handleExport = () => {
@@ -296,28 +294,9 @@ export default function App() {
 
     try {
       await copyTextToClipboard(reportLink)
+      setCopiedReady(true)
     } catch (error) {
       console.error('复制报告链接失败', error)
-    }
-  }
-
-  const handleShare = async () => {
-    if (!reportLink) {
-      return
-    }
-
-    try {
-      if (navigator.share) {
-        await navigator.share({
-          title: documentData.title || selectedTemplate?.name || 'ReportFlow 报告',
-          url: reportLink,
-        })
-        return
-      }
-
-      await copyTextToClipboard(reportLink)
-    } catch (error) {
-      console.error('分享报告失败', error)
     }
   }
 
@@ -367,6 +346,18 @@ export default function App() {
   }, [showSuccessToast])
 
   useEffect(() => {
+    if (!copiedReady) {
+      return undefined
+    }
+
+    const timer = window.setTimeout(() => {
+      setCopiedReady(false)
+    }, 1600)
+
+    return () => window.clearTimeout(timer)
+  }, [copiedReady])
+
+  useEffect(() => {
     const handleFullscreenChange = () => {
       setIsFullscreen(Boolean(document.fullscreenElement))
     }
@@ -374,6 +365,43 @@ export default function App() {
     document.addEventListener('fullscreenchange', handleFullscreenChange)
     return () => {
       document.removeEventListener('fullscreenchange', handleFullscreenChange)
+    }
+  }, [])
+
+  useEffect(() => {
+    const root = document.documentElement
+    let rafId = 0
+    let nextX = 72
+    let nextY = 34
+
+    const applyPointer = () => {
+      root.style.setProperty('--pointer-x', `${nextX.toFixed(2)}%`)
+      root.style.setProperty('--pointer-y', `${nextY.toFixed(2)}%`)
+      rafId = 0
+    }
+
+    const scheduleUpdate = () => {
+      if (rafId) {
+        return
+      }
+
+      rafId = window.requestAnimationFrame(applyPointer)
+    }
+
+    const handlePointerMove = (event) => {
+      nextX = (event.clientX / Math.max(window.innerWidth, 1)) * 100
+      nextY = (event.clientY / Math.max(window.innerHeight, 1)) * 100
+      scheduleUpdate()
+    }
+
+    applyPointer()
+    window.addEventListener('pointermove', handlePointerMove, { passive: true })
+
+    return () => {
+      window.removeEventListener('pointermove', handlePointerMove)
+      if (rafId) {
+        window.cancelAnimationFrame(rafId)
+      }
     }
   }, [])
 
@@ -392,9 +420,22 @@ export default function App() {
     }
   }, [isReportReady, previewHtml])
 
+  useEffect(() => {
+    if (!showTemplateBridge || !selectedTemplate?.id || !templateBridgeListRef.current) {
+      return
+    }
+
+    const target = templateBridgeListRef.current.querySelector(`[data-template-id="${selectedTemplate.id}"]`)
+    if (!target) {
+      return
+    }
+
+    target.scrollIntoView({ block: 'center', behavior: 'smooth' })
+  }, [selectedTemplate?.id, showTemplateBridge])
+
   return (
-    <div className="app-shell">
-      <main className="workspace">
+    <div className={`app-shell ${isGenerating ? 'is-generating' : ''}`}>
+      <main className={`workspace ${showTemplateBridge ? 'workspace--with-template-bridge' : ''}`}>
         <aside className="control-panel control-panel--refined">
           <PreferenceSection
             audience={audience}
@@ -462,19 +503,69 @@ export default function App() {
           ) : null}
         </aside>
 
+        {showTemplateBridge ? (
+          <section className="template-bridge-column">
+            <div className="template-bridge-panel glass-panel">
+              <div className="template-bridge-panel__header">
+                <span className="template-bridge-panel__kicker">模板列表</span>
+                <strong>模板切换</strong>
+                <p>向下滚动查看更多模板，点击卡片立即切换预览。</p>
+              </div>
+
+              <div aria-label="模板选择列表" className="template-bridge-scroll" ref={templateBridgeListRef} role="listbox">
+                {templateOptionCatalog.map((item, index) => {
+                  const isActive = selectedTemplate?.id === item.id
+
+                  return (
+                    <button
+                      aria-selected={isActive}
+                      className={`template-bridge-card ${isActive ? 'is-active' : ''}`}
+                      data-template-id={item.id}
+                      key={item.id}
+                      onClick={() => handleTemplateSelect(item.id)}
+                      role="option"
+                      style={{ '--template-order': index }}
+                      type="button"
+                    >
+                      <div className="template-bridge-card__preview">
+                        <TemplateThumbnail variant={item.previewKey} />
+                      </div>
+
+                      <div className="template-bridge-card__body">
+                        <div className="template-bridge-card__meta">
+                          <span className="template-bridge-card__chip">{item.templateMeta.chip}</span>
+                          <span className="template-bridge-card__index">{String(index + 1).padStart(2, '0')}</span>
+                        </div>
+                        <strong>{item.templateMeta.title}</strong>
+                        <p>{item.description}</p>
+                        <div className="template-bridge-card__tags">
+                          <span>适合场景：{item.sceneBadge}</span>
+                          <span>风格：{item.styleBadge}</span>
+                        </div>
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+
+              <div className="template-bridge-panel__footer">已接入 {templateOptionCatalog.length} 个内置模板</div>
+            </div>
+          </section>
+        ) : null}
+
         <section className="preview-column">
           <PreviewPane
             generationMode={generationMode}
+            copiedReady={copiedReady}
+            copyReady={copyReady}
             exportReady={exportReady}
             fullscreenReady={fullscreenReady}
             iframeHtml={previewHtml}
             iframeKey={iframeKey}
+            onCopyLink={handleCopyLink}
             onDeviceChange={setPreviewDevice}
             onExport={handleExport}
             onFullscreen={handleFullscreen}
-            onShare={handleShare}
-            onSelectTemplateNext={() => handleTemplateSwitch(1)}
-            onSelectTemplatePrev={() => handleTemplateSwitch(-1)}
             previewDevice={previewDevice}
             previewStageRef={previewStageRef}
             previewState={previewState}
@@ -483,7 +574,6 @@ export default function App() {
             progress={generationProgress}
             recentReports={recentReports}
             selectedTemplate={selectedTemplate}
-            shareReady={Boolean(isReportReady && reportLink)}
             showSuccessToast={showSuccessToast}
           />
         </section>

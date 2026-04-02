@@ -1,322 +1,329 @@
 (() => {
-  const current = document.currentScript;
-  const templateId = current?.dataset.templateId || document.body.dataset.templateId || 'template-01';
-  const styleHref = current?.dataset.styleHref || './style.css';
-  const scriptSrc = current?.dataset.scriptSrc || './app.js';
-  const inlineStyle = document.getElementById('template-inline-style');
-  const dataNode = document.getElementById('template-data');
-  const scriptNode = document.getElementById('template-script');
+  const current = document.currentScript
+  const templateId = current?.dataset.templateId || document.body.dataset.templateId || 'template-01'
+  const styleHref = current?.dataset.styleHref || './style.css'
+  const scriptSrc = current?.dataset.scriptSrc || './app.js'
+  const styleNode = document.getElementById('template-inline-style')
+  const dataNode = document.getElementById('template-data')
 
-  const baseMeta = {
-    title: '教科人管理中心周报 · 示例版',
-    subtitle: '中关村两院教科人管理中心 · 2026年4月第1周',
-    summary: '本周围绕科研组织、招生协同、国际合作与人才机制建设四条主线推进工作，形成阶段性成果，并同步明确了下周的资源配置与风险应对动作。',
-    generatedAt: '2026-04-01 10:00',
-    sensitiveMode: false,
-    departmentFocus: '综合管理',
-    audienceFocus: '主任办公会',
-  };
+  const serializePayload = (payload) =>
+    JSON.stringify(payload)
+      .replace(/</g, '\\u003c')
+      .replace(/>/g, '\\u003e')
+      .replace(/&/g, '\\u0026')
+      .replace(/<\/script/gi, '<\\\\/script')
 
-  const payloadBase = ({
-    id,
-    name,
-    accent,
-    chip,
-    moduleBlueprint,
-    keyPoints = [],
-    decisions = [],
-    resources = [],
-    meta = {},
-  }) => ({
-    templateId: id,
-    templateName: name,
-    theme: { accent, chip },
-    moduleBlueprint,
-    meta: { ...baseMeta, ...meta },
-    keyPoints,
-    decisions,
-    resources,
-    viewModel: {},
-  });
+  const workItem = (title, body, status, progress, tone) => ({
+    title,
+    body,
+    status,
+    progress,
+    tone,
+  })
 
-  const narrativePayload = ({ id, name, accent, chip, moduleBlueprint, keyPoints, meta, highlights, stories, actions }) => ({
-    ...payloadBase({ id, name, accent, chip, moduleBlueprint, keyPoints, meta }),
-    viewModel: {
-      narrative: {
-        highlights,
-        stories,
-        actions,
-      },
-    },
-  });
+  const stats = [
+    { label: '重大科研成果', value: '5', unit: '项', detail: '完成四轮评审', target: 5 },
+    { label: '国家基金申报', value: '34', unit: '项', detail: '完成集中申报', target: 34 },
+    { label: '国际青年论坛', value: '19', unit: '名', detail: '覆盖 9 个国家和地区', target: 19 },
+    { label: '深澜计划报名', value: '470', unit: '人', detail: '来自 108 所高校', target: 470 },
+    { label: '夏令营报名', value: '700', unit: '+', detail: '研招系统已开放', target: 700 },
+  ]
 
-  const dashboardPayload = ({ id, name, accent, chip, moduleBlueprint, keyPoints, meta, kpis, progress, risks, actions }) => ({
-    ...payloadBase({ id, name, accent, chip, moduleBlueprint, keyPoints, meta }),
-    viewModel: {
-      dashboard: {
-        kpis,
-        progress,
-        risks,
-        actions,
-      },
-    },
-  });
+  const overview = [
+    { number: '01', tag: '科研组织', title: '两院重大科研成果评选完成', body: '经过 4 轮评审，形成 5 项重点成果推荐名单，并进入论坛发布与转化对接阶段。', tone: 'red' },
+    { number: '02', tag: '科研申报', title: '国家自然科学基金集中申报收口', body: '完成 34 项项目申报材料汇总与提交流程，组织工作按时闭环。', tone: 'jade' },
+    { number: '03', tag: '国际交流', title: '第四届中关村国际青年论坛召开', body: '论坛吸引 19 名青年学者到场交流，形成多项后续合作议题。', tone: 'indigo' },
+    { number: '04', tag: '学术研讨', title: '清华-两院 AI+数学研讨会举办', body: '围绕交叉研究方向展开深度讨论，现场参会师生超过 80 人。', tone: 'gold' },
+    { number: '05', tag: '少年学院', title: '少年学院展示项目取得阶段成果', body: '学生项目在公开展示活动中获得关注，体现培养机制成效。', tone: 'copper' },
+  ]
 
-  const briefPayload = ({ id, name, accent, chip, moduleBlueprint, keyPoints, meta, highlights, sectionAbstracts }) => ({
-    ...payloadBase({ id, name, accent, chip, moduleBlueprint, keyPoints, meta }),
-    viewModel: {
-      brief: {
-        highlights,
-        sectionAbstracts,
-      },
-    },
-  });
+  const groups = {
+    internal: [
+      workItem('第一季度推进会', '完成 51 个项目评审并明确后续资源配置。', '已完成', 100, 'done'),
+      workItem('重大项目首轮讨论', '三学部完成首轮汇报，进入意见收敛阶段。', '进行中', 60, 'progress'),
+      workItem('深澜访学计划启动', '完成报名收口与首轮遴选，录取结果同步发布。', '已完成', 100, 'done'),
+      workItem('2026 年夏令营启动', '校园大使与导师招募完成，报名持续增长。', '进行中', 45, 'progress'),
+      workItem('博士生补充答辩', '完成 4 场答辩组织，形成结果汇总。', '已完成', 100, 'done'),
+      workItem('清北导师池计划', '明确联合培育与自由探索两类合作模式。', '进行中', 50, 'progress'),
+    ],
+    cooperation: [
+      workItem('中央民族大学战略合作协议', '协议经院务会审理通过，进入执行准备。', '已完成', 80, 'done'),
+      workItem('清华大学求真书院合作', '围绕联合培养与教师合作立项持续推进。', '推进中', 55, 'progress'),
+      workItem('北邮定向招生班共建', '已完成首轮意向对接，进入方案整理。', '推进中', 50, 'progress'),
+      workItem('北航共建协议', '核心条款仍待协商，会签节点后移。', '待推进', 40, 'warning'),
+      workItem('北京大学工学院合作探索', '课程创新与技术转化合作同步沟通。', '推进中', 35, 'progress'),
+      workItem('香港城市大学战略合作', '受规则限制暂缓推进，保留后续补充协议空间。', '待推进', 25, 'warning'),
+    ],
+    visit: [
+      workItem('中关村国际青年论坛', '论坛环节顺利完成，形成后续对接清单。', '已完成', 100, 'done'),
+      workItem('香港科技大学合作交流', '围绕联培与课程合作形成下一轮研讨计划。', '推进中', 45, 'progress'),
+      workItem('首都体育学院访问', '双方围绕科研合作与活动联动交换意见。', '已完成', 70, 'done'),
+      workItem('怀柔实验室虚拟实验班', '仍处于机制论证阶段。', '探讨中', 20, 'warning'),
+      workItem('少年学院对外交流', '围绕项目展示与活动联动形成正向反馈。', '已完成', 100, 'done'),
+    ],
+    system: [
+      workItem('国际事务联动平台', '推动论坛资源共享与外部引流机制建设。', '进行中', 40, 'progress'),
+      workItem('国际 AI 科学家联盟', '完成主管沟通与阶段性汇报。', '推进中', 30, 'progress'),
+      workItem('课程建设与质量保证', '课程评价分析完成，督导机制持续落地。', '进行中', 60, 'progress'),
+      workItem('博士研究生实习管理办法', '正式印发并进入执行阶段。', '已完成', 100, 'done'),
+      workItem('招生智能体系统建设', '进入建设期，功能边界与数据接口已锁定。', '建设中', 15, 'warning'),
+      workItem('学者知识图谱第三轮迭代', '完成五维画像与重点学者筛选。', '迭代完成', 75, 'done'),
+    ],
+  }
 
-  const strategyPayload = ({ id, name, accent, chip, moduleBlueprint, keyPoints, decisions, resources, meta, kpis, progress, risks }) => ({
-    ...payloadBase({ id, name, accent, chip, moduleBlueprint, keyPoints, decisions, resources, meta }),
-    viewModel: {
-      strategy: {
-        kpis,
-        progress,
-        risks,
-        decisions,
-        resources,
-      },
-    },
-  });
+  const keyMetrics = [
+    { label: '重大科研成果', value: '5', unit: '项', sub: '论坛发布窗口已锁定' },
+    { label: '国家基金申报', value: '34', unit: '项', sub: '含参与项目 5 项' },
+    { label: '深澜计划报名', value: '470', unit: '人', sub: '来自 108 所高校' },
+    { label: '夏令营报名', value: '700', unit: '+', sub: '系统已开放' },
+    { label: '海外学者筛选', value: '58', unit: '名', sub: '知识图谱第三轮迭代' },
+    { label: '课程督导专家', value: '12', unit: '位', sub: '分阶段听课' },
+  ]
 
-  const riskPayload = ({ id, name, accent, chip, moduleBlueprint, keyPoints, meta, risks, actions }) => ({
-    ...payloadBase({ id, name, accent, chip, moduleBlueprint, keyPoints, meta }),
-    viewModel: {
-      risk: {
-        risks,
-        actions,
-        keyPoints,
-      },
-    },
-  });
-
-  const pipelinePayload = ({ id, name, accent, chip, moduleBlueprint, keyPoints, meta, metrics, stages, actions }) => ({
-    ...payloadBase({ id, name, accent, chip, moduleBlueprint, keyPoints, meta }),
-    viewModel: {
-      pipeline: {
-        metrics,
-        stages,
-        actions,
-      },
-    },
-  });
+  const footer = {
+    issuedBy: '中关村两院教科人管理中心',
+    recipient: '中关村两院领导班子成员',
+    distribution: '教科人管理中心各部门',
+    editor: '（待填写）',
+    reviewer: '（待填写）',
+    date: '2026年04月02日',
+    dateOnly: '2026-04-02',
+    timestamp: '2026-04-02T10:00:00+08:00',
+  }
 
   const payloadCatalog = {
-    'template-01': narrativePayload({
-      id: 'template-01',
-      name: '叙事型周报可视化',
-      accent: '#0f766e',
-      chip: 'TEMPLATE/01',
-      moduleBlueprint: ['摘要总览', '关键指标', '重点章节叙事', '下周动作'],
-      keyPoints: ['重点项目整体进展平稳，跨部门协同效率较上周提升。', '论坛与成果转化两条主线均形成明确的后续动作。'],
-      highlights: [
-        { label: '本周重点事项', value: '12', detail: '覆盖科研、合作、人才与综合事务' },
-        { label: '关键会议节点', value: '5', detail: '含论坛筹备、评审会与协同复盘' },
-        { label: '跨部门联动项', value: '8', detail: '已明确牵头人与完成时点' },
-      ],
-      stories: [
-        { title: '重点课题进入中期评审准备', body: '科研管理组完成材料汇总与专家对接，评审节点较计划提前两天锁定。', tag: '科研组织' },
-        { title: '国际论坛筹备进入邀约执行', body: '嘉宾名单与议程版本已初步确定，品牌传播节奏同步拉起。', tag: '国际合作' },
-        { title: '青年教师培养计划形成首轮匹配', body: '完成导师与培养对象匹配，进入个性化辅导安排阶段。', tag: '人才发展' },
-      ],
-      actions: [
-        { task: '完成论坛邀约函发出', deadline: '4月5日', owner: '国际合作组', dependency: '嘉宾名单确认' },
-        { task: '锁定中期评审专家时间', deadline: '4月6日', owner: '科研管理组', dependency: '评审日程协调' },
-      ],
-    }),
-    'template-02': dashboardPayload({
-      id: 'template-02',
-      name: '控制台信息密度',
-      accent: '#4f46e5',
-      chip: 'TEMPLATE/02',
-      moduleBlueprint: ['执行总览', '指标面板', '模块状态卡片', '任务分派'],
-      keyPoints: ['预算与采购协同效率是当前主瓶颈。', '本周新增两项跨部门接口联调任务。'],
-      kpis: [
-        { name: '任务完成率', value: '78%', trend: '较上周 +6%' },
-        { name: '关键依赖项', value: '4', trend: '其中 1 项高优先级' },
-        { name: '异常闭环率', value: '85%', note: '中高风险均已指定责任人' },
-        { name: '待执行动作', value: '6', trend: '需在下周前完成' },
-      ],
-      progress: [
-        { stream: '项目推进', status: '进行中', outcome: '完成里程碑拆解，进入责任分发阶段', owner: '项目办' },
-        { stream: '资源协调', status: '待确认', outcome: '重点资源清单已提交，等待统一排期', owner: '综合保障组' },
-      ],
-      risks: [
-        { risk: '采购审批链偏长', level: 'high', mitigation: '申请并行审批，缩短设备到位周期', owner: '采购组' },
-        { risk: '接口联调反馈较慢', level: 'medium', mitigation: '建立每日同步机制', owner: '技术组' },
-      ],
-      actions: [
-        { task: '完成设备采购排期确认', deadline: '4月4日', owner: '采购组', dependency: '供应商报价' },
-        { task: '补齐联调问题清单', deadline: '4月3日', owner: '技术组', dependency: '对方接口反馈' },
-      ],
-    }),
-    'template-03': briefPayload({
-      id: 'template-03',
-      name: '简洁正式白底版',
-      accent: '#1d4ed8',
-      chip: 'TEMPLATE/03',
-      moduleBlueprint: ['摘要', '关键亮点', '章节要点', '归档信息'],
-      keyPoints: ['当前整体推进节奏稳健，建议继续保持周度复盘。', '跨部门协作已初步形成闭环，但仍需压缩审批时长。'],
-      highlights: [
-        { label: '重点事项完成率', value: '82%', detail: '本周完成 9 项，延期 2 项' },
-        { label: '组织动作数量', value: '7', detail: '含制度优化、论坛筹备与项目复盘' },
-      ],
-      sectionAbstracts: [
-        { title: '科研组织', description: '完成重点课题材料整合，并锁定下一轮专家评审窗口。' },
-        { title: '综合协调', description: '建立跨部门问题清单，明确责任人与反馈时点。' },
-        { title: '人才发展', description: '青年教师培养计划完成首轮辅导匹配。' },
-      ],
-    }),
-    'template-04': strategyPayload({
-      id: 'template-04',
-      name: '领导决策总览',
-      accent: '#2563eb',
-      chip: 'TEMPLATE/04',
-      moduleBlueprint: ['战略摘要', '关键指标', '进展与风险', '决策请求', '资源诉求'],
-      keyPoints: ['本周重点事项已完成节奏重排。', '风险主要集中在跨部门资源占用。'],
-      decisions: ['确认第二阶段资源优先级', '确认论坛品牌合作边界'],
-      resources: ['增加专项协调人手 1 名', '开通跨部门看板访问权限'],
-      kpis: [
-        { name: '战略事项完成率', value: '82%', trend: '较上周 +6%' },
-        { name: '重点项目准时率', value: '91%', trend: '关键节点整体可控' },
-      ],
-      progress: [
-        { stream: '重点项目 A', status: '推进中', outcome: '完成里程碑评审并进入执行阶段', owner: '项目办' },
-      ],
-      risks: [
-        { risk: '跨部门资源排期冲突', level: 'high', mitigation: '已提交协调清单，待统一排期', owner: '综合协调组' },
-      ],
-    }),
-    'template-05': riskPayload({
-      id: 'template-05',
-      name: '风险与闭环追踪',
-      accent: '#b91c1c',
-      chip: 'TEMPLATE/05',
-      moduleBlueprint: ['风险清单', '风险等级', '闭环动作', '责任人', '关键观察'],
-      keyPoints: ['高风险事项需在 48 小时内形成书面反馈。', '中风险事项保持周度追踪。'],
-      risks: [
-        { risk: '供应商节点延后', level: 'high', mitigation: '已要求补交恢复计划', owner: '采购组' },
-        { risk: '材料归档滞后', level: 'medium', mitigation: '建立周度核查台账', owner: '办公室' },
-      ],
-      actions: [
-        { task: '完成供应商复盘会', dependency: '供应商恢复计划', deadline: '4月3日', owner: '采购组' },
-      ],
-    }),
-    'template-06': pipelinePayload({
-      id: 'template-06',
-      name: '课题与成果管线',
-      accent: '#0f766e',
-      chip: 'TEMPLATE/06',
-      moduleBlueprint: ['科研摘要', '管线指标', '项目分阶段进展', '下一步关键动作'],
-      keyPoints: ['本周新增 3 项进入评审窗口。', '合作单位数据回收仍是主要影响因素。'],
-      metrics: [
-        { name: '在研项目', value: '18 项', trend: '其中 3 项本周进入评审' },
-        { name: '成果产出', value: '6 项', note: '含论文、专利与报告' },
-      ],
-      stages: [
-        { stream: '重点课题一', status: '推进中', outcome: '完成中期材料整合并启动专家预审', owner: '科研秘书' },
-        { stream: '重点课题二', status: '计划中', outcome: '等待合作单位提交补充数据', owner: '项目负责人' },
-      ],
-      actions: [
-        { task: '完成专家预审排期', dependency: '评审名单确认', deadline: '4月6日', owner: '科研秘书' },
-      ],
-    }),
-    'template-07': strategyPayload({
-      id: 'template-07',
-      name: '任务推进与责任看板',
-      accent: '#1d4ed8',
-      chip: 'TEMPLATE/07',
-      moduleBlueprint: ['执行摘要', '任务进展', '阻塞与依赖', '下周排期'],
-      keyPoints: ['关键任务已进入责任链执行。'],
-      decisions: ['确认里程碑延期预案'],
-      resources: ['申请测试窗口与排期支持'],
-      kpis: [
-        { name: '任务完成率', value: '76%', trend: '较上周 +8%' },
-      ],
-      progress: [
-        { stream: '事项 A', status: '推进中', outcome: '完成跨部门协调并进入执行阶段', owner: '项目办' },
-      ],
-      risks: [
-        { risk: '接口联调依赖外部反馈', level: 'medium', mitigation: '已提交对接清单', owner: '技术组' },
-      ],
-    }),
-    'template-08': dashboardPayload({
-      id: 'template-08',
-      name: '预算与资源配置看板',
-      accent: '#4f46e5',
-      chip: 'TEMPLATE/08',
-      moduleBlueprint: ['预算执行摘要', '投入产出指标', '资源诉求', '风险与建议'],
-      keyPoints: ['当前预算执行节奏偏慢，需要加快审批。', '设备类支出是主要瓶颈。'],
-      kpis: [
-        { name: '预算执行率', value: '68%', trend: '本周新增支出审批 2 项' },
-      ],
-      progress: [
-        { stream: '场地资源配置', status: '进行中', outcome: '完成重点项目场地腾挪', owner: '综合保障' },
-      ],
-      risks: [
-        { risk: '采购流程较慢影响设备到位', level: 'high', mitigation: '增加并行审批链路', owner: '采购组' },
-      ],
-      actions: [
-        { task: '完成设备采购排期确认', deadline: '4月4日', owner: '采购组', dependency: '供应商报价' },
-      ],
-    }),
-    'template-09': narrativePayload({
-      id: 'template-09',
-      name: '国际合作进展简报',
-      accent: '#0f766e',
-      chip: 'TEMPLATE/09',
-      moduleBlueprint: ['合作摘要', '外联指标', '重点合作进展', '窗口期风险', '下周行动'],
-      keyPoints: ['论坛窗口期集中在 4 月上旬。', '签约项目需同步法务审核。'],
-      highlights: [
-        { label: '合作项目', value: '12 项', detail: '其中 3 项进入签约阶段' },
-      ],
-      stories: [
-        { title: '海外院校合作推进', body: '完成第二轮沟通并确认联合活动框架。', tag: '合作项目' },
-        { title: '国际论坛筹备', body: '嘉宾名单初步锁定，进入邀约阶段。', tag: '品牌活动' },
-      ],
-      actions: [
-        { task: '发送论坛邀约函', deadline: '4月5日', owner: '国际合作组', dependency: '名单确认' },
-      ],
-    }),
-    'template-10': briefPayload({
-      id: 'template-10',
-      name: '人才与组织发展简报',
-      accent: '#1d4ed8',
-      chip: 'TEMPLATE/10',
-      moduleBlueprint: ['人才摘要', '关键指标', '组织动作', '风险与支持请求'],
-      keyPoints: ['培训资源需继续向新入职教师倾斜。', '考核机制优化方案待征求意见。'],
-      highlights: [
-        { label: '培训覆盖率', value: '84%', detail: '较上周提升 6 个百分点' },
-        { label: '引才进度', value: '5 人', detail: '其中 2 人进入终面阶段' },
-      ],
-      sectionAbstracts: [
-        { title: '青年教师培养', description: '完成第一轮辅导计划匹配并启动跟进。' },
-        { title: '组织机制优化', description: '考核与反馈流程完成初版方案审阅。' },
-      ],
-    }),
-  };
-
-  if (inlineStyle?.textContent.includes('__TEMPLATE_STYLE__')) {
-    inlineStyle.remove();
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = styleHref;
-    document.head.appendChild(link);
+    'template-01': {
+      templateId: 'template-01',
+      templateName: '极简周报版式',
+      meta: {
+        title: '教科人管理中心周报 · 示例版',
+        subtitle: '中关村两院教科人管理中心 · 2026年4月第1周',
+        summary: '本周围绕科研组织、招生协同、国际合作与制度建设持续推进，形成阶段性进展并明确下周动作。',
+      },
+      viewModel: {
+        minimal: {
+          hero: {
+            eyebrow: '中关村两院教科人管理中心 · 内部周报',
+            title: '教科人管理中心周报 · 示例版',
+            summary: '本周围绕科研组织、招生协同、国际合作与制度建设持续推进，形成阶段性进展并明确下周动作。',
+            period: '中关村两院教科人管理中心 · 2026年4月第1周',
+            unit: footer.issuedBy,
+            issuedAt: footer.date,
+            bgNumber: '01',
+          },
+          stats,
+          overview,
+          groups,
+          data: {
+            keyMetrics,
+            cooperation: groups.cooperation.slice(0, 5),
+            system: groups.system.slice(0, 5),
+          },
+          footer,
+        },
+      },
+    },
+    'template-02': {
+      templateId: 'template-02',
+      templateName: '杂志封面周报',
+      meta: {
+        title: '教科人管理中心周报 · 示例版',
+        subtitle: '中关村两院教科人管理中心 · 2026年4月第1周',
+        summary: '本期围绕重点成果发布、申报收口、国际交流和制度建设四条主线展开。',
+      },
+      viewModel: {
+        magazine: {
+          cover: {
+            issueLabel: 'Vol.01 · 2026 · 第01期',
+            headline: '五项重大科研成果即将在论坛窗口集中发布',
+            decks: [
+              '经过多轮评审，本周完成重点成果推荐名单收口，发布与转化对接工作同步启动。',
+              '与此同时，国际交流、招生协同与制度建设持续推进，多条工作线进入执行窗口。',
+            ],
+            period: '2026年3月27日—4月2日',
+            unit: footer.issuedBy,
+          },
+          stats: stats.slice(0, 4),
+          toc: ['本周要览', '重点工作', '数据看板', '签发信息'],
+          overview,
+          groups,
+          data: {
+            keyMetrics: keyMetrics.slice(0, 5),
+            defense: { total: 17, pass: 11, fail: 5, revised: 1, exam: 1 },
+            cooperation: groups.cooperation.slice(0, 6),
+          },
+          footer,
+        },
+      },
+    },
+    'template-03': {
+      templateId: 'template-03',
+      templateName: '国风卷轴周报',
+      meta: {
+        title: '教科人管理中心周报 · 示例版',
+        subtitle: '中关村两院教科人管理中心 · 2026年4月第1周',
+        summary: '通过章回式结构呈现本周科研、合作、交流与制度建设进展。',
+      },
+      viewModel: {
+        ink: {
+          cover: {
+            enTitle: 'Zhongguancun Academy · Weekly Report · Issue No.1',
+            title: '教科人管理中心周报',
+            subTitle: '第一期 · 二〇二六年春',
+            period: '2026年3月27日 — 4月2日',
+            issuedAt: footer.date,
+            unit: footer.issuedBy,
+            stats,
+          },
+          overview,
+          groups,
+          data: {
+            keyMetrics,
+            cooperation: groups.cooperation.slice(0, 6),
+            system: groups.system.slice(0, 6),
+            defense: { total: 17, pass: 11, fail: 5, revised: 1, exam: 1 },
+          },
+          footer,
+        },
+      },
+    },
+    'template-04': {
+      templateId: 'template-04',
+      templateName: '控制台仪表盘周报',
+      meta: {
+        title: '教科人管理中心周报 · 示例版',
+        subtitle: '中关村两院教科人管理中心 · 2026年4月第1周',
+        summary: '当前进入执行追踪阶段，重点观察跨部门协同效率和外部合作推进度。',
+      },
+      viewModel: {
+        dashboardPlus: {
+          hero: {
+            title: '教科人管理中心周报',
+            subtitle: '中关村两院教科人管理中心 · 第01期 · 内部资料',
+            issuedAt: '2026.04.02 ISSUED',
+            period: '2026.03.27 — 04.02',
+          },
+          stats,
+          overview,
+          groups,
+          data: {
+            cooperation: groups.cooperation.slice(0, 6),
+            defense: { total: 17, pass: 11, fail: 5, revised: 1, exam: 1 },
+            keyMetrics,
+          },
+          summaryCounts: { done: 8, progress: 11, pending: 3 },
+          footer,
+        },
+      },
+    },
+    'template-05': {
+      templateId: 'template-05',
+      templateName: '新闻简报周报',
+      meta: {
+        title: '教科人管理中心周报 · 示例版',
+        subtitle: '中关村两院教科人管理中心 · 2026年4月第1周',
+        summary: '本周重点成果进入公开发布窗口，国际论坛和对外合作同步推进。',
+      },
+      viewModel: {
+        news: {
+          masthead: {
+            brand: footer.issuedBy,
+            date: '2026·04·02',
+            issueLabel: '第 01 期',
+          },
+          ticker: keyMetrics.slice(0, 6).map((item) => ({ label: item.label, value: item.value, unit: item.unit })),
+          hero: {
+            eyebrow: '本周要览',
+            headline: '五项重大科研成果进入发布窗口',
+            deck: '重点成果、申报收口、国际交流和制度建设四条工作线同步推进，整体节奏稳定。',
+            stats: stats.slice(0, 4),
+          },
+          groups,
+          data: {
+            keyMetrics,
+            defense: { total: 17, pass: 11, fail: 5, revised: 1 },
+            cooperation: groups.cooperation.slice(0, 6),
+            international: groups.visit.slice(0, 4),
+          },
+          footer,
+        },
+      },
+    },
+    'template-06': {
+      templateId: 'template-06',
+      templateName: '学术期刊周报',
+      meta: {
+        title: '教科人管理中心周报 · 示例版',
+        subtitle: '中关村两院教科人管理中心 · 2026年4月第1周',
+        summary: '本周周报按期刊结构编排，突出摘要、要览、合作推进与签发信息。',
+      },
+      viewModel: {
+        journal: {
+          header: {
+            title: '教科人管理中心周报 · 示例版',
+            subtitle: '中关村两院教科人管理中心 · 2026年4月第1周',
+            issueLabel: '第 01 期',
+            issuedAt: footer.date,
+            period: '2026年3月27日—4月2日',
+            tags: ['内部协同', '对外合作', '交流互访', '体系建设'],
+          },
+          abstract: '本周围绕科研组织、合作推进与制度优化三条主线开展工作，形成阶段性成果并保留后续推进接口。',
+          stats,
+          overview,
+          groups,
+          data: {
+            defense: { total: 17, pass: 11, fail: 5, revised: 1 },
+            cooperation: groups.cooperation.slice(0, 6),
+            system: groups.system.slice(0, 6),
+          },
+          footer,
+        },
+      },
+    },
+    'template-07': {
+      templateId: 'template-07',
+      templateName: '赛博控制台周报',
+      meta: {
+        title: '教科人管理中心周报 · 示例版',
+        subtitle: '中关村两院教科人管理中心 · 2026年4月第1周',
+        summary: '系统视角呈现重点成果发布、合作推进与数据分布。',
+      },
+      viewModel: {
+        cyber: {
+          hero: {
+            line: 'SYS_INIT: LOADING_REPORT_MODULE_2026.04.02 ... [OK]',
+            subtitle: '中关村两院教科人管理中心 · 第01期',
+            desc: 'REPORT_PERIOD: 2026.03.27 — 2026.04.02 | ISSUED: 2026.04.02 | UNIT: 中关村两院教科人管理中心',
+          },
+          stats,
+          overview,
+          groups,
+          data: {
+            keyMetrics,
+            defense: { total: 17, pass: 11, fail: 5, revised: 1 },
+            system: groups.system.slice(0, 5),
+            cooperation: groups.cooperation.slice(0, 6),
+          },
+          footer,
+        },
+      },
+    },
   }
 
-  if (dataNode?.textContent.includes('__TEMPLATE_DATA__')) {
-    dataNode.textContent = JSON.stringify(payloadCatalog[templateId] || payloadCatalog['template-01']);
+  if (styleNode) {
+    styleNode.textContent = ''
   }
 
-  if (scriptNode?.textContent.includes('__TEMPLATE_SCRIPT__')) {
-    const runtimeScript = document.createElement('script');
-    runtimeScript.src = scriptSrc;
-    document.body.appendChild(runtimeScript);
+  const link = document.createElement('link')
+  link.rel = 'stylesheet'
+  link.href = styleHref
+  document.head.appendChild(link)
+
+  if (dataNode) {
+    dataNode.textContent = serializePayload(payloadCatalog[templateId] || payloadCatalog['template-01'])
   }
-})();
+
+  const runtimeScript = document.createElement('script')
+  runtimeScript.src = scriptSrc
+  document.body.appendChild(runtimeScript)
+})()

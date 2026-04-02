@@ -1,40 +1,5 @@
 (() => {
-  const MODULE_NAME = 'template-pipeline-runtime';
-  const root = document.getElementById('template-root');
-
-  const logBusinessJson = (stage, payload) => {
-    console.info(
-      '[业务JSON]',
-      JSON.stringify(
-        {
-          module: MODULE_NAME,
-          stage,
-          timestamp: new Date().toISOString(),
-          payload,
-        },
-        null,
-        2,
-      ),
-    );
-  };
-
-  const logSystem = (level, event, payload = {}) => {
-    const logger = level === 'error' ? console.error : console.info;
-    logger(
-      '[系统日志]',
-      JSON.stringify(
-        {
-          module: MODULE_NAME,
-          level,
-          event,
-          timestamp: new Date().toISOString(),
-          payload,
-        },
-        null,
-        2,
-      ),
-    );
-  };
+  const MODULE_NAME = 'template-journal-runtime'
 
   const escapeHtml = (value) =>
     String(value ?? '')
@@ -42,209 +7,124 @@
       .replaceAll('<', '&lt;')
       .replaceAll('>', '&gt;')
       .replaceAll('"', '&quot;')
-      .replaceAll("'", '&#39;');
-
-  const toList = (items, render, fallback) =>
-    Array.isArray(items) && items.length > 0 ? items.map(render).join('') : fallback;
+      .replaceAll("'", '&#39;')
 
   const readPayload = () => {
-    const node = document.getElementById('template-data');
-    if (!node) {
-      throw new Error('缺少 template-data 节点');
-    }
-    return JSON.parse(node.textContent || '{}');
-  };
+    const node = document.getElementById('template-data')
+    if (!node) throw new Error('缺少 template-data 节点')
+    return JSON.parse(node.textContent || '{}')
+  }
 
-  const statusClass = (status) => {
-    const text = String(status || '').toLowerCase();
-    if (text.includes('已') || text.includes('完成') || text.includes('done')) return 'done';
-    if (text.includes('阻塞') || text.includes('风险') || text.includes('blocked')) return 'blocked';
-    if (text.includes('待') || text.includes('计划') || text.includes('pending') || text.includes('plan')) return 'planned';
-    return 'active';
-  };
+  const logBusinessJson = (stage, payload) => {
+    console.info('[业务JSON]', JSON.stringify({ module: MODULE_NAME, stage, timestamp: new Date().toISOString(), payload }, null, 2))
+  }
+
+  const logSystem = (level, event, payload = {}) => {
+    const logger = level === 'error' ? console.error : console.info
+    logger('[系统日志]', JSON.stringify({ module: MODULE_NAME, level, event, timestamp: new Date().toISOString(), payload }, null, 2))
+  }
+
+  const statusChip = (item) => {
+    if (item.tone === 'done') return 'chip-done'
+    if (item.tone === 'warning') return 'chip-pend'
+    return 'chip-prog'
+  }
+
+  const renderBars = (items) =>
+    items
+      .map(
+        (item) => `
+          <div class="data-row"><div class="dr-label">${escapeHtml(item.title)}</div><div class="dr-bar"><div class="dr-fill" data-w="${escapeHtml(String(item.progress))}%" style="width:0"></div></div><div class="dr-val">${escapeHtml(String(item.progress))}%</div></div>
+        `,
+      )
+      .join('')
 
   try {
-    const start = performance.now();
-    logSystem('info', '模板启动');
+    const startedAt = performance.now()
+    logSystem('info', '模板启动')
 
-    const payload = readPayload();
-    const meta = payload.meta || {};
-    const vm = (payload.viewModel && payload.viewModel.pipeline) || {};
+    const payload = readPayload()
+    const vm = payload.viewModel?.journal || {}
+    const header = vm.header || {}
+    const stats = Array.isArray(vm.stats) ? vm.stats.slice(0, 5) : []
+    const overview = Array.isArray(vm.overview) ? vm.overview.slice(0, 5) : []
+    const groups = vm.groups || {}
+    const data = vm.data || {}
+    const footer = vm.footer || {}
 
-    const metrics = Array.isArray(vm.metrics) ? vm.metrics.slice(0, 6) : [];
-    const stages = Array.isArray(vm.stages) ? vm.stages.slice(0, 8) : [];
-    const actions = Array.isArray(vm.actions) ? vm.actions.slice(0, 6) : [];
-    const heroStats = metrics.slice(0, 3);
+    const title = document.querySelector('.journal-title')
+    const sub = document.querySelector('.journal-sub')
+    const issueNum = document.querySelector('.issue-num')
+    const issueDate = document.querySelector('.issue-date')
+    const metaAuthors = document.querySelector('.meta-authors')
+    const metaTags = document.querySelector('.meta-tags')
+    const abstract = document.querySelector('.abstract-text')
+    if (title) title.textContent = header.title || payload.meta?.title || '未命名周报'
+    if (sub) sub.textContent = header.subtitle || payload.meta?.subtitle || '自动生成期刊式周报'
+    if (issueNum) issueNum.textContent = header.issueLabel || '第 01 期'
+    if (issueDate) issueDate.textContent = header.issuedAt || footer.date || ''
+    if (metaAuthors) metaAuthors.innerHTML = `报告期间：<span>${escapeHtml(header.period || payload.meta?.subtitle || '本周汇总')}</span> &nbsp;|&nbsp; 发布：<span>${escapeHtml(footer.issuedBy || '自动生成周报')}</span>`
+    if (metaTags) metaTags.innerHTML = (header.tags || []).map((item) => `<span class="meta-tag">${escapeHtml(item)}</span>`).join('')
+    if (abstract) abstract.textContent = vm.abstract || payload.meta?.summary || '暂无摘要信息。'
 
-    const stageSummary = stages.reduce(
-      (result, item) => {
-        const key = statusClass(item.status);
-        result[key] += 1;
-        return result;
-      },
-      { done: 0, active: 0, planned: 0, blocked: 0 },
-    );
-
-    if (payload.theme?.accent) {
-      document.documentElement.style.setProperty('--accent', payload.theme.accent);
+    const kpiInline = document.querySelector('.kpi-inline')
+    if (kpiInline) {
+      kpiInline.innerHTML = stats
+        .map(
+          (item) => `
+            <div class="kpi-inline-cell">
+              <div class="kic-num">${escapeHtml(item.value || '--')}${item.unit ? escapeHtml(item.unit) : ''}</div>
+              <div class="kic-label">${escapeHtml(item.label || '指标')}</div>
+            </div>
+          `,
+        )
+        .join('')
     }
 
-    root.innerHTML = `
-      <main class="tpl-page pipeline-lab">
-        <header class="hero-shell">
-          <section class="hero-copy">
-            <div class="hero-top">
-              <span class="template-chip">${escapeHtml(payload.templateName || '科研管线版')}</span>
-              <span class="hero-meta">${escapeHtml(meta.generatedAt || '')}</span>
-            </div>
-            <h1>${escapeHtml(meta.title || '未命名周报')}</h1>
-            <p class="subtitle">${escapeHtml(meta.subtitle || '课题、成果、节点与下一步动作集中呈现')}</p>
-            <p class="summary">${escapeHtml(meta.summary || '暂无摘要')}</p>
-            <div class="status-overview">
-              <span class="status-pill">完成 ${escapeHtml(stageSummary.done)}</span>
-              <span class="status-pill active">推进中 ${escapeHtml(stageSummary.active)}</span>
-              <span class="status-pill planned">计划中 ${escapeHtml(stageSummary.planned)}</span>
-              <span class="status-pill blocked">阻塞 ${escapeHtml(stageSummary.blocked)}</span>
-            </div>
-          </section>
+    const bodyCols = document.querySelector('.body-cols')
+    if (bodyCols) {
+      bodyCols.innerHTML = `
+        <div class="sec-title col-reveal"><span class="sec-num">一</span>本周要览<span class="sec-title-en">/ Weekly Highlights</span></div>
+        <div class="col-reveal">${overview.map((item) => `<div class="subsec">${escapeHtml(item.tag || '要览')}</div><div class="para">${escapeHtml(item.body)}</div>`).join('')}</div>
+        <div class="sec-title col-reveal"><span class="sec-num">二</span>内部协同<span class="sec-title-en">/ Internal Coordination</span></div>
+        <div class="col-reveal"><table class="data-table"><tr><th>事项</th><th>状态</th><th>完成度</th></tr>${(groups.internal || []).map((item) => `<tr><td>${escapeHtml(item.title)}</td><td><span class="status-chip ${statusChip(item)}">${escapeHtml(item.status)}</span></td><td>${escapeHtml(String(item.progress))}%</td></tr>`).join('')}</table></div>
+        <div class="sec-title col-reveal"><span class="sec-num">三</span>对外合作<span class="sec-title-en">/ External Cooperation</span></div>
+        <div class="col-reveal">${renderBars(data.cooperation || [])}</div>
+        <div class="sec-title col-reveal"><span class="sec-num">四</span>交流互访<span class="sec-title-en">/ Academic Exchange</span></div>
+        <div class="col-reveal">${(groups.visit || []).map((item) => `<div class="subsec">${escapeHtml(item.title)}</div><div class="para">${escapeHtml(item.body)}</div>`).join('')}</div>
+        <div class="sec-title col-reveal"><span class="sec-num">五</span>体系建设<span class="sec-title-en">/ System Development</span></div>
+        <div class="col-reveal">${(groups.system || []).map((item) => `<div class="subsec">${escapeHtml(item.title)}</div><div class="para">${escapeHtml(item.body)}</div>`).join('')}</div>
+      `
+    }
 
-          <aside class="hero-side">
-            ${toList(
-              heroStats,
-              (item) => `
-                <article class="hero-stat">
-                  <span>${escapeHtml(item.name || '关键指标')}</span>
-                  <strong>${escapeHtml(item.value || '--')}</strong>
-                  <p>${escapeHtml(item.trend || item.note || '持续追踪中')}</p>
-                </article>
-              `,
-              `
-                <article class="hero-stat">
-                  <span>关键指标</span>
-                  <strong>待补充</strong>
-                  <p>上传真实材料后可自动展示科研推进信号。</p>
-                </article>
-              `,
-            )}
-          </aside>
-        </header>
+    const footnoteBar = document.querySelector('.footnote-bar')
+    if (footnoteBar) {
+      footnoteBar.innerHTML = `
+        <div class="fn-title">签发信息 · Distribution Notes</div>
+        <div class="fn-grid">
+          <div><div class="fn-item-label">报送对象</div><div class="fn-item-val">${escapeHtml(footer.recipient || '相关负责人')}</div></div>
+          <div><div class="fn-item-label">发送范围</div><div class="fn-item-val">${escapeHtml(footer.distribution || '相关部门')}</div></div>
+          <div><div class="fn-item-label">责编 / 核发 / 日期</div><div class="fn-item-val">责编：${escapeHtml(footer.editor || '（待填写）')} · 核发：${escapeHtml(footer.reviewer || '（待填写）')} · ${escapeHtml(footer.date || '')}</div></div>
+        </div>
+      `
+    }
 
-        <section class="metric-strip">
-          ${toList(
-            metrics,
-            (item) => `
-              <article class="metric-card">
-                <span class="metric-label">${escapeHtml(item.name || '指标')}</span>
-                <strong>${escapeHtml(item.value || '--')}</strong>
-                <p>${escapeHtml(item.trend || item.note || '暂无补充说明')}</p>
-              </article>
-            `,
-            `
-              <article class="metric-card">
-                <span class="metric-label">指标</span>
-                <strong>待补充</strong>
-                <p>当前暂无可展示的科研指标。</p>
-              </article>
-            `,
-          )}
-        </section>
-
-        <section class="main-grid">
-          <article class="panel flow-panel">
-            <div class="panel-head">
-              <h2>课题推进链路</h2>
-              <span>${escapeHtml(stages.length || 0)} 个阶段节点</span>
-            </div>
-            <div class="timeline-track">
-              ${toList(
-                stages,
-                (item, index) => `
-                  <article class="stage-card ${statusClass(item.status)}">
-                    <div class="stage-node">${String(index + 1).padStart(2, '0')}</div>
-                    <div class="stage-body">
-                      <div class="stage-top">
-                        <h3>${escapeHtml(item.stream || '阶段事项')}</h3>
-                        <span class="stage-status">${escapeHtml(item.status || '进行中')}</span>
-                      </div>
-                      <p>${escapeHtml(item.outcome || '暂无阶段说明')}</p>
-                      <small>负责人：${escapeHtml(item.owner || '待明确')}</small>
-                    </div>
-                  </article>
-                `,
-                `
-                  <article class="stage-card planned">
-                    <div class="stage-node">01</div>
-                    <div class="stage-body">
-                      <div class="stage-top">
-                        <h3>暂无阶段信息</h3>
-                        <span class="stage-status">待补充</span>
-                      </div>
-                      <p>请补充课题或项目推进节点。</p>
-                      <small>负责人：待明确</small>
-                    </div>
-                  </article>
-                `,
-              )}
-            </div>
-          </article>
-
-          <aside class="panel action-panel">
-            <div class="panel-head">
-              <h2>下一步关键动作</h2>
-              <span>保证节点评审不断档</span>
-            </div>
-            <div class="action-stack">
-              ${toList(
-                actions,
-                (item, index) => `
-                  <article class="action-card">
-                    <span class="action-index">A${String(index + 1).padStart(2, '0')}</span>
-                    <div class="action-body">
-                      <h3>${escapeHtml(item.task || '待补充动作')}</h3>
-                      <p>${escapeHtml(item.dependency || '无外部依赖')}</p>
-                      <div class="action-meta">
-                        <span>${escapeHtml(item.deadline || '待定')}</span>
-                        <span>${escapeHtml(item.owner || '待明确')}</span>
-                      </div>
-                    </div>
-                  </article>
-                `,
-                `
-                  <article class="action-card">
-                    <span class="action-index">A00</span>
-                    <div class="action-body">
-                      <h3>暂无下一步动作</h3>
-                      <p>建议补充近期里程碑与责任安排。</p>
-                      <div class="action-meta">
-                        <span>待定</span>
-                        <span>待明确</span>
-                      </div>
-                    </div>
-                  </article>
-                `,
-              )}
-            </div>
-          </aside>
-        </section>
-      </main>
-    `;
-
-    logBusinessJson('render_payload', {
-      templateId: payload.templateId,
-      stageSummary,
-      metrics: metrics.length,
-      stages: stages.length,
-      actions: actions.length,
-    });
-
-    logSystem('info', '模板完成', {
-      elapsedMs: Number((performance.now() - start).toFixed(2)),
-      status: 'ok',
-    });
+    logBusinessJson('render_payload', { stats: stats.length, overview: overview.length, internal: (groups.internal || []).length, cooperation: (groups.cooperation || []).length, visit: (groups.visit || []).length, system: (groups.system || []).length })
+    logSystem('info', '模板完成', { elapsedMs: Number((performance.now() - startedAt).toFixed(2)) })
   } catch (error) {
-    const message = error instanceof Error ? error.message : '未知异常';
-    root.innerHTML = `<main class="tpl-page"><section class="panel"><h2>模板渲染失败</h2><p>${escapeHtml(message)}</p></section></main>`;
-    logBusinessJson('render_error', { message });
-    logSystem('error', '模板异常', { message });
+    logSystem('error', '模板渲染失败', { message: error instanceof Error ? error.message : String(error) })
   }
-})();
+})()
+
+const io=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{
+    if(!e.isIntersecting)return;
+    e.target.classList.add('vis');
+    e.target.querySelectorAll('.dr-fill,[data-w]').forEach(el=>{
+      const w=el.dataset.w||el.getAttribute('data-w');
+      if(w)setTimeout(()=>el.style.width=w,300);
+    });
+    io.unobserve(e.target);
+  });
+},{threshold:.05});
+document.querySelectorAll('.col-reveal').forEach(el=>io.observe(el));

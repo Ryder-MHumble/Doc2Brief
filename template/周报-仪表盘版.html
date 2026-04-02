@@ -1,12 +1,313 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>file2web 模板预览</title>
-  <style id="template-inline-style">__TEMPLATE_STYLE__</style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>周报 · 仪表盘版</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap');
+
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --c0:#0A0C10;--c1:#0F1218;--c2:#161B24;--c3:#1E2535;
+  --cyan:#00E5FF;--lime:#B2FF59;--amber:#FFD740;--rose:#FF4D6D;
+  --text:#E2E8F0;--muted:#64748B;--border:#1E293B;
+}
+html{scroll-behavior:smooth}
+body{
+  font-family:'Inter',system-ui,sans-serif;
+  background:var(--c0);color:var(--text);
+  min-height:100vh;overflow-x:hidden;
+}
+
+/* ── 全局网格背景 ── */
+body::before{
+  content:'';position:fixed;inset:0;
+  background-image:
+    linear-gradient(rgba(0,229,255,.03) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(0,229,255,.03) 1px,transparent 1px);
+  background-size:32px 32px;pointer-events:none;z-index:0;
+}
+
+/* ══════════════ HERO STRIP ══════════════ */
+.hero{
+  position:relative;z-index:1;
+  background:linear-gradient(135deg,#0D1117 0%,#0F1A2E 100%);
+  border-bottom:1px solid var(--border);
+  display:grid;grid-template-columns:1fr auto;
+  align-items:center;gap:32px;
+  padding:28px 40px;
+}
+.hero-left{}
+.hero-eyebrow{
+  display:flex;align-items:center;gap:10px;
+  font-family:'JetBrains Mono',monospace;
+  font-size:11px;color:var(--cyan);letter-spacing:2px;
+  text-transform:uppercase;margin-bottom:12px;
+}
+.hero-pulse{
+  width:8px;height:8px;border-radius:50%;
+  background:var(--cyan);
+  box-shadow:0 0 0 0 rgba(0,229,255,.6);
+  animation:pulse 2s infinite;
+}
+@keyframes pulse{
+  0%{box-shadow:0 0 0 0 rgba(0,229,255,.6)}
+  70%{box-shadow:0 0 0 10px rgba(0,229,255,0)}
+  100%{box-shadow:0 0 0 0 rgba(0,229,255,0)}
+}
+.hero-title{
+  font-size:32px;font-weight:800;letter-spacing:-1px;
+  background:linear-gradient(90deg,#fff 0%,#94A3B8 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;line-height:1.1;margin-bottom:6px;
+}
+.hero-sub{font-size:13px;color:var(--muted);font-weight:400;}
+
+/* 右侧实时时间 */
+.hero-clock{
+  text-align:right;
+  font-family:'JetBrains Mono',monospace;
+}
+.clock-date{font-size:11px;color:var(--muted);letter-spacing:1px;margin-bottom:4px;}
+.clock-period{
+  font-size:13px;font-weight:700;color:var(--cyan);
+  background:rgba(0,229,255,.08);border:1px solid rgba(0,229,255,.2);
+  padding:6px 14px;border-radius:4px;display:inline-block;
+}
+
+/* ══════════════ KPI ROW ══════════════ */
+.kpi-strip{
+  position:relative;z-index:1;
+  display:grid;grid-template-columns:repeat(5,1fr);
+  border-bottom:1px solid var(--border);
+}
+.kpi-cell{
+  padding:20px 28px;border-right:1px solid var(--border);
+  position:relative;overflow:hidden;
+  transition:background .2s;cursor:default;
+}
+.kpi-cell:last-child{border-right:none}
+.kpi-cell:hover{background:rgba(255,255,255,.02)}
+.kpi-cell::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+}
+.kpi-cell:nth-child(1)::before{background:var(--cyan)}
+.kpi-cell:nth-child(2)::before{background:var(--lime)}
+.kpi-cell:nth-child(3)::before{background:var(--amber)}
+.kpi-cell:nth-child(4)::before{background:var(--rose)}
+.kpi-cell:nth-child(5)::before{background:#C084FC}
+.kpi-label{font-size:10px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;}
+.kpi-num{
+  font-family:'JetBrains Mono',monospace;
+  font-size:38px;font-weight:700;line-height:1;margin-bottom:4px;
+}
+.kpi-cell:nth-child(1) .kpi-num{color:var(--cyan)}
+.kpi-cell:nth-child(2) .kpi-num{color:var(--lime)}
+.kpi-cell:nth-child(3) .kpi-num{color:var(--amber)}
+.kpi-cell:nth-child(4) .kpi-num{color:var(--rose)}
+.kpi-cell:nth-child(5) .kpi-num{color:#C084FC}
+.kpi-desc{font-size:11px;color:var(--muted)}
+
+/* ══════════════ MAIN GRID ══════════════ */
+.page-grid{
+  position:relative;z-index:1;
+  display:grid;
+  grid-template-columns:220px 1fr;
+  min-height:calc(100vh - 200px);
+}
+
+/* ── 侧边栏 ── */
+.sidebar{
+  border-right:1px solid var(--border);
+  background:var(--c1);
+  padding:0;
+  position:sticky;top:0;height:100vh;overflow-y:auto;
+}
+.sidebar::-webkit-scrollbar{width:4px}
+.sidebar::-webkit-scrollbar-thumb{background:var(--border)}
+.sidebar-section{padding:20px 0;}
+.sidebar-label{
+  font-size:9px;font-weight:700;letter-spacing:3px;
+  text-transform:uppercase;color:var(--muted);
+  padding:0 20px;margin-bottom:6px;
+}
+.sidebar-item{
+  display:flex;align-items:center;gap:10px;
+  padding:9px 20px;font-size:12px;color:var(--muted);
+  cursor:pointer;transition:all .15s;
+  border-left:2px solid transparent;
+}
+.sidebar-item:hover{color:var(--text);background:rgba(255,255,255,.03)}
+.sidebar-item.active{
+  color:var(--cyan);background:rgba(0,229,255,.06);
+  border-left-color:var(--cyan);
+}
+.sidebar-icon{font-size:14px;width:16px;text-align:center}
+.sidebar-divider{height:1px;background:var(--border);margin:8px 20px}
+
+/* ── 内容区 ── */
+.content{padding:32px 40px;overflow-x:hidden;}
+
+/* ══ Section Header ══ */
+.sec-hd{
+  display:flex;align-items:center;gap:12px;
+  margin-bottom:24px;padding-bottom:16px;
+  border-bottom:1px solid var(--border);
+}
+.sec-hd-line{width:3px;height:20px;border-radius:2px}
+.sec-hd-title{font-size:16px;font-weight:700;letter-spacing:-.3px}
+.sec-hd-badge{
+  font-family:'JetBrains Mono',monospace;
+  font-size:10px;padding:3px 8px;border-radius:3px;
+  background:rgba(255,255,255,.05);color:var(--muted);
+  letter-spacing:1px;margin-left:auto;
+}
+
+/* ══ 时间线卡片 ══ */
+.timeline{display:flex;flex-direction:column;gap:0;}
+.tl-item{
+  display:grid;grid-template-columns:80px 1fr;
+  gap:0;opacity:0;transform:translateX(-8px);
+  transition:opacity .5s ease,transform .5s ease;
+}
+.tl-item.vis{opacity:1;transform:translateX(0)}
+.tl-left{
+  display:flex;flex-direction:column;align-items:flex-end;
+  padding:20px 24px 20px 0;position:relative;
+}
+.tl-left::after{
+  content:'';position:absolute;right:0;top:0;bottom:0;
+  width:1px;background:var(--border);
+}
+.tl-dot{
+  position:absolute;right:-5px;top:26px;
+  width:10px;height:10px;border-radius:50%;
+  background:var(--c0);border:2px solid var(--cyan);
+  box-shadow:0 0 8px rgba(0,229,255,.4);
+}
+.tl-tag{
+  font-size:9px;font-weight:700;letter-spacing:1.5px;
+  text-transform:uppercase;
+  padding:2px 7px;border-radius:3px;text-align:center;
+  white-space:nowrap;
+}
+.tl-right{padding:18px 0 18px 24px;}
+.tl-title{font-size:14px;font-weight:700;margin-bottom:6px;line-height:1.4}
+.tl-body{font-size:12.5px;color:var(--muted);line-height:1.8}
+.tl-body strong{color:var(--text);font-weight:600}
+
+/* ══ 工作看板 ══ */
+.board-tabs{
+  display:flex;gap:4px;margin-bottom:20px;
+  background:var(--c2);padding:4px;border-radius:6px;
+  width:fit-content;
+}
+.btab{
+  padding:7px 16px;border-radius:4px;font-size:12px;
+  font-weight:500;color:var(--muted);cursor:pointer;
+  border:none;background:none;font-family:inherit;
+  transition:all .2s;letter-spacing:.3px;
+}
+.btab:hover{color:var(--text)}
+.btab.on{background:var(--c3);color:var(--text);font-weight:600}
+.bpanel{display:none}.bpanel.on{display:block}
+
+.kanban{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.kanban-col{}
+.kanban-col-hd{
+  font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;
+  color:var(--muted);padding:0 0 10px;
+  display:flex;align-items:center;gap:8px;
+  border-bottom:1px solid var(--border);margin-bottom:10px;
+}
+.kanban-col-hd-dot{width:6px;height:6px;border-radius:50%}
+.kanban-card{
+  background:var(--c2);border:1px solid var(--border);
+  border-radius:6px;padding:14px;margin-bottom:8px;
+  transition:all .2s;cursor:default;
+}
+.kanban-card:hover{border-color:rgba(255,255,255,.1);background:var(--c3)}
+.kc-title{font-size:13px;font-weight:600;margin-bottom:6px;line-height:1.4}
+.kc-desc{font-size:11.5px;color:var(--muted);line-height:1.7;margin-bottom:10px}
+.kc-desc strong{color:#94A3B8}
+.kc-foot{display:flex;align-items:center;justify-content:space-between}
+.kc-pct-num{
+  font-family:'JetBrains Mono',monospace;
+  font-size:11px;color:var(--muted);
+}
+.kc-bar{flex:1;height:2px;background:var(--border);margin:0 10px;border-radius:2px;overflow:hidden}
+.kc-bar-fill{height:100%;border-radius:2px;transition:width 1.2s cubic-bezier(.22,1,.36,1)}
+
+/* ══ 数据可视化 ══ */
+.viz-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+.viz-card{
+  background:var(--c1);border:1px solid var(--border);
+  border-radius:8px;padding:20px;overflow:hidden;
+}
+.viz-card-title{
+  font-size:11px;font-weight:600;letter-spacing:1.5px;
+  text-transform:uppercase;color:var(--muted);margin-bottom:16px;
+  display:flex;align-items:center;gap:8px;
+}
+.viz-card-title::before{
+  content:'';width:6px;height:6px;border-radius:50%;
+  background:currentColor;
+}
+
+/* 微型条形图 */
+.mini-bar-list{display:flex;flex-direction:column;gap:10px}
+.mini-bar-item{display:flex;align-items:center;gap:10px}
+.mini-bar-label{font-size:11px;color:var(--muted);width:72px;text-align:right;flex-shrink:0}
+.mini-bar-track{flex:1;height:6px;background:var(--c3);border-radius:6px;overflow:hidden}
+.mini-bar-fill{height:100%;border-radius:6px;transition:width 1.4s cubic-bezier(.22,1,.36,1)}
+.mini-bar-val{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text);width:28px;flex-shrink:0}
+
+/* 数字墙 */
+.num-wall{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.num-cell{
+  text-align:center;padding:12px 6px;
+  background:var(--c2);border-radius:6px;border:1px solid var(--border);
+  transition:all .2s;
+}
+.num-cell:hover{border-color:rgba(0,229,255,.2);background:rgba(0,229,255,.03)}
+.nc-val{
+  font-family:'JetBrains Mono',monospace;
+  font-size:24px;font-weight:700;color:var(--cyan);
+  line-height:1;margin-bottom:5px;
+}
+.nc-label{font-size:9.5px;color:var(--muted);line-height:1.4}
+
+/* 答辩甜甜圈 */
+.donut-wrap{display:flex;align-items:center;gap:16px}
+.donut-legend{flex:1;display:flex;flex-direction:column;gap:8px}
+.dl-row{display:flex;align-items:center;gap:8px}
+.dl-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+.dl-name{font-size:11px;color:var(--muted);flex:1}
+.dl-val{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700}
+
+/* ══ 签发 ══ */
+.footer-bar{
+  position:relative;z-index:1;
+  border-top:1px solid var(--border);
+  background:var(--c1);
+  padding:20px 40px;
+  display:grid;grid-template-columns:repeat(4,1fr);gap:24px;
+  font-size:12px;
+}
+.footer-item-label{
+  font-size:9px;letter-spacing:2px;text-transform:uppercase;
+  color:var(--muted);margin-bottom:5px;
+}
+.footer-item-val{color:var(--text);font-weight:500}
+
+/* ══ 通用动效 ══ */
+.reveal{opacity:0;transform:translateY(16px);transition:opacity .6s ease,transform .6s ease}
+.reveal.vis{opacity:1;transform:translateY(0)}
+.section-block{margin-bottom:48px}
+</style>
 </head>
-<body data-template-id="template-04">
+<body>
 
 <!-- HERO -->
 <div class="hero">
@@ -59,26 +360,26 @@
   <aside class="sidebar">
     <div class="sidebar-section">
       <div class="sidebar-label">导航</div>
-      <div class="sidebar-item active" onclick="scrollTo2('ov',event)">
+      <div class="sidebar-item active" onclick="scrollTo2('ov')">
         <span class="sidebar-icon">◎</span>本周要览
       </div>
-      <div class="sidebar-item" onclick="scrollTo2('sync',event)">
+      <div class="sidebar-item" onclick="scrollTo2('sync')">
         <span class="sidebar-icon">⚙</span>内部协同
       </div>
-      <div class="sidebar-item" onclick="scrollTo2('collab',event)">
+      <div class="sidebar-item" onclick="scrollTo2('collab')">
         <span class="sidebar-icon">◈</span>对外合作
       </div>
-      <div class="sidebar-item" onclick="scrollTo2('visit',event)">
+      <div class="sidebar-item" onclick="scrollTo2('visit')">
         <span class="sidebar-icon">⊕</span>交流互访
       </div>
-      <div class="sidebar-item" onclick="scrollTo2('system',event)">
+      <div class="sidebar-item" onclick="scrollTo2('system')">
         <span class="sidebar-icon">◻</span>体系建设
       </div>
       <div class="sidebar-divider"></div>
-      <div class="sidebar-item" onclick="scrollTo2('data',event)">
+      <div class="sidebar-item" onclick="scrollTo2('data')">
         <span class="sidebar-icon">▨</span>数据看板
       </div>
-      <div class="sidebar-item" onclick="scrollTo2('footer',event)">
+      <div class="sidebar-item" onclick="scrollTo2('footer')">
         <span class="sidebar-icon">◇</span>签发信息
       </div>
     </div>
@@ -490,32 +791,63 @@
   </div>
 </div>
 
-  <script id="template-data" type="application/json">__TEMPLATE_DATA__</script>
-  <script id="template-script" type="application/json">__TEMPLATE_SCRIPT__</script>
-  <script>
-    (() => {
-      const styleNode = document.getElementById('template-inline-style');
-      const dataNode = document.getElementById('template-data');
-      const scriptNode = document.getElementById('template-script');
-      const isLivePreview =
-        styleNode?.textContent.includes('__TEMPLATE_STYLE__') ||
-        dataNode?.textContent.includes('__TEMPLATE_DATA__') ||
-        scriptNode?.textContent.includes('__TEMPLATE_SCRIPT__');
+<script>
+// 数字滚动
+document.querySelectorAll('.kpi-num[data-target]').forEach(el=>{
+  const t=parseInt(el.dataset.target);
+  let s=performance.now();
+  const d=1600;
+  const go=now=>{
+    const p=Math.min((now-s)/d,1);
+    const e=1-Math.pow(1-p,4);
+    el.textContent=Math.round(e*t);
+    if(p<1)requestAnimationFrame(go);
+  };
+  setTimeout(()=>{s=performance.now();requestAnimationFrame(go);},300);
+});
 
-      if (isLivePreview) {
-        const loader = document.createElement('script');
-        loader.src = '../_runtime/live-preview.js';
-        loader.dataset.templateId = document.body.dataset.templateId || '';
-        loader.dataset.styleHref = './style.css';
-        loader.dataset.scriptSrc = './app.js';
-        document.body.appendChild(loader);
-        return;
-      }
+// 进度条
+function animateBars(container){
+  container.querySelectorAll('[data-w]').forEach(el=>{
+    el.style.width=el.dataset.w;
+  });
+}
 
-      const runtimeScript = document.createElement('script');
-      runtimeScript.textContent = scriptNode?.textContent || '';
-      document.body.appendChild(runtimeScript);
-    })();
-  </script>
+// IntersectionObserver
+const io=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{
+    if(!e.isIntersecting)return;
+    e.target.classList.add('vis');
+    e.target.querySelectorAll('.tl-item').forEach((i,idx)=>{
+      setTimeout(()=>i.classList.add('vis'),idx*120);
+    });
+    setTimeout(()=>animateBars(e.target),400);
+    io.unobserve(e.target);
+  });
+},{threshold:.06});
+document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+
+// 侧边栏高亮
+function scrollTo2(id){
+  const el=document.getElementById(id);
+  if(el)el.scrollIntoView({behavior:'smooth',block:'start'});
+  document.querySelectorAll('.sidebar-item').forEach(i=>i.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+}
+
+// 滚动同步侧边栏
+const sections=['ov','sync','collab','visit','system','data','footer'];
+const sideItems=document.querySelectorAll('.sidebar-item');
+window.addEventListener('scroll',()=>{
+  let cur='';
+  sections.forEach(id=>{
+    const el=document.getElementById(id);
+    if(el&&window.scrollY>=el.offsetTop-200)cur=id;
+  });
+  sideItems.forEach((item,i)=>{
+    item.classList.toggle('active',i===sections.indexOf(cur));
+  });
+},{passive:true});
+</script>
 </body>
 </html>

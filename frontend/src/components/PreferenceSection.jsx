@@ -22,7 +22,7 @@ export function PreferenceSection({
         <span className="section-index">生成配置</span>
         <div>
           <h2 className="font-headline">控制台</h2>
-          <p>先配置生成模式和上下文；模板生成模式可在右侧预览区切换模板。</p>
+          <p>先配置生成模式和上下文；模板生成模式可在中间模板卡片列切换模板。</p>
         </div>
       </div>
 

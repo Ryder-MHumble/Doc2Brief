@@ -1,12 +1,241 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>file2web 模板预览</title>
-  <style id="template-inline-style">__TEMPLATE_STYLE__</style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>周报 · 学术期刊版</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Source+Sans+3:wght@300;400;600;700&family=Source+Code+Pro:wght@400;600&display=swap');
+
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --paper:#FEFCF8;
+  --paper2:#F9F6F0;
+  --rule:#D4C9B8;
+  --ink:#1C1410;
+  --ink2:#3D3028;
+  --ink3:#6B5D4F;
+  --ink4:#9C8C7C;
+  --red:#8B1A1A;
+  --blue:#1A3A6B;
+  --green:#1A5C2E;
+  --col-w:680px;
+}
+html{font-size:16px;scroll-behavior:smooth}
+body{
+  font-family:'Source Sans 3',system-ui,sans-serif;
+  background:#E8E0D4;
+  color:var(--ink);line-height:1.7;
+}
+
+/* ── 纸张容器 ── */
+.paper-wrap{
+  max-width:960px;margin:0 auto;
+  background:var(--paper);
+  box-shadow:0 4px 40px rgba(0,0,0,.18);
+  min-height:100vh;
+  position:relative;
+}
+
+/* ── 刊头 ── */
+.journal-header{
+  border-bottom:3px double var(--rule);
+  padding:28px 60px 20px;
+  display:grid;
+  grid-template-columns:1fr auto;
+  align-items:end;
+  gap:20px;
+}
+.jh-left{}
+.journal-name{
+  font-family:'Lora',Georgia,serif;
+  font-size:11px;font-weight:600;
+  letter-spacing:4px;text-transform:uppercase;
+  color:var(--ink3);margin-bottom:8px;
+}
+.journal-title{
+  font-family:'Lora',Georgia,serif;
+  font-size:28px;font-weight:700;
+  color:var(--ink);line-height:1.2;
+  margin-bottom:4px;
+}
+.journal-sub{
+  font-size:13px;color:var(--ink3);
+  font-style:italic;
+}
+.jh-right{text-align:right}
+.issue-box{
+  border:1px solid var(--rule);
+  padding:10px 16px;display:inline-block;
+}
+.issue-vol{font-size:10px;color:var(--ink4);letter-spacing:2px;text-transform:uppercase;margin-bottom:3px;}
+.issue-num{font-family:'Lora',serif;font-size:20px;font-weight:700;color:var(--ink);margin-bottom:3px;}
+.issue-date{font-size:11px;color:var(--ink3);}
+
+/* ── 作者/摘要行 ── */
+.meta-strip{
+  background:var(--paper2);
+  border-bottom:1px solid var(--rule);
+  padding:14px 60px;
+  display:flex;align-items:center;
+  justify-content:space-between;
+  flex-wrap:wrap;gap:12px;
+}
+.meta-authors{font-size:12px;color:var(--ink2);}
+.meta-authors span{font-weight:600;}
+.meta-tags{display:flex;gap:8px;flex-wrap:wrap;}
+.meta-tag{
+  font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;
+  padding:3px 10px;border:1px solid var(--rule);color:var(--ink3);
+}
+
+/* ── 摘要区 ── */
+.abstract{
+  padding:24px 60px;
+  border-bottom:1px solid var(--rule);
+  display:grid;grid-template-columns:64px 1fr;gap:16px;
+}
+.abstract-label{
+  font-family:'Lora',serif;
+  font-size:10px;font-weight:700;letter-spacing:3px;
+  text-transform:uppercase;color:var(--red);
+  writing-mode:vertical-rl;text-orientation:mixed;
+  transform:rotate(180deg);
+  display:flex;align-items:center;
+  border-right:2px solid var(--red);padding-right:12px;
+}
+.abstract-body{}
+.abstract-text{
+  font-size:13px;color:var(--ink2);line-height:1.85;
+  font-style:italic;
+  border-left:none;
+}
+
+/* KPI 数字行（文字内联） */
+.kpi-inline{
+  padding:20px 60px;
+  border-bottom:2px solid var(--ink);
+  display:grid;grid-template-columns:repeat(5,1fr);
+  gap:0;
+}
+.kpi-inline-cell{
+  text-align:center;
+  border-right:1px solid var(--rule);
+  padding:12px 8px;
+}
+.kpi-inline-cell:last-child{border-right:none;}
+.kic-num{
+  font-family:'Lora',Georgia,serif;
+  font-size:36px;font-weight:700;color:var(--red);
+  line-height:1;margin-bottom:5px;
+}
+.kic-label{font-size:10px;color:var(--ink3);line-height:1.4;letter-spacing:.5px;}
+
+/* ── 双栏正文 ── */
+.body-cols{
+  padding:32px 60px;
+  column-count:2;column-gap:40px;
+  column-rule:1px solid var(--rule);
+}
+
+/* 章节标题 */
+.sec-title{
+  font-family:'Lora',Georgia,serif;
+  font-size:15px;font-weight:700;
+  color:var(--ink);
+  border-top:2px solid var(--ink);
+  padding-top:10px;margin-bottom:12px;
+  margin-top:24px;
+  break-inside:avoid;
+  display:flex;align-items:baseline;gap:10px;
+  column-span:all;
+}
+.sec-title:first-child{margin-top:0}
+.sec-num{
+  font-family:'Lora',serif;font-size:13px;
+  color:var(--red);font-weight:700;
+}
+.sec-title-en{font-size:10px;color:var(--ink3);font-weight:400;font-style:italic;letter-spacing:1px;}
+
+/* 小节标题 */
+.subsec{
+  font-size:12.5px;font-weight:700;color:var(--blue);
+  margin:14px 0 6px;break-inside:avoid;
+  display:flex;align-items:center;gap:8px;
+  letter-spacing:.3px;
+}
+.subsec::before{content:'§';color:var(--red);font-family:'Lora',serif;}
+
+/* 正文段落 */
+.para{
+  font-size:12.5px;color:var(--ink2);line-height:1.85;
+  margin-bottom:10px;text-align:justify;
+  hyphens:auto;
+}
+.para strong{color:var(--ink);font-weight:700;}
+.para em{color:var(--blue);font-style:normal;font-weight:600;}
+
+/* 脚注式数据行 */
+.data-row{
+  display:flex;align-items:center;
+  padding:6px 0;
+  border-bottom:1px dotted var(--rule);
+  break-inside:avoid;
+}
+.dr-label{font-size:11.5px;color:var(--ink3);flex:1;}
+.dr-bar{width:80px;height:4px;background:var(--rule);margin:0 10px;border-radius:2px;overflow:hidden;flex-shrink:0;}
+.dr-fill{height:100%;background:var(--blue);border-radius:2px;transition:width 1.4s ease;}
+.dr-val{font-family:'Source Code Pro',monospace;font-size:11px;color:var(--ink);font-weight:600;width:32px;text-align:right;}
+
+/* 表格 */
+.data-table{
+  width:100%;border-collapse:collapse;
+  font-size:11.5px;margin:12px 0;break-inside:avoid;
+}
+.data-table th{
+  background:var(--ink);color:var(--paper);
+  padding:7px 10px;text-align:left;font-weight:600;font-size:10px;letter-spacing:1px;
+}
+.data-table td{
+  padding:6px 10px;border-bottom:1px solid var(--rule);
+  color:var(--ink2);
+}
+.data-table tr:hover td{background:var(--paper2);}
+.status-chip{
+  font-size:9px;font-weight:700;letter-spacing:1px;
+  padding:2px 7px;text-transform:uppercase;
+}
+.chip-done{background:#D4EDDA;color:var(--green);}
+.chip-prog{background:#D4DCF0;color:var(--blue);}
+.chip-pend{background:#FEF3CD;color:#7B5A00;}
+
+/* 引用框 */
+.pull-quote{
+  background:var(--paper2);
+  border-left:3px solid var(--red);
+  padding:12px 16px;margin:14px 0;
+  break-inside:avoid;
+}
+.pq-text{font-family:'Lora',serif;font-size:12px;font-style:italic;color:var(--ink2);line-height:1.7;margin-bottom:4px;}
+.pq-source{font-size:10px;color:var(--ink4);letter-spacing:1px;}
+
+/* 注释栏（单栏全宽） */
+.footnote-bar{
+  border-top:2px solid var(--ink);
+  padding:20px 60px;
+  background:var(--paper2);
+}
+.fn-title{font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--ink3);margin-bottom:12px;}
+.fn-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;}
+.fn-item-label{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--ink4);margin-bottom:4px;}
+.fn-item-val{font-size:12px;color:var(--ink2);}
+
+/* 动画 */
+.col-reveal{opacity:0;transform:translateY(12px);transition:opacity .7s ease,transform .7s ease;}
+.col-reveal.vis{opacity:1;transform:translateY(0);}
+</style>
 </head>
-<body data-template-id="template-06">
+<body>
 
 <div class="paper-wrap">
 
@@ -213,32 +442,19 @@
 
 </div><!-- end paper-wrap -->
 
-  <script id="template-data" type="application/json">__TEMPLATE_DATA__</script>
-  <script id="template-script" type="application/json">__TEMPLATE_SCRIPT__</script>
-  <script>
-    (() => {
-      const styleNode = document.getElementById('template-inline-style');
-      const dataNode = document.getElementById('template-data');
-      const scriptNode = document.getElementById('template-script');
-      const isLivePreview =
-        styleNode?.textContent.includes('__TEMPLATE_STYLE__') ||
-        dataNode?.textContent.includes('__TEMPLATE_DATA__') ||
-        scriptNode?.textContent.includes('__TEMPLATE_SCRIPT__');
-
-      if (isLivePreview) {
-        const loader = document.createElement('script');
-        loader.src = '../_runtime/live-preview.js';
-        loader.dataset.templateId = document.body.dataset.templateId || '';
-        loader.dataset.styleHref = './style.css';
-        loader.dataset.scriptSrc = './app.js';
-        document.body.appendChild(loader);
-        return;
-      }
-
-      const runtimeScript = document.createElement('script');
-      runtimeScript.textContent = scriptNode?.textContent || '';
-      document.body.appendChild(runtimeScript);
-    })();
-  </script>
+<script>
+const io=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{
+    if(!e.isIntersecting)return;
+    e.target.classList.add('vis');
+    e.target.querySelectorAll('.dr-fill,[data-w]').forEach(el=>{
+      const w=el.dataset.w||el.getAttribute('data-w');
+      if(w)setTimeout(()=>el.style.width=w,300);
+    });
+    io.unobserve(e.target);
+  });
+},{threshold:.05});
+document.querySelectorAll('.col-reveal').forEach(el=>io.observe(el));
+</script>
 </body>
 </html>

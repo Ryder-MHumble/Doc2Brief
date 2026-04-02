@@ -1,40 +1,5 @@
 (() => {
-  const MODULE_NAME = 'template-risk-runtime';
-  const root = document.getElementById('template-root');
-
-  const logBusinessJson = (stage, payload) => {
-    console.info(
-      '[业务JSON]',
-      JSON.stringify(
-        {
-          module: MODULE_NAME,
-          stage,
-          timestamp: new Date().toISOString(),
-          payload,
-        },
-        null,
-        2,
-      ),
-    );
-  };
-
-  const logSystem = (level, event, payload = {}) => {
-    const logger = level === 'error' ? console.error : console.info;
-    logger(
-      '[系统日志]',
-      JSON.stringify(
-        {
-          module: MODULE_NAME,
-          level,
-          event,
-          timestamp: new Date().toISOString(),
-          payload,
-        },
-        null,
-        2,
-      ),
-    );
-  };
+  const MODULE_NAME = 'template-news-runtime'
 
   const escapeHtml = (value) =>
     String(value ?? '')
@@ -42,204 +7,148 @@
       .replaceAll('<', '&lt;')
       .replaceAll('>', '&gt;')
       .replaceAll('"', '&quot;')
-      .replaceAll("'", '&#39;');
-
-  const toList = (items, render, fallback) =>
-    Array.isArray(items) && items.length > 0 ? items.map(render).join('') : fallback;
+      .replaceAll("'", '&#39;')
 
   const readPayload = () => {
-    const node = document.getElementById('template-data');
-    if (!node) {
-      throw new Error('缺少 template-data 节点');
-    }
-    return JSON.parse(node.textContent || '{}');
-  };
+    const node = document.getElementById('template-data')
+    if (!node) throw new Error('缺少 template-data 节点')
+    return JSON.parse(node.textContent || '{}')
+  }
 
-  const levelClass = (level) => {
-    const text = String(level || '').toLowerCase();
-    if (text.includes('高') || text.includes('high')) return 'high';
-    if (text.includes('低') || text.includes('low')) return 'low';
-    return 'medium';
-  };
+  const logBusinessJson = (stage, payload) => {
+    console.info('[业务JSON]', JSON.stringify({ module: MODULE_NAME, stage, timestamp: new Date().toISOString(), payload }, null, 2))
+  }
 
-  const levelLabel = (level) => {
-    const key = levelClass(level);
-    if (key === 'high') return '高风险';
-    if (key === 'low') return '低风险';
-    return '中风险';
-  };
+  const logSystem = (level, event, payload = {}) => {
+    const logger = level === 'error' ? console.error : console.info
+    logger('[系统日志]', JSON.stringify({ module: MODULE_NAME, level, event, timestamp: new Date().toISOString(), payload }, null, 2))
+  }
+
+  const toneMeta = (item) => {
+    if (item.tone === 'done') return { color: 'var(--sage)', label: '已完成' }
+    if (item.tone === 'warning') return { color: 'var(--orange)', label: '待推进' }
+    return { color: 'var(--blue)', label: '进行中' }
+  }
+
+  const renderStory = (item) => {
+    const meta = toneMeta(item)
+    return `
+      <div class="story-item">
+        <div class="si-tag" style="color:${meta.color}"><div style="width:5px;height:5px;border-radius:50%;background:${meta.color}"></div>${escapeHtml(item.status || meta.label)}</div>
+        <div class="si-title">${escapeHtml(item.title)}</div>
+        <div class="si-body">${escapeHtml(item.body)}</div>
+        <div class="si-prog"><div class="si-prog-track"><div class="si-prog-fill" style="background:${meta.color};width:0" data-w="${escapeHtml(String(item.progress))}%"></div></div><div class="si-prog-val">${escapeHtml(String(item.progress))}%</div></div>
+      </div>
+    `
+  }
+
+  const renderDataProgress = (items, colorize) =>
+    items
+      .map((item) => {
+        const color = colorize(item)
+        return `<div class="dpl-item"><div class="dpl-label">${escapeHtml(item.title)}</div><div class="dpl-track"><div class="dpl-fill" style="background:${color};width:0" data-w="${escapeHtml(String(item.progress))}%"></div></div><div class="dpl-val">${escapeHtml(String(item.progress))}%</div></div>`
+      })
+      .join('')
 
   try {
-    const start = performance.now();
-    logSystem('info', '模板启动');
+    const startedAt = performance.now()
+    logSystem('info', '模板启动')
 
-    const payload = readPayload();
-    const meta = payload.meta || {};
-    const vm = (payload.viewModel && payload.viewModel.risk) || {};
+    const payload = readPayload()
+    const vm = payload.viewModel?.news || {}
+    const masthead = vm.masthead || {}
+    const ticker = Array.isArray(vm.ticker) ? vm.ticker.slice(0, 6) : []
+    const hero = vm.hero || {}
+    const groups = vm.groups || {}
+    const data = vm.data || {}
+    const footer = vm.footer || {}
 
-    const risks = Array.isArray(vm.risks) ? vm.risks.slice(0, 8) : [];
-    const actions = Array.isArray(vm.actions) ? vm.actions.slice(0, 6) : [];
-    const keyPoints = Array.isArray(vm.keyPoints) ? vm.keyPoints.slice(0, 6) : [];
+    const brandName = document.querySelector('.mh-name')
+    const dateNode = document.querySelector('.mh-date')
+    const issueNode = document.querySelector('.mh-issue')
+    if (brandName) brandName.textContent = masthead.brand || footer.issuedBy || '自动生成周报'
+    if (dateNode) dateNode.textContent = masthead.date || footer.dateOnly || ''
+    if (issueNode) issueNode.textContent = masthead.issueLabel || '第 01 期'
 
-    const severity = risks.reduce(
-      (result, item) => {
-        const key = levelClass(item.level);
-        result[key] += 1;
-        return result;
-      },
-      { high: 0, medium: 0, low: 0 },
-    );
-
-    if (payload.theme?.accent) {
-      document.documentElement.style.setProperty('--accent', payload.theme.accent);
+    const tickerNode = document.querySelector('.ticker-items')
+    if (tickerNode) {
+      const cells = [...ticker, ...ticker]
+      tickerNode.innerHTML = cells
+        .map((item, index) => `${index > 0 ? '<div class="ticker-dot"></div>' : ''}<div class="ticker-item">${escapeHtml(item.label || '指标')} <span class="ticker-val">${escapeHtml(item.value || '--')}${item.unit ? escapeHtml(item.unit) : ''}</span></div>`)
+        .join('')
     }
 
-    root.innerHTML = `
-      <main class="tpl-page risk-ledger">
-        <header class="hero-band">
-          <section class="hero-copy">
-            <div class="hero-top">
-              <span class="template-chip">${escapeHtml(payload.templateName || '风控合规版')}</span>
-              <span class="hero-meta">${escapeHtml(meta.generatedAt || '')}</span>
+    const eyebrow = document.querySelector('.sh-eyebrow')
+    const headline = document.querySelector('.sh-headline')
+    const deck = document.querySelector('.sh-deck')
+    if (eyebrow) eyebrow.textContent = hero.eyebrow || '本周要览'
+    if (headline) headline.innerHTML = escapeHtml(hero.headline || payload.meta?.title || '未命名周报').replace(/\s+/g, '<br>')
+    if (deck) deck.textContent = hero.deck || payload.meta?.summary || '暂无摘要信息。'
+
+    const heroStats = document.querySelector('.sh-kpi-col')
+    if (heroStats) {
+      heroStats.innerHTML = (hero.stats || [])
+        .map(
+          (item, index) => `
+            <div class="sh-kpi-item">
+              <div class="ski-label">${escapeHtml(item.label || '指标')}</div>
+              <div class="ski-row"><div class="ski-num" style="color:${['var(--gold)','var(--sage)','var(--blue)','var(--orange)'][index % 4]}">${escapeHtml(item.value || '--')}</div><div class="ski-unit">${escapeHtml(item.unit || '')}</div></div>
+              <div class="ski-desc">${escapeHtml(item.detail || '')}</div>
             </div>
-            <h1>${escapeHtml(meta.title || '未命名周报')}</h1>
-            <p class="subtitle">${escapeHtml(meta.subtitle || '风险优先、责任闭环、状态可追踪')}</p>
-            <p class="summary">${escapeHtml(meta.summary || '暂无摘要')}</p>
-          </section>
+          `,
+        )
+        .join('')
+    }
 
-          <section class="severity-grid">
-            <article class="severity-card high">
-              <span>高风险</span>
-              <strong>${escapeHtml(severity.high)}</strong>
-              <p>建议优先升级处理并给出明确责任人与时点。</p>
-            </article>
-            <article class="severity-card medium">
-              <span>中风险</span>
-              <strong>${escapeHtml(severity.medium)}</strong>
-              <p>保持周度追踪，避免演化为跨部门阻塞。</p>
-            </article>
-            <article class="severity-card low">
-              <span>低风险</span>
-              <strong>${escapeHtml(severity.low)}</strong>
-              <p>进入观察名单，按周复盘即可。</p>
-            </article>
-          </section>
-        </header>
+    const bodyLayout = document.querySelector('.body-layout')
+    if (bodyLayout) {
+      bodyLayout.innerHTML = `
+        <div class="bl-col">
+          <div class="col-head"><div class="ch-label"><div class="ch-dot" style="background:var(--gold)"></div>内部协同</div><div class="ch-count">${escapeHtml(String((groups.internal || []).length))} ITEMS</div></div>
+          ${(groups.internal || []).map(renderStory).join('')}
+          <div style="padding:0 28px"><div style="border-top:1px solid var(--border);padding:16px 0"><div class="ch-label" style="margin-bottom:12px"><div class="ch-dot" style="background:var(--lavender)"></div>交流互访</div>${(groups.visit || []).slice(0,3).map((item) => `<div class="story-item" style="padding:12px 0;border-bottom:1px solid var(--border)"><div class="si-title" style="font-size:13px">${escapeHtml(item.title)}</div><div class="si-body" style="font-size:11.5px">${escapeHtml(item.body)}</div></div>`).join('')}</div></div>
+        </div>
+        <div class="bl-col">
+          <div class="col-head"><div class="ch-label"><div class="ch-dot" style="background:var(--coral)"></div>对外合作 · 体系建设</div><div class="ch-count">${escapeHtml(String((groups.cooperation || []).length + (groups.system || []).length))} ITEMS</div></div>
+          ${(groups.cooperation || []).map(renderStory).join('')}
+          <div style="padding:0 28px"><div style="border-top:1px solid var(--border);padding-top:16px;margin-top:4px"><div class="ch-label" style="margin-bottom:12px"><div class="ch-dot" style="background:var(--gold)"></div>体系建设</div></div></div>
+          ${(groups.system || []).map(renderStory).join('')}
+        </div>
+        <div class="bl-col">
+          <div class="col-head"><div class="ch-label"><div class="ch-dot" style="background:var(--lavender)"></div>数据看板</div></div>
+          <div class="dp-section"><div class="dp-title">关键数字</div><div class="dp-nums">${(data.keyMetrics || []).map((item, index) => `<div class="dp-num-cell"><div class="dn-val" style="color:${['var(--gold)','var(--sage)','var(--blue)','var(--orange)','var(--lavender)','var(--coral)'][index % 6]}">${escapeHtml(item.value || '--')}</div><div class="dn-label">${escapeHtml(item.label || '指标')}</div></div>`).join('')}</div></div>
+          <div class="dp-section"><div class="dp-title">博士答辩结果</div><div class="dp-donut-wrap"><div class="dp-legend" style="width:100%"><div class="dp-l-item"><div class="dp-l-dot" style="background:var(--sage)"></div><div class="dp-l-name">总人数</div><div class="dp-l-val">${escapeHtml(String(data.defense?.total || 0))}</div></div><div class="dp-l-item"><div class="dp-l-dot" style="background:var(--blue)"></div><div class="dp-l-name">开题通过</div><div class="dp-l-val">${escapeHtml(String(data.defense?.pass || 0))}</div></div><div class="dp-l-item"><div class="dp-l-dot" style="background:var(--coral)"></div><div class="dp-l-name">未通过</div><div class="dp-l-val">${escapeHtml(String(data.defense?.fail || 0))}</div></div><div class="dp-l-item"><div class="dp-l-dot" style="background:var(--gold)"></div><div class="dp-l-name">修改后通过</div><div class="dp-l-val">${escapeHtml(String(data.defense?.revised || 0))}</div></div></div></div></div>
+          <div class="dp-section"><div class="dp-title">合作推进度</div><div class="dp-prog-list">${renderDataProgress(data.cooperation || [], (item) => toneMeta(item).color)}</div></div>
+          <div class="dp-section"><div class="dp-title">本周国际亮点</div><div style="background:var(--surface2);border-radius:8px;padding:14px;border:1px solid var(--border)"><div style="font-size:28px;font-weight:800;color:var(--gold);font-family:'Syne',sans-serif;letter-spacing:-1px;line-height:1;margin-bottom:4px">${escapeHtml(String((data.international || []).length))}<span style="font-size:14px;color:var(--muted);font-weight:400">条亮点</span></div><div style="font-size:11px;color:var(--muted);margin-bottom:10px">来自交流互访与论坛活动</div>${(data.international || []).slice(0,4).map((item) => `<div style="font-size:10px;color:var(--muted);margin-bottom:6px">${escapeHtml(item.title)}</div>`).join('')}</div></div>
+        </div>
+      `
+    }
 
-        <section class="content-grid">
-          <article class="panel register-panel">
-            <div class="panel-head">
-              <h2>风险台账</h2>
-              <span>${escapeHtml(risks.length || 0)} 条风险记录</span>
-            </div>
-            <div class="risk-register">
-              ${toList(
-                risks,
-                (item, index) => `
-                  <article class="risk-entry ${levelClass(item.level)}">
-                    <div class="risk-entry-top">
-                      <span class="risk-index">R${String(index + 1).padStart(2, '0')}</span>
-                      <span class="risk-tag">${escapeHtml(levelLabel(item.level))}</span>
-                    </div>
-                    <h3>${escapeHtml(item.risk || '风险事项')}</h3>
-                    <p>${escapeHtml(item.mitigation || '暂无应对方案')}</p>
-                    <div class="risk-meta-row">
-                      <span>责任人：${escapeHtml(item.owner || '待明确')}</span>
-                      <span>状态：${escapeHtml(item.level || 'medium')}</span>
-                    </div>
-                  </article>
-                `,
-                `
-                  <article class="risk-entry low">
-                    <div class="risk-entry-top">
-                      <span class="risk-index">R00</span>
-                      <span class="risk-tag">低风险</span>
-                    </div>
-                    <h3>暂无显式风险</h3>
-                    <p>当前可继续保持例行监控与周度抽查。</p>
-                    <div class="risk-meta-row">
-                      <span>责任人：待明确</span>
-                      <span>状态：low</span>
-                    </div>
-                  </article>
-                `,
-              )}
-            </div>
-          </article>
+    const bottomStrip = document.querySelector('.bottom-strip')
+    if (bottomStrip) {
+      bottomStrip.innerHTML = `
+        <div class="bs-cell"><div class="bsc-label">报送对象</div><div class="bsc-val">${escapeHtml(footer.recipient || '相关负责人')}</div></div>
+        <div class="bs-cell"><div class="bsc-label">发送范围</div><div class="bsc-val">${escapeHtml(footer.distribution || '相关部门')}</div></div>
+        <div class="bs-cell"><div class="bsc-label">责编 / 核发</div><div class="bsc-val">责编：${escapeHtml(footer.editor || '（待填写）')} · 核发：${escapeHtml(footer.reviewer || '（待填写）')}</div></div>
+        <div class="bs-cell"><div class="bs-stamp">${escapeHtml(footer.dateOnly || '')}<br>${escapeHtml(masthead.issueLabel || '第 01 期')}</div></div>
+      `
+    }
 
-          <aside class="side-column">
-            <section class="panel action-panel">
-              <div class="panel-head">
-                <h2>闭环动作</h2>
-                <span>按节点推进整改</span>
-              </div>
-              <div class="action-stack">
-                ${toList(
-                  actions,
-                  (item, index) => `
-                    <article class="action-card">
-                      <span class="action-index">${String(index + 1).padStart(2, '0')}</span>
-                      <div class="action-body">
-                        <h3>${escapeHtml(item.task || '待补充动作')}</h3>
-                        <p>${escapeHtml(item.dependency || '无外部依赖')}</p>
-                        <div class="action-meta">
-                          <span>${escapeHtml(item.deadline || '待定')}</span>
-                          <span>${escapeHtml(item.owner || '待明确')}</span>
-                        </div>
-                      </div>
-                    </article>
-                  `,
-                  `
-                    <article class="action-card">
-                      <span class="action-index">00</span>
-                      <div class="action-body">
-                        <h3>暂无闭环动作</h3>
-                        <p>请补充整改计划与责任安排。</p>
-                        <div class="action-meta">
-                          <span>待定</span>
-                          <span>待明确</span>
-                        </div>
-                      </div>
-                    </article>
-                  `,
-                )}
-              </div>
-            </section>
-
-            <section class="panel watch-panel">
-              <div class="panel-head">
-                <h2>关键观察</h2>
-                <span>用于周会提示</span>
-              </div>
-              <ul class="watch-list">
-                ${toList(
-                  keyPoints,
-                  (item) => `<li>${escapeHtml(item)}</li>`,
-                  '<li>暂无关键观察</li>',
-                )}
-              </ul>
-            </section>
-          </aside>
-        </section>
-      </main>
-    `;
-
-    logBusinessJson('render_payload', {
-      templateId: payload.templateId,
-      severity,
-      risks: risks.length,
-      actions: actions.length,
-      keyPoints: keyPoints.length,
-    });
-
-    logSystem('info', '模板完成', {
-      elapsedMs: Number((performance.now() - start).toFixed(2)),
-      status: 'ok',
-    });
+    logBusinessJson('render_payload', { ticker: ticker.length, internal: (groups.internal || []).length, cooperation: (groups.cooperation || []).length, visit: (groups.visit || []).length, system: (groups.system || []).length })
+    logSystem('info', '模板完成', { elapsedMs: Number((performance.now() - startedAt).toFixed(2)) })
   } catch (error) {
-    const message = error instanceof Error ? error.message : '未知异常';
-    root.innerHTML = `<main class="tpl-page"><section class="panel"><h2>模板渲染失败</h2><p>${escapeHtml(message)}</p></section></main>`;
-    logBusinessJson('render_error', { message });
-    logSystem('error', '模板异常', { message });
+    logSystem('error', '模板渲染失败', { message: error instanceof Error ? error.message : String(error) })
   }
-})();
+})()
+
+const io=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{
+    if(!e.isIntersecting)return;
+    e.target.classList.add('vis');
+    e.target.querySelectorAll('[data-w]').forEach(el=>{
+      setTimeout(()=>el.style.width=el.dataset.w,300);
+    });
+    io.unobserve(e.target);
+  });
+},{threshold:.04});
+document.querySelectorAll('.story-item,.fade-up,.data-card').forEach(el=>io.observe(el));

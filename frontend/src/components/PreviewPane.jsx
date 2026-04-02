@@ -30,22 +30,21 @@ function buildGenerationSteps(activeStep, generationMode) {
 
 export function PreviewPane({
   generationMode,
+  copiedReady,
+  copyReady,
   previewState,
   previewDevice,
+  onCopyLink,
   onDeviceChange,
   onFullscreen,
-  onShare,
   onExport,
   fullscreenReady,
-  shareReady,
   exportReady,
   iframeHtml,
   iframeKey,
   previewTitle,
   templates,
   selectedTemplate,
-  onSelectTemplatePrev,
-  onSelectTemplateNext,
   progress,
   recentReports,
   showSuccessToast,
@@ -56,23 +55,9 @@ export function PreviewPane({
   const activeStep = steps.find((item) => item.status === 'running') ?? steps[steps.length - 1]
 
   return (
-    <section className="preview-pane-shell glass-panel">
+    <section className={`preview-pane-shell glass-panel preview-pane-shell--${previewState}`}>
       <div className="preview-toolbar">
         <div className="preview-toolbar__left">
-          {showTemplateRail ? (
-            <div className="preview-template-switcher">
-              <button className="template-nav-button" onClick={onSelectTemplatePrev} type="button">
-                ←
-              </button>
-              <div className="template-active-pill">
-                <span>{selectedTemplate.templateMeta.chip}</span>
-                <strong>{selectedTemplate.templateMeta.title}</strong>
-              </div>
-              <button className="template-nav-button" onClick={onSelectTemplateNext} type="button">
-                →
-              </button>
-            </div>
-          ) : null}
           <div className="device-toggle">
             <button
               className={previewDevice === 'desktop' ? 'is-active' : ''}
@@ -92,31 +77,56 @@ export function PreviewPane({
         </div>
 
         <div className="preview-toolbar__right">
-          <button className="toolbar-button" disabled={!fullscreenReady} onClick={onFullscreen} type="button">
-            ⛶ 全屏
+          <button className="toolbar-button toolbar-button--ghost" disabled={!fullscreenReady} onClick={onFullscreen} type="button">
+            <span className="toolbar-button__icon" aria-hidden="true">
+              ⛶
+            </span>
+            <span>全屏</span>
           </button>
-          <button className="toolbar-button" disabled={!shareReady} onClick={onShare} type="button">
-            ↗ 分享
+          <button
+            className={`toolbar-button toolbar-button--ghost ${copiedReady ? 'toolbar-button--copied' : ''}`}
+            disabled={!copyReady}
+            onClick={onCopyLink}
+            type="button"
+          >
+            <span className="toolbar-button__icon" aria-hidden="true">
+              ⧉
+            </span>
+            <span>{copiedReady ? '已复制' : '复制链接'}</span>
           </button>
-          <button className="toolbar-button" disabled={!exportReady} onClick={onExport} type="button">
-            ⬇ 导出 HTML
+          <button className="toolbar-button toolbar-button--primary" disabled={!exportReady} onClick={onExport} type="button">
+            <span className="toolbar-button__icon" aria-hidden="true">
+              ⬇
+            </span>
+            <span>导出 HTML</span>
           </button>
         </div>
       </div>
 
-      <div className="preview-stage" ref={previewStageRef}>
+      <div className={`preview-stage preview-stage--${previewState}`} ref={previewStageRef}>
+        <div className="preview-atmosphere" aria-hidden="true">
+          <span className="preview-atmosphere__aurora" />
+          <span className="preview-atmosphere__rays" />
+          <span className="preview-atmosphere__grain" />
+        </div>
+
         {previewState === 'idle' ? (
           <div className="idle-state">
             <div className="orbital-wrapper">
+              <span className="orbital-halo orbital-halo--outer" />
+              <span className="orbital-halo orbital-halo--inner" />
               <svg className="orbital-sphere" viewBox="0 0 240 240" aria-hidden="true">
                 <circle cx="120" cy="120" r="76" />
                 <ellipse cx="120" cy="120" rx="92" ry="32" />
                 <ellipse cx="120" cy="120" rx="92" ry="32" transform="rotate(60 120 120)" />
                 <ellipse cx="120" cy="120" rx="92" ry="32" transform="rotate(120 120 120)" />
               </svg>
+              <span className="orbital-spark orbital-spark--1" />
+              <span className="orbital-spark orbital-spark--2" />
+              <span className="orbital-spark orbital-spark--3" />
               <span className="orbital-core" />
             </div>
-            <p>{generationMode === 'llm-html' ? 'LLM 模式下将直接展示模型返回的 HTML 页面。' : '在顶部切换模板后，点击生成即可。'}</p>
+            <p>{generationMode === 'llm-html' ? 'LLM 模式下将直接展示模型返回的 HTML 页面。' : '在中间模板卡片列选择模板后，点击生成即可。'}</p>
 
             {recentReports.length > 0 ? (
               <div className="recent-reports">
@@ -134,13 +144,13 @@ export function PreviewPane({
 
             {showTemplateRail && templates.length > 0 ? (
               <div className="idle-template-hint">
-                已接入 {templates.length} 个内置模板，支持左右快速切换
+                已接入 {templates.length} 个内置模板，支持纵向滚动浏览并点击切换
               </div>
             ) : null}
           </div>
         ) : null}
 
-        {previewState === 'template' || previewState === 'done' ? (
+        {previewState === 'done' ? (
           <div className={`iframe-shell ${previewDevice === 'mobile' ? 'is-mobile' : ''}`}>
             <iframe
               key={iframeKey}

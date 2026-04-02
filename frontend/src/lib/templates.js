@@ -19,15 +19,6 @@ import template06Js from '../../../template/06/app.js?raw'
 import template07Html from '../../../template/07/index.html?raw'
 import template07Css from '../../../template/07/style.css?raw'
 import template07Js from '../../../template/07/app.js?raw'
-import template08Html from '../../../template/08/index.html?raw'
-import template08Css from '../../../template/08/style.css?raw'
-import template08Js from '../../../template/08/app.js?raw'
-import template09Html from '../../../template/09/index.html?raw'
-import template09Css from '../../../template/09/style.css?raw'
-import template09Js from '../../../template/09/app.js?raw'
-import template10Html from '../../../template/10/index.html?raw'
-import template10Css from '../../../template/10/style.css?raw'
-import template10Js from '../../../template/10/app.js?raw'
 
 const templateAssets = {
   'template-01': { html: template01Html, css: template01Css, js: template01Js },
@@ -37,9 +28,6 @@ const templateAssets = {
   'template-05': { html: template05Html, css: template05Css, js: template05Js },
   'template-06': { html: template06Html, css: template06Css, js: template06Js },
   'template-07': { html: template07Html, css: template07Css, js: template07Js },
-  'template-08': { html: template08Html, css: template08Css, js: template08Js },
-  'template-09': { html: template09Html, css: template09Css, js: template09Js },
-  'template-10': { html: template10Html, css: template10Css, js: template10Js },
 }
 
 const fallbackSections = [
@@ -56,143 +44,101 @@ const fallbackSections = [
 export const templateCatalog = [
   {
     id: 'template-01',
-    renderer: 'narrative',
-    name: '部门叙事版',
-    title: '叙事型周报可视化',
-    description: '模板资产位于 template/01，强调关键指标与章节叙事。',
-    accent: '#0f766e',
-    chip: 'TEMPLATE/01',
-    focus: '适合跨部门综合汇报，平衡结果与过程叙事。',
-    bestFor: '院办/综合管理',
-    departmentTags: ['comprehensive', 'teaching', 'international'],
-    audienceTags: ['director', 'executive'],
-    moduleBlueprint: ['摘要总览', '关键指标', '重点章节叙事', '下周动作'],
+    renderer: 'minimal',
+    name: '极简版',
+    title: '极简周报版式',
+    description: '基于原始极简 HTML 拆分，突出大标题、表格进展和数据墙。',
+    accent: '#121212',
+    chip: 'MINIMAL/01',
+    focus: '适合正式汇报、快速浏览和打印归档。',
+    bestFor: '管理层简报',
+    departmentTags: ['comprehensive', 'operations', 'research', 'teaching'],
+    audienceTags: ['director', 'executive', 'operations'],
+    moduleBlueprint: ['封面摘要', '重点要览', '四象限工作', '数据看板', '签发信息'],
   },
   {
     id: 'template-02',
-    renderer: 'dashboard',
-    name: '运营驾驶舱',
-    title: '控制台信息密度',
-    description: '模板资产位于 template/02，偏仪表盘和模块化表达。',
-    accent: '#4f46e5',
-    chip: 'TEMPLATE/02',
-    focus: '强调指标、状态与执行节奏，便于运营追踪。',
-    bestFor: '运营保障/项目管理',
-    departmentTags: ['operations', 'comprehensive', 'talent'],
-    audienceTags: ['operations', 'executive'],
-    moduleBlueprint: ['执行总览', '指标面板', '模块状态卡片', '任务分派'],
+    renderer: 'magazine',
+    name: '杂志版',
+    title: '杂志封面周报',
+    description: '保留原杂志感封面、目录、专题导读和图表区。',
+    accent: '#C8382A',
+    chip: 'MAGAZINE/02',
+    focus: '适合品牌感较强的汇报场景和对外展示式周报。',
+    bestFor: '专题汇报 / 品牌展示',
+    departmentTags: ['comprehensive', 'international', 'research'],
+    audienceTags: ['director', 'executive'],
+    moduleBlueprint: ['封面主稿', '要览导读', '分栏工作', '数据图表', '签发信息'],
   },
   {
     id: 'template-03',
-    renderer: 'brief',
-    name: '正式简报版',
-    title: '简洁正式白底版',
-    description: '模板资产位于 template/03，适合汇报归档与打印阅读。',
-    accent: '#1d4ed8',
-    chip: 'TEMPLATE/03',
-    focus: '强调规范表达与可打印归档。',
-    bestFor: '正式上会材料',
-    departmentTags: ['research', 'teaching', 'operations', 'comprehensive'],
-    audienceTags: ['director', 'executive', 'operations', 'risk'],
-    moduleBlueprint: ['摘要', '关键亮点', '章节要点', '归档信息'],
+    renderer: 'ink',
+    name: '国风版',
+    title: '国风卷轴周报',
+    description: '完整保留宣纸、水墨、卷轴、章回式结构和进度卷轴。',
+    accent: '#C41E3A',
+    chip: 'INK/03',
+    focus: '适合高辨识度展示，强调仪式感与章节叙事。',
+    bestFor: '特色汇报 / 对外展示',
+    departmentTags: ['comprehensive', 'international', 'teaching'],
+    audienceTags: ['director', 'executive'],
+    moduleBlueprint: ['封面信息', '卷轴要览', '四类重点工作', '数据板块', '签发信息'],
   },
   {
     id: 'template-04',
-    renderer: 'strategy',
-    name: '战略总览版',
-    title: '领导决策总览',
-    description: '模板资产位于 template/04，突出目标进展、风险和决策请求。',
-    accent: '#2563eb',
-    chip: 'TEMPLATE/04',
-    focus: '为领导快速决策提供结构化输入。',
-    bestFor: '院长/主任',
-    departmentTags: ['comprehensive', 'research', 'operations'],
-    audienceTags: ['director', 'executive'],
-    moduleBlueprint: ['战略摘要', '关键指标', '进展与风险', '决策请求', '资源诉求'],
+    renderer: 'dashboard-plus',
+    name: '仪表盘版',
+    title: '控制台仪表盘周报',
+    description: '保留深色驾驶舱、时间线、看板、数值墙和侧边导航。',
+    accent: '#00E5FF',
+    chip: 'DASHBOARD/04',
+    focus: '适合执行追踪、项目例会和高频运营复盘。',
+    bestFor: '运营周会 / 项目推进',
+    departmentTags: ['operations', 'research', 'comprehensive'],
+    audienceTags: ['operations', 'executive'],
+    moduleBlueprint: ['头部 KPI', '时间线要览', '分类看板', '数据可视化', '签发信息'],
   },
   {
     id: 'template-05',
-    renderer: 'risk',
-    name: '风控合规版',
-    title: '风险与闭环追踪',
-    description: '模板资产位于 template/05，强化风险等级、应对动作和责任闭环。',
-    accent: '#b91c1c',
-    chip: 'TEMPLATE/05',
-    focus: '风险优先、问题闭环、责任明确。',
-    bestFor: '风控/审计/督办',
-    departmentTags: ['operations', 'comprehensive', 'international', 'talent'],
-    audienceTags: ['risk', 'operations', 'executive'],
-    moduleBlueprint: ['风险清单', '风险等级', '闭环动作', '责任人', '关键观察'],
+    renderer: 'news',
+    name: '新闻简报版',
+    title: '新闻简报周报',
+    description: '保留新闻刊头、ticker、三栏正文和右侧数据面板。',
+    accent: '#F5C842',
+    chip: 'NEWS/05',
+    focus: '适合信息密度高、亮点多的简报型周报。',
+    bestFor: '简报速览 / 内参',
+    departmentTags: ['comprehensive', 'international', 'operations'],
+    audienceTags: ['director', 'executive', 'operations'],
+    moduleBlueprint: ['刊头 ticker', '主头条', '双列故事流', '数据边栏', '签发信息'],
   },
   {
     id: 'template-06',
-    renderer: 'pipeline',
-    name: '科研管线版',
-    title: '课题与成果管线',
-    description: '模板资产位于 template/06，聚焦科研项目进度与里程碑。',
-    accent: '#0f766e',
-    chip: 'TEMPLATE/06',
-    focus: '项目管线视角呈现科研推进状态。',
-    bestFor: '科研管理/学术委员会',
-    departmentTags: ['research'],
-    audienceTags: ['director', 'executive', 'operations'],
-    moduleBlueprint: ['科研摘要', '管线指标', '项目分阶段进展', '下一步关键动作'],
+    renderer: 'journal',
+    name: '学术期刊版',
+    title: '学术期刊周报',
+    description: '保留论文期刊排版、摘要、双栏正文、表格和脚注信息。',
+    accent: '#8B1A1A',
+    chip: 'JOURNAL/06',
+    focus: '适合严肃、长文本、可存档的研究或管理周报。',
+    bestFor: '归档材料 / 学术管理',
+    departmentTags: ['research', 'teaching', 'comprehensive'],
+    audienceTags: ['director', 'executive', 'risk'],
+    moduleBlueprint: ['刊头', '摘要', 'KPI 行', '双栏正文', '表格与脚注'],
   },
   {
     id: 'template-07',
-    renderer: 'strategy',
-    name: '执行推进版',
-    title: '任务推进与责任看板',
-    description: '模板资产位于 template/07，强调任务状态、责任分工与跨部门依赖。',
-    accent: '#1d4ed8',
-    chip: 'TEMPLATE/07',
-    focus: '适合执行层周会，突出任务推进节奏和责任链。',
-    bestFor: '项目经理/执行负责人',
-    departmentTags: ['operations', 'teaching', 'talent', 'comprehensive'],
-    audienceTags: ['operations', 'executive'],
-    moduleBlueprint: ['执行摘要', '任务进展', '阻塞与依赖', '下周排期'],
-  },
-  {
-    id: 'template-08',
-    renderer: 'dashboard',
-    name: '预算资源版',
-    title: '预算与资源配置看板',
-    description: '模板资产位于 template/08，突出预算执行、资源投入产出与瓶颈。',
-    accent: '#4f46e5',
-    chip: 'TEMPLATE/08',
-    focus: '适合财务和综合管理视角，强调投入产出与资源配置。',
-    bestFor: '财务/综合管理',
-    departmentTags: ['operations', 'comprehensive', 'research'],
-    audienceTags: ['executive', 'director', 'operations'],
-    moduleBlueprint: ['预算执行摘要', '投入产出指标', '资源诉求', '风险与建议'],
-  },
-  {
-    id: 'template-09',
-    renderer: 'narrative',
-    name: '国际合作版',
-    title: '国际合作进展简报',
-    description: '模板资产位于 template/09，聚焦合作项目、外联节点与品牌影响。',
-    accent: '#0f766e',
-    chip: 'TEMPLATE/09',
-    focus: '适合国际合作条线，强调活动节奏、合作成果和后续窗口。',
-    bestFor: '国际合作/对外事务',
-    departmentTags: ['international', 'comprehensive'],
-    audienceTags: ['director', 'executive'],
-    moduleBlueprint: ['合作摘要', '外联指标', '重点合作进展', '窗口期风险', '下周行动'],
-  },
-  {
-    id: 'template-10',
-    renderer: 'brief',
-    name: '人才发展版',
-    title: '人才与组织发展简报',
-    description: '模板资产位于 template/10，聚焦引才、考核、培训与组织机制优化。',
-    accent: '#1d4ed8',
-    chip: 'TEMPLATE/10',
-    focus: '适合人才人事部门，强调组织能力建设与机制落地。',
-    bestFor: '人才人事/组织发展',
-    departmentTags: ['talent', 'comprehensive'],
+    renderer: 'cyber',
+    name: '赛博版',
+    title: '赛博控制台周报',
+    description: '保留矩阵雨、霓虹 HUD、矩阵卡片和终端式元信息。',
+    accent: '#00FFFF',
+    chip: 'CYBER/07',
+    focus: '适合技术、创新、AI 项目类汇报，视觉冲击强。',
+    bestFor: '技术周报 / 创新项目',
+    departmentTags: ['research', 'operations', 'international'],
     audienceTags: ['executive', 'operations', 'director'],
-    moduleBlueprint: ['人才摘要', '关键指标', '组织动作', '风险与支持请求'],
+    moduleBlueprint: ['系统封面', 'HUD 要览', '矩阵工作流', '数据终端', '元信息终端'],
   },
 ]
 
@@ -234,14 +180,7 @@ function normalizeDocument(document) {
 }
 
 function buildTemplatePayload(templateMeta, document, generatedAt) {
-  const highlights = pickHighlights(document)
-  const metrics = pickMetrics(document)
-  const progress = pickProgress(document)
-  const risks = pickRisks(document)
-  const actions = pickActions(document)
-  const keyPoints = (document.key_points ?? []).slice(0, 10)
-  const decisions = (document.decision_requests ?? []).slice(0, 10)
-  const resources = (document.resource_requests ?? []).slice(0, 10)
+  const shared = buildSharedData(document, generatedAt, templateMeta)
 
   const payload = {
     templateId: templateMeta.id,
@@ -261,160 +200,559 @@ function buildTemplatePayload(templateMeta, document, generatedAt) {
       departmentFocus: document.department_focus || '',
       audienceFocus: document.audience_focus || '',
     },
-    keyPoints,
-    decisions,
-    resources,
+    keyPoints: shared.keyPoints,
+    decisions: shared.decisions,
+    resources: shared.resources,
     viewModel: {},
   }
 
-  if (templateMeta.renderer === 'narrative') {
-    payload.viewModel.narrative = {
-      highlights,
-      stories: buildStories(document.sections),
-      actions,
-    }
+  if (templateMeta.id === 'template-01') {
+    payload.viewModel.minimal = buildMinimalViewModel(shared)
     return payload
   }
 
-  if (templateMeta.renderer === 'dashboard') {
-    payload.viewModel.dashboard = {
-      kpis: metrics,
-      progress,
-      risks,
-      actions,
-    }
+  if (templateMeta.id === 'template-02') {
+    payload.viewModel.magazine = buildMagazineViewModel(shared)
     return payload
   }
 
-  if (templateMeta.renderer === 'brief') {
-    payload.viewModel.brief = {
-      highlights,
-      sectionAbstracts: buildSectionAbstracts(document.sections),
-    }
+  if (templateMeta.id === 'template-03') {
+    payload.viewModel.ink = buildInkViewModel(shared)
     return payload
   }
 
-  if (templateMeta.renderer === 'strategy') {
-    payload.viewModel.strategy = {
-      kpis: metrics,
-      progress,
-      risks,
-      decisions,
-      resources,
-    }
+  if (templateMeta.id === 'template-04') {
+    payload.viewModel.dashboardPlus = buildDashboardViewModel(shared)
     return payload
   }
 
-  if (templateMeta.renderer === 'risk') {
-    payload.viewModel.risk = {
-      risks,
-      actions,
-      keyPoints,
-    }
+  if (templateMeta.id === 'template-05') {
+    payload.viewModel.news = buildNewsViewModel(shared)
     return payload
   }
 
-  payload.viewModel.pipeline = {
-    metrics,
-    stages: progress,
-    actions,
+  if (templateMeta.id === 'template-06') {
+    payload.viewModel.journal = buildJournalViewModel(shared)
+    return payload
   }
+
+  payload.viewModel.cyber = buildCyberViewModel(shared)
   return payload
 }
 
-function pickHighlights(document) {
-  const highlights = document.highlights ?? []
-  if (highlights.length > 0) {
-    return highlights.slice(0, 6)
+function buildSharedData(document, generatedAt, templateMeta) {
+  const stats = buildStats(document, 6)
+  const overview = buildOverviewItems(document, 5)
+  const groups = buildWorkGroups(document)
+  const defense = extractDefenseStats(document)
+  const keyMetrics = buildMetricWall(document, stats, defense)
+  const footer = buildFooter(document, generatedAt)
+  const issued = formatDateParts(generatedAt)
+  const metaLine = {
+    periodText: document.subtitle || '本周汇总周期',
+    issuedText: issued.display,
+    issuedDateText: issued.dateOnly,
+    issuedMachineText: issued.isoLike,
+    issueLabel: `第 ${String(issued.issueNumber).padStart(2, '0')} 期`,
+    unitText: document.department_focus || 'file2web 自动生成',
+    title: document.title,
+    subtitle: document.subtitle,
+    summary: document.summary,
   }
 
-  return (document.metrics ?? []).slice(0, 6).map((item) => ({
-    label: item.name,
-    value: item.value,
-    detail: item.note || item.trend || '',
-  }))
+  return {
+    document,
+    templateMeta,
+    generatedAt,
+    metaLine,
+    stats,
+    overview,
+    groups,
+    defense,
+    footer,
+    keyMetrics,
+    keyPoints: (document.key_points ?? []).slice(0, 8),
+    decisions: (document.decision_requests ?? []).slice(0, 6),
+    resources: (document.resource_requests ?? []).slice(0, 6),
+    cooperationProgress: groups.cooperation.slice(0, 6),
+    systemProgress: groups.system.slice(0, 6),
+    visitProgress: groups.visit.slice(0, 6),
+    internalProgress: groups.internal.slice(0, 8),
+  }
 }
 
-function pickMetrics(document) {
-  if ((document.metrics ?? []).length > 0) {
-    return (document.metrics ?? []).slice(0, 8)
+function buildMinimalViewModel(shared) {
+  return {
+    hero: {
+      eyebrow: shared.metaLine.unitText ? `${shared.metaLine.unitText} · 内部周报` : '自动生成 · 内部周报',
+      title: shared.metaLine.title,
+      summary: shared.metaLine.summary,
+      period: shared.metaLine.periodText,
+      unit: shared.footer.issuedBy,
+      issuedAt: shared.metaLine.issuedText,
+      bgNumber: String(shared.metaLine.issueLabel.match(/\d+/)?.[0] || '1').padStart(2, '0'),
+    },
+    stats: shared.stats.slice(0, 5),
+    overview: shared.overview,
+    groups: shared.groups,
+    data: {
+      keyMetrics: shared.keyMetrics.slice(0, 9),
+      cooperation: shared.cooperationProgress.slice(0, 6),
+      system: shared.systemProgress.slice(0, 5),
+    },
+    footer: shared.footer,
   }
-  return pickHighlights(document).map((item) => ({
-    name: item.label,
-    value: item.value,
-    trend: '',
-    note: item.detail,
-  }))
 }
 
-function pickProgress(document) {
-  if ((document.progress_items ?? []).length > 0) {
-    return (document.progress_items ?? []).slice(0, 12)
+function buildMagazineViewModel(shared) {
+  return {
+    cover: {
+      issueLabel: `Vol.${String(shared.metaLine.issueLabel.match(/\d+/)?.[0] || '1').padStart(2, '0')} · ${shared.metaLine.issuedDateText.slice(0, 4)} · ${shared.metaLine.issueLabel}`,
+      headline: shared.overview[0]?.title || shared.metaLine.title,
+      decks: [shared.metaLine.summary, ...(shared.keyPoints ?? []).slice(0, 1)],
+      period: shared.metaLine.periodText,
+      unit: shared.footer.issuedBy,
+    },
+    stats: shared.stats.slice(0, 4),
+    toc: ['本周要览', '重点工作', '数据看板', '签发信息'],
+    overview: shared.overview,
+    groups: shared.groups,
+    data: {
+      keyMetrics: shared.keyMetrics.slice(0, 6),
+      defense: shared.defense,
+      cooperation: shared.cooperationProgress.slice(0, 6),
+    },
+    footer: shared.footer,
   }
-  return buildStories(document.sections).slice(0, 10).map((item) => ({
-    stream: item.title,
-    status: item.tag || '进行中',
-    outcome: item.body,
-    owner: '待明确',
-  }))
 }
 
-function pickRisks(document) {
-  if ((document.risk_items ?? []).length > 0) {
-    return (document.risk_items ?? []).slice(0, 12)
+function buildInkViewModel(shared) {
+  return {
+    cover: {
+      enTitle: `${shared.footer.issuedBy || 'file2web'} · Weekly Report`,
+      title: shared.metaLine.title,
+      subTitle: shared.metaLine.issueLabel,
+      period: shared.metaLine.periodText,
+      issuedAt: shared.metaLine.issuedText,
+      unit: shared.footer.issuedBy,
+      stats: shared.stats.slice(0, 5),
+    },
+    overview: shared.overview,
+    groups: shared.groups,
+    data: {
+      keyMetrics: shared.keyMetrics.slice(0, 6),
+      cooperation: shared.cooperationProgress.slice(0, 6),
+      system: shared.systemProgress.slice(0, 6),
+      defense: shared.defense,
+    },
+    footer: shared.footer,
+  }
+}
+
+function buildDashboardViewModel(shared) {
+  return {
+    hero: {
+      title: shared.metaLine.title,
+      subtitle: `${shared.footer.issuedBy} · ${shared.metaLine.issueLabel} · 内部资料`,
+      issuedAt: `${shared.metaLine.issuedDateText.replace(/-/g, '.')} ISSUED`,
+      period: shared.metaLine.periodText,
+    },
+    stats: shared.stats.slice(0, 5),
+    overview: shared.overview,
+    groups: shared.groups,
+    data: {
+      cooperation: shared.cooperationProgress.slice(0, 6),
+      defense: shared.defense,
+      keyMetrics: shared.keyMetrics.slice(0, 6),
+    },
+    summaryCounts: summarizeGroupCounts(shared.groups),
+    footer: shared.footer,
+  }
+}
+
+function buildNewsViewModel(shared) {
+  return {
+    masthead: {
+      brand: shared.footer.issuedBy,
+      date: shared.metaLine.issuedDateText.replace(/-/g, '·'),
+      issueLabel: shared.metaLine.issueLabel,
+    },
+    ticker: shared.keyMetrics.slice(0, 6),
+    hero: {
+      eyebrow: '本周要览',
+      headline: shared.overview[0]?.title || shared.metaLine.title,
+      deck: shared.metaLine.summary,
+      stats: shared.stats.slice(0, 4),
+    },
+    groups: shared.groups,
+    data: {
+      keyMetrics: shared.keyMetrics.slice(0, 6),
+      defense: shared.defense,
+      cooperation: shared.cooperationProgress.slice(0, 6),
+      international: shared.visitProgress.slice(0, 6),
+    },
+    footer: shared.footer,
+  }
+}
+
+function buildJournalViewModel(shared) {
+  return {
+    header: {
+      title: shared.metaLine.title,
+      subtitle: shared.metaLine.subtitle,
+      issueLabel: shared.metaLine.issueLabel,
+      issuedAt: shared.metaLine.issuedText,
+      period: shared.metaLine.periodText,
+      tags: buildSectionTags(shared.groups),
+    },
+    abstract: shared.metaLine.summary,
+    stats: shared.stats.slice(0, 5),
+    overview: shared.overview,
+    groups: shared.groups,
+    data: {
+      defense: shared.defense,
+      cooperation: shared.cooperationProgress.slice(0, 6),
+      system: shared.systemProgress.slice(0, 6),
+    },
+    footer: shared.footer,
+  }
+}
+
+function buildCyberViewModel(shared) {
+  return {
+    hero: {
+      line: `SYS_INIT: LOADING_REPORT_MODULE_${shared.metaLine.issuedDateText.replace(/-/g, '.')} ... [OK]`,
+      subtitle: `${shared.footer.issuedBy} · ${shared.metaLine.issueLabel}`,
+      desc: `REPORT_PERIOD: ${shared.metaLine.periodText} | ISSUED: ${shared.metaLine.issuedText} | UNIT: ${shared.footer.issuedBy}`,
+    },
+    stats: shared.stats.slice(0, 5),
+    overview: shared.overview,
+    groups: shared.groups,
+    data: {
+      keyMetrics: shared.keyMetrics.slice(0, 6),
+      defense: shared.defense,
+      system: shared.systemProgress.slice(0, 5),
+      cooperation: shared.cooperationProgress.slice(0, 6),
+    },
+    footer: shared.footer,
+  }
+}
+
+function buildStats(document, count) {
+  const seeds = []
+
+  ;(document.metrics ?? []).forEach((item) => {
+    seeds.push({
+      label: item.name || '关键指标',
+      value: item.value || '--',
+      detail: item.note || item.trend || '持续跟踪中',
+    })
+  })
+
+  ;(document.highlights ?? []).forEach((item) => {
+    seeds.push({
+      label: item.label || '亮点',
+      value: item.value || '--',
+      detail: item.detail || '重点关注',
+    })
+  })
+
+  if (seeds.length === 0) {
+    buildOverviewItems(document, count).forEach((item, index) => {
+      seeds.push({
+        label: item.tag || `重点 ${index + 1}`,
+        value: String(index + 1),
+        detail: item.title,
+      })
+    })
   }
 
-  const riskSection = document.sections.find((section) => section.title.includes('风险') || section.title.includes('问题'))
-  if (!riskSection) {
-    return [{ risk: '暂无显式风险条目', level: 'low', mitigation: '持续监控并按周复盘。', owner: '待明确' }]
-  }
+  return dedupeByLabel(seeds)
+    .slice(0, count)
+    .map((item, index) => {
+      const { numeric, display, unit } = splitValueUnit(item.value)
+      return {
+        label: item.label,
+        value: display,
+        unit,
+        detail: item.detail,
+        target: numeric,
+        tone: index % 5,
+      }
+    })
+}
 
-  const items = riskSection.items.slice(0, 8).map((item) => ({
-    risk: item.title,
-    level: 'medium',
-    mitigation: item.body,
-    owner: '待明确',
-  }))
+function buildOverviewItems(document, count) {
+  const fromSections = document.sections
+    .flatMap((section) =>
+      section.items.map((item) => ({
+        tag: item.tag || section.title,
+        title: item.title,
+        body: item.body,
+      })),
+    )
+    .filter((item) => item.title || item.body)
+
+  const items = (fromSections.length > 0
+    ? fromSections
+    : (document.highlights ?? []).map((item) => ({
+        tag: item.label || '亮点',
+        title: `${item.label || '亮点'} ${item.value ? `· ${item.value}` : ''}`.trim(),
+        body: item.detail || document.summary,
+      })))
+    .slice(0, count)
+    .map((item, index) => ({
+      ...item,
+      number: String(index + 1).padStart(2, '0'),
+      tone: overviewTone(index),
+    }))
 
   return items.length > 0
     ? items
-    : [{ risk: '暂无显式风险条目', level: 'low', mitigation: '持续监控并按周复盘。', owner: '待明确' }]
+    : [
+        {
+          tag: '自动结构化',
+          title: '当前原文未提取出足够的重点条目',
+          body: document.summary,
+          number: '01',
+          tone: overviewTone(0),
+        },
+      ]
 }
 
-function pickActions(document) {
-  if ((document.next_actions ?? []).length > 0) {
-    return (document.next_actions ?? []).slice(0, 12)
+function buildWorkGroups(document) {
+  const groups = {
+    internal: [],
+    cooperation: [],
+    visit: [],
+    system: [],
   }
 
-  const fallback = (document.key_points ?? []).slice(0, 8).map((item) => ({
-    task: item,
-    deadline: '下周',
-    owner: '待明确',
-    dependency: '',
-  }))
+  document.sections.forEach((section) => {
+    const bucket = classifyGroup(section.title)
+    section.items.forEach((item) => {
+      groups[bucket].push(toWorkItem(item.title, item.body, item.tag || section.title))
+    })
+  })
 
-  return fallback.length > 0
-    ? fallback
-    : [{ task: '补充下周行动计划', deadline: '下周', owner: '待明确', dependency: '' }]
-}
-
-function buildStories(sections) {
-  return sections
-    .flatMap((section) =>
-      section.items.map((item) => ({
-        title: item.title,
-        body: item.body,
-        tag: item.tag || section.title,
-      })),
+  ;(document.progress_items ?? []).forEach((item) => {
+    const bucket = classifyGroup(item.stream || item.status || '')
+    groups[bucket].push(
+      toWorkItem(
+        item.stream || '推进事项',
+        [item.outcome, item.owner ? `责任人：${item.owner}` : '', item.dependency ? `依赖：${item.dependency}` : '']
+          .filter(Boolean)
+          .join('；'),
+        item.status || '进行中',
+      ),
     )
-    .slice(0, 12)
+  })
+
+  ;(document.risk_items ?? []).slice(0, 4).forEach((item) => {
+    groups.system.push(
+      toWorkItem(item.risk, item.mitigation, item.level || 'medium'),
+    )
+  })
+
+  if (groups.internal.length === 0) {
+    buildOverviewItems(document, 4).forEach((item) => {
+      groups.internal.push(toWorkItem(item.title, item.body, item.tag))
+    })
+  }
+
+  const fallbackKeys = ['internal', 'cooperation', 'visit', 'system']
+  fallbackKeys.forEach((key, index) => {
+    if (groups[key].length === 0) {
+      groups[key].push(
+        toWorkItem(
+          `${['内部协同', '对外合作', '交流互访', '体系建设'][index]}待补充`,
+          '当前原文未显式抽取到该分类条目，可在原始文档中补充更明确的小节标题。',
+          '待补充',
+        ),
+      )
+    }
+    groups[key] = groups[key].slice(0, key === 'internal' ? 8 : 6)
+  })
+
+  return groups
 }
 
-function buildSectionAbstracts(sections) {
-  return sections.slice(0, 10).map((section) => ({
-    title: section.title,
-    description: section.description || section.items[0]?.body || '待补充',
-  }))
+function buildMetricWall(document, stats, defense) {
+  const items = [
+    ...stats.map((item) => ({
+      label: item.label,
+      value: item.value,
+      unit: item.unit,
+      sub: item.detail,
+    })),
+  ]
+
+  if (defense.total > 0) {
+    items.push({ label: '答辩总人数', value: String(defense.total), unit: '人', sub: `开题通过 ${defense.pass} 人` })
+  }
+
+  ;(document.resource_requests ?? []).slice(0, 2).forEach((item, index) => {
+    items.push({ label: `资源诉求 ${index + 1}`, value: String(index + 1), unit: '项', sub: item })
+  })
+
+  return items.slice(0, 12)
+}
+
+function extractDefenseStats(document) {
+  const joined = [
+    ...document.sections
+      .filter((section) => /答辩|开题|博士/.test(section.title))
+      .flatMap((section) => [section.description || '', ...section.items.map((item) => `${item.title} ${item.body}`)]),
+    ...(document.progress_items ?? []).map((item) => `${item.stream} ${item.outcome}`),
+  ].join(' ')
+
+  const total = extractNumber(joined, /(参加|总人数|共)\s*(\d+)/) || 0
+  const pass = extractNumber(joined, /开题通过\s*(\d+)/) || 0
+  const fail = extractNumber(joined, /未通过\s*(\d+)/) || 0
+  const revised = extractNumber(joined, /修改后通过\s*(\d+)/) || 0
+  const exam = extractNumber(joined, /博资考通过\s*(\d+)/) || 0
+
+  const safeTotal = total || pass + fail + revised + exam
+  return {
+    total: safeTotal,
+    pass,
+    fail,
+    revised,
+    exam,
+  }
+}
+
+function buildFooter(document, generatedAt) {
+  return {
+    issuedBy: document.department_focus || '自动生成周报',
+    recipient: document.audience_focus || '相关负责人',
+    distribution: document.department_focus || '相关部门',
+    editor: '（待填写）',
+    reviewer: '（待填写）',
+    date: formatDateParts(generatedAt).display,
+    dateOnly: formatDateParts(generatedAt).dateOnly,
+    timestamp: formatDateParts(generatedAt).isoLike,
+  }
+}
+
+function classifyGroup(title) {
+  const text = String(title || '')
+  if (/交流|互访|论坛|访问|会议|活动/.test(text)) return 'visit'
+  if (/合作|外部|联动|国际/.test(text)) return 'cooperation'
+  if (/体系|制度|机制|平台|系统|课程|图谱|建设|办法/.test(text)) return 'system'
+  return 'internal'
+}
+
+function toWorkItem(title, body, status) {
+  const progress = inferProgress(status, body)
+  return {
+    title: title || '待补充事项',
+    body: body || '暂无补充说明。',
+    status: normalizeStatusLabel(status),
+    progress,
+    tone: statusTone(status, progress),
+  }
+}
+
+function inferProgress(status, body) {
+  const text = `${status || ''} ${body || ''}`
+  const explicit = extractNumber(text, /(\d{1,3})\s*%/)
+  if (explicit) return Math.max(0, Math.min(100, explicit))
+  if (/已完成|完成|通过|印发|发布|DONE|ISSUED|COUNCIL_PASS/.test(text)) return 100
+  if (/搁置|暂停|待解决|ON_HOLD/.test(text)) return 25
+  if (/探讨|规划|计划|筹备/.test(text)) return 35
+  if (/建设中|进行中|推进中|ACTIVE|BUILDING/.test(text)) return 55
+  return 40
+}
+
+function normalizeStatusLabel(status) {
+  const text = String(status || '')
+  if (/DONE|完成|通过|印发|发布|已完成/.test(text)) return '已完成'
+  if (/ON_HOLD|搁置|暂停/.test(text)) return '搁置'
+  if (/待解决|待推进|PENDING/.test(text)) return '待推进'
+  if (/探讨|EXPLORING/.test(text)) return '探讨中'
+  if (/建设中|BUILDING/.test(text)) return '建设中'
+  return text || '进行中'
+}
+
+function statusTone(status, progress) {
+  const text = String(status || '')
+  if (/已完成|DONE|通过|印发|发布/.test(text) || progress >= 90) return 'done'
+  if (/搁置|待推进|待解决|ON_HOLD|PENDING/.test(text) || progress <= 30) return 'warning'
+  return 'progress'
+}
+
+function splitValueUnit(value) {
+  const text = String(value ?? '--').trim()
+  const match = text.match(/^([+-]?\d+(?:\.\d+)?)(.*)$/)
+  if (!match) {
+    return { numeric: 0, display: text || '--', unit: '' }
+  }
+  const numeric = Number.parseFloat(match[1])
+  return {
+    numeric: Number.isFinite(numeric) ? numeric : 0,
+    display: match[1],
+    unit: match[2].trim(),
+  }
+}
+
+function dedupeByLabel(items) {
+  const seen = new Set()
+  return items.filter((item) => {
+    const key = `${item.label}::${item.value}`
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
+
+function overviewTone(index) {
+  return ['red', 'jade', 'indigo', 'gold', 'copper'][index % 5]
+}
+
+function summarizeGroupCounts(groups) {
+  const values = Object.values(groups).flat()
+  return {
+    done: values.filter((item) => item.tone === 'done').length,
+    progress: values.filter((item) => item.tone === 'progress').length,
+    pending: values.filter((item) => item.tone === 'warning').length,
+  }
+}
+
+function buildSectionTags(groups) {
+  return Object.entries(groups)
+    .filter(([, items]) => items.length > 0)
+    .map(([key]) => {
+      if (key === 'internal') return '内部协同'
+      if (key === 'cooperation') return '对外合作'
+      if (key === 'visit') return '交流互访'
+      return '体系建设'
+    })
+    .slice(0, 4)
+}
+
+function extractNumber(text, pattern) {
+  const match = String(text || '').match(pattern)
+  return match ? Number.parseInt(match[2] || match[1], 10) : 0
+}
+
+function formatDateParts(generatedAt) {
+  const source = String(generatedAt || '').replace(/[年月]/g, '/').replace(/[日]/g, '').replace(/\./g, '/').trim()
+  const maybeDate = new Date(source)
+  const date = Number.isNaN(maybeDate.getTime()) ? new Date() : maybeDate
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const hour = String(date.getHours()).padStart(2, '0')
+  const minute = String(date.getMinutes()).padStart(2, '0')
+  const second = String(date.getSeconds()).padStart(2, '0')
+
+  return {
+    display: `${year}年${month}月${day}日`,
+    dateOnly: `${year}-${month}-${day}`,
+    isoLike: `${year}-${month}-${day}T${hour}:${minute}:${second}+08:00`,
+    issueNumber: Math.ceil(Number(month) / 1),
+  }
 }
 
 function injectTemplate(asset, payload) {
@@ -459,7 +797,7 @@ function buildFallbackHtml(document, generatedAt) {
 }
 
 function escapeHtml(value) {
-  return value
+  return String(value ?? '')
     .replaceAll('&', '&amp;')
     .replaceAll('<', '&lt;')
     .replaceAll('>', '&gt;')
