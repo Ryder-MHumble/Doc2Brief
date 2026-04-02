@@ -3,7 +3,12 @@ const DEFAULT_HTML_MODEL = 'minimax/minimax-m2.7'
 const DEFAULT_STRUCTURED_MODEL = 'minimax/minimax-m2.7'
 const DEFAULT_POLISH_MODEL = 'minimax/minimax-m2.7'
 const DEFAULT_PROMPT_PROFILE = 'auto'
+const DEFAULT_HTML_MAX_TOKENS_FALLBACK = 7200
 const PROMPT_PROFILE_SET = new Set(['auto', 'v1', 'v2'])
+const MODEL_MAX_COMPLETION_TOKENS = {
+  'minimax/minimax-m2.7': 131072,
+  'minimax/minimax-m2.7-20260318': 131072,
+}
 
 export const OPENROUTER_BASE_URL = (
   import.meta.env.OPENROUTER_BASE_URL || import.meta.env.MINIMAX_BASE_URL || DEFAULT_BASE_URL
@@ -19,6 +24,9 @@ export const OPENROUTER_STRUCTURED_MODEL =
 export const OPENROUTER_POLISH_MODEL =
   import.meta.env.OPENROUTER_POLISH_MODEL || import.meta.env.MINIMAX_POLISH_MODEL || DEFAULT_POLISH_MODEL
 export const OPENROUTER_API_KEY = import.meta.env.OPENROUTER_API_KEY || import.meta.env.MINIMAX_API_KEY || ''
+export const OPENROUTER_HTML_MAX_TOKENS = normalizePositiveInteger(
+  import.meta.env.OPENROUTER_HTML_MAX_TOKENS || import.meta.env.MINIMAX_HTML_MAX_TOKENS,
+)
 export const OPENROUTER_PROMPT_PROFILE = normalizePromptProfile(
   import.meta.env.OPENROUTER_PROMPT_PROFILE || DEFAULT_PROMPT_PROFILE,
 )
@@ -154,16 +162,7 @@ export function getAudienceProfile(audienceId) {
 
 export function chooseMaxTokens(rawText, mode) {
   if (mode === 'llm-html') {
-    if (rawText.length <= 2000) {
-      return 3600
-    }
-    if (rawText.length <= 6000) {
-      return 5200
-    }
-    if (rawText.length <= 12000) {
-      return 6200
-    }
-    return 7200
+    return resolveHtmlMaxTokens()
   }
 
   if (rawText.length <= 2000) {
@@ -200,12 +199,33 @@ export function resolvePromptProfile(params) {
   return { profile: bucket === 0 ? 'v1' : 'v2', source: 'auto-ab', bucket }
 }
 
+function resolveHtmlMaxTokens() {
+  if (OPENROUTER_HTML_MAX_TOKENS) {
+    return OPENROUTER_HTML_MAX_TOKENS
+  }
+
+  const modelId = String(OPENROUTER_HTML_MODEL || '').trim().toLowerCase()
+  if (MODEL_MAX_COMPLETION_TOKENS[modelId]) {
+    return MODEL_MAX_COMPLETION_TOKENS[modelId]
+  }
+
+  return DEFAULT_HTML_MAX_TOKENS_FALLBACK
+}
+
 function normalizePromptProfile(value) {
   const text = typeof value === 'string' ? value.trim().toLowerCase() : ''
   if (!PROMPT_PROFILE_SET.has(text)) {
     return DEFAULT_PROMPT_PROFILE
   }
   return text
+}
+
+function normalizePositiveInteger(value) {
+  const parsed = Number.parseInt(String(value || '').trim(), 10)
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return 0
+  }
+  return parsed
 }
 
 function simpleHash(value) {

@@ -64,14 +64,14 @@ export function PreviewPane({
               onClick={() => onDeviceChange('desktop')}
               type="button"
             >
-              桌面
+              网页视图
             </button>
             <button
               className={previewDevice === 'mobile' ? 'is-active' : ''}
               onClick={() => onDeviceChange('mobile')}
               type="button"
             >
-              移动
+              手机视图
             </button>
           </div>
         </div>

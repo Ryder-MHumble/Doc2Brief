@@ -1808,33 +1808,30 @@ select {
   position: relative;
   isolation: isolate;
   overflow: hidden;
-  width: min(560px, 100%);
-  padding: 24px;
-  border-radius: 24px;
-  border: 1px solid rgba(108, 186, 255, 0.2);
+  width: min(620px, 100%);
+  padding: 28px 26px 22px;
+  border-radius: 28px;
+  border: 1px solid rgba(115, 206, 255, 0.24);
   background:
-    radial-gradient(circle at 85% 8%, rgba(52, 181, 255, 0.2), transparent 44%),
-    radial-gradient(circle at 10% 90%, rgba(77, 124, 255, 0.12), transparent 42%),
-    linear-gradient(155deg, rgba(10, 17, 32, 0.95), rgba(8, 13, 25, 0.9));
+    linear-gradient(120deg, rgba(9, 18, 36, 0.95), rgba(7, 13, 30, 0.94) 52%, rgba(8, 23, 37, 0.92)),
+    radial-gradient(circle at 8% 0%, rgba(112, 146, 255, 0.26), transparent 48%),
+    radial-gradient(circle at 100% 100%, rgba(62, 214, 255, 0.2), transparent 46%);
   box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.02),
-    0 16px 42px rgba(3, 8, 20, 0.56);
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04),
+    inset 0 -26px 44px rgba(32, 126, 224, 0.1),
+    0 26px 58px rgba(2, 8, 24, 0.62);
 }
 
 .progress-card::before {
   content: '';
   position: absolute;
-  inset: 0;
+  inset: -50% -10%;
   border-radius: inherit;
-  background: linear-gradient(
-    110deg,
-    transparent 0%,
-    rgba(49, 176, 255, 0.16) 30%,
-    rgba(114, 118, 255, 0.2) 52%,
-    transparent 78%
-  );
-  transform: translateX(-58%);
-  animation: cardSweep 5.2s linear infinite;
+  background: conic-gradient(from 180deg at 50% 50%, transparent 0deg, rgba(66, 167, 255, 0.26) 72deg, transparent 124deg);
+  filter: blur(42px);
+  opacity: 0.7;
+  transform: rotate(0deg);
+  animation: haloRotate 10s linear infinite;
   pointer-events: none;
 }
 
@@ -1842,10 +1839,13 @@ select {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(circle at 88% 12%, rgba(71, 208, 255, 0.18), transparent 56%),
-    radial-gradient(circle at 12% 86%, rgba(100, 138, 255, 0.13), transparent 54%);
-  opacity: 0.72;
-  animation: auroraDrift 7.2s ease-in-out infinite alternate;
+    linear-gradient(130deg, rgba(73, 221, 255, 0.11), transparent 30%),
+    linear-gradient(310deg, rgba(118, 130, 255, 0.14), transparent 36%),
+    repeating-linear-gradient(90deg, rgba(150, 203, 255, 0.06) 0 1px, transparent 1px 18px),
+    repeating-linear-gradient(0deg, rgba(150, 203, 255, 0.03) 0 1px, transparent 1px 18px);
+  mix-blend-mode: screen;
+  opacity: 0.8;
+  animation: auroraDrift 8.2s ease-in-out infinite alternate;
   pointer-events: none;
 }
 
@@ -1855,42 +1855,43 @@ select {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: 14px;
-  margin-bottom: 18px;
+  gap: 16px;
+  margin-bottom: 22px;
 }
 
 .progress-signal {
   position: relative;
-  width: 56px;
-  height: 56px;
+  width: 60px;
+  height: 60px;
   display: grid;
   place-items: center;
 }
 
 .progress-signal__ring {
   position: absolute;
-  inset: 9px;
+  inset: 8px;
   border-radius: 50%;
-  background: conic-gradient(from 30deg, transparent 12%, rgba(96, 218, 255, 0.88) 50%, transparent 76%);
-  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1px));
-  mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1px));
-  animation: signalOrbit 1.4s linear infinite;
+  background: conic-gradient(from 50deg, rgba(74, 210, 255, 0.05), rgba(74, 210, 255, 0.95), rgba(126, 123, 255, 0.8), rgba(74, 210, 255, 0.05));
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 1px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 1px));
+  animation: signalOrbit 2.6s linear infinite;
 }
 
 .progress-signal__ring--outer {
-  inset: 0;
-  opacity: 0.48;
-  animation-duration: 2.8s;
+  inset: -1px;
+  opacity: 0.38;
+  filter: blur(0.2px);
+  animation-duration: 4.5s;
   animation-direction: reverse;
 }
 
 .progress-signal__core {
-  width: 14px;
-  height: 14px;
+  width: 13px;
+  height: 13px;
   border-radius: 50%;
-  background: radial-gradient(circle at 30% 30%, #effbff, #42d4ff 52%, #1f77ff);
-  box-shadow: 0 0 0 8px rgba(59, 198, 255, 0.11), 0 0 24px rgba(66, 208, 255, 0.45);
-  animation: pulse 1.5s ease-in-out infinite;
+  background: radial-gradient(circle at 35% 35%, #f5fcff, #55dfff 54%, #2b7fff);
+  box-shadow: 0 0 0 10px rgba(80, 209, 255, 0.12), 0 0 0 20px rgba(80, 209, 255, 0.06), 0 0 26px rgba(64, 197, 255, 0.42);
+  animation: pulse 1.9s ease-in-out infinite;
 }
 
 .progress-card__headline {
@@ -1899,63 +1900,67 @@ select {
 
 .progress-card__headline strong {
   display: block;
-  margin-bottom: 5px;
-  font-size: 16px;
-  letter-spacing: 0.01em;
+  margin-bottom: 6px;
+  font-size: 17px;
+  letter-spacing: 0.04em;
 }
 
 .progress-card__headline span {
   font-size: 12px;
-  color: rgba(186, 210, 242, 0.88);
+  color: rgba(190, 218, 248, 0.84);
 }
 
 .progress-percent-chip {
-  height: 30px;
-  min-width: 66px;
-  padding: 0 12px;
+  height: 36px;
+  min-width: 86px;
+  padding: 0 14px;
   border-radius: 999px;
-  border: 1px solid rgba(115, 201, 255, 0.34);
-  background: linear-gradient(140deg, rgba(24, 38, 65, 0.86), rgba(18, 29, 53, 0.78));
-  box-shadow: inset 0 0 18px rgba(42, 169, 255, 0.24);
+  border: 1px solid rgba(107, 204, 255, 0.48);
+  background: linear-gradient(140deg, rgba(18, 34, 59, 0.92), rgba(16, 28, 49, 0.88));
+  box-shadow: inset 0 0 20px rgba(56, 178, 255, 0.28), 0 8px 18px rgba(3, 10, 27, 0.44);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: #7addff;
-  font-size: 14px;
+  color: #89e7ff;
+  font-size: 15px;
   font-weight: 700;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.04em;
+  text-shadow: 0 0 12px rgba(90, 217, 255, 0.45);
 }
 
 .progress-step-list {
   position: relative;
   z-index: 1;
   display: grid;
-  gap: 10px;
+  gap: 11px;
   margin-top: 2px;
 }
 
 .progress-step-list::before {
   content: '';
   position: absolute;
-  top: 10px;
-  bottom: 10px;
-  left: 13px;
-  width: 1px;
+  top: 12px;
+  bottom: 12px;
+  left: 14px;
+  width: 2px;
+  border-radius: 999px;
   background: linear-gradient(
     to bottom,
-    rgba(91, 175, 255, 0.68) 0%,
-    rgba(85, 140, 255, 0.34) 45%,
-    rgba(91, 175, 255, 0.12) 100%
+    rgba(96, 209, 255, 0.8) 0%,
+    rgba(91, 145, 255, 0.42) 52%,
+    rgba(86, 199, 255, 0.08) 100%
   );
 }
 
 .progress-step {
   position: relative;
   display: grid;
-  grid-template-columns: 26px minmax(0, 1fr) auto;
+  grid-template-columns: 30px minmax(0, 1fr) auto;
   align-items: center;
   gap: 12px;
-  padding: 5px 0;
+  padding: 8px 10px 8px 0;
+  border-radius: 14px;
+  background: linear-gradient(130deg, rgba(31, 49, 84, 0.12), rgba(16, 29, 50, 0.02));
 }
 
 .progress-step__icon {
@@ -1967,47 +1972,48 @@ select {
 
 .step-node {
   position: relative;
-  width: 12px;
-  height: 12px;
+  width: 13px;
+  height: 13px;
   border-radius: 50%;
-  border: 1.5px solid rgba(147, 167, 192, 0.66);
-  background: rgba(12, 18, 32, 0.9);
+  border: 1.5px solid rgba(139, 167, 199, 0.72);
+  background: rgba(10, 19, 35, 0.9);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: #09172b;
+  color: #05202e;
   font-size: 10px;
   font-weight: 800;
 }
 
 .step-node--running {
-  width: 14px;
-  height: 14px;
-  border: 2px solid #50d6ff;
-  background: radial-gradient(circle at 35% 35%, #d8f8ff, #38cbff 62%, #2383ff);
-  box-shadow: 0 0 18px rgba(58, 205, 255, 0.5);
-  animation: stepPulse 1.35s ease-in-out infinite;
+  width: 15px;
+  height: 15px;
+  border: 2px solid #66deff;
+  background: radial-gradient(circle at 35% 35%, #eefcff, #3ad4ff 60%, #2a86ff);
+  box-shadow: 0 0 20px rgba(58, 205, 255, 0.58);
+  animation: stepPulse 1.7s ease-in-out infinite;
 }
 
 .step-node--running::after {
   content: '';
   position: absolute;
-  inset: -6px;
+  inset: -8px;
   border-radius: inherit;
-  border: 1px solid rgba(80, 214, 255, 0.56);
-  animation: stepRipple 1.65s ease-out infinite;
+  border: 1px solid rgba(80, 214, 255, 0.54);
+  animation: stepRipple 2s ease-out infinite;
 }
 
 .step-node--done {
-  border-color: rgba(0, 230, 118, 0.7);
-  background: radial-gradient(circle at 30% 25%, #e6fff2, #5cf7b0 60%, #14c174);
+  border-color: rgba(46, 255, 176, 0.7);
+  background: radial-gradient(circle at 30% 25%, #effff4, #7ef8c3 62%, #1fcf85);
   color: #052011;
 }
 
 .progress-step__body strong {
   display: block;
   font-size: 14px;
-  margin-bottom: 3px;
+  margin-bottom: 4px;
+  letter-spacing: 0.02em;
 }
 
 .progress-step__body span,
@@ -2016,87 +2022,86 @@ select {
 }
 
 .progress-step__status {
-  min-width: 74px;
+  min-width: 80px;
   justify-self: end;
   text-align: right;
-  height: 24px;
-  padding: 0 10px;
+  height: 28px;
+  padding: 0 12px;
   border-radius: 999px;
   border: 1px solid transparent;
-  background: rgba(17, 24, 40, 0.84);
+  background: rgba(16, 26, 44, 0.8);
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  letter-spacing: 0.02em;
 }
 
 .progress-step.running .progress-step__icon,
 .progress-step.running .progress-step__status {
-  color: #6ddfff;
+  color: #7be6ff;
 }
 
 .progress-step.running .progress-step__status {
-  border-color: rgba(95, 196, 255, 0.38);
-  background: rgba(26, 42, 72, 0.84);
+  border-color: rgba(95, 196, 255, 0.5);
+  background: rgba(25, 48, 84, 0.88);
   text-shadow: 0 0 10px rgba(63, 204, 255, 0.45);
 }
 
 .progress-step.done .progress-step__icon,
 .progress-step.done .progress-step__status {
-  color: #56f2b0;
+  color: #5ff4be;
 }
 
 .progress-step.done .progress-step__status {
-  border-color: rgba(0, 230, 118, 0.32);
-  background: rgba(13, 39, 31, 0.72);
+  border-color: rgba(0, 230, 118, 0.42);
+  background: rgba(10, 45, 33, 0.72);
 }
 
 .progress-track {
   position: relative;
   z-index: 1;
-  margin-top: 20px;
-  height: 12px;
+  margin-top: 22px;
+  height: 14px;
   border-radius: 999px;
   overflow: hidden;
-  border: 1px solid rgba(124, 170, 235, 0.2);
-  background: linear-gradient(100deg, rgba(255, 255, 255, 0.04), rgba(111, 145, 208, 0.07));
+  border: 1px solid rgba(108, 172, 240, 0.32);
+  background:
+    linear-gradient(95deg, rgba(255, 255, 255, 0.03), rgba(92, 124, 185, 0.1)),
+    repeating-linear-gradient(90deg, rgba(191, 226, 255, 0.06) 0 1px, transparent 1px 20px);
+  box-shadow: inset 0 0 12px rgba(89, 143, 220, 0.24);
 }
 
 .progress-track::before {
   content: '';
   position: absolute;
   inset: 0;
-  background: repeating-linear-gradient(
-    90deg,
-    transparent 0 18px,
-    rgba(225, 242, 255, 0.09) 18px 24px
-  );
-  opacity: 0.6;
+  background: linear-gradient(120deg, transparent 0%, rgba(171, 220, 255, 0.16) 48%, transparent 100%);
+  transform: translateX(-100%);
+  animation: trackSweep 2.4s ease-in-out infinite;
 }
 
 .progress-track__fill {
   position: relative;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(95deg, #4d79ff 0%, #28ccff 45%, #00e7ba 100%);
-  box-shadow: 0 0 24px rgba(63, 198, 255, 0.4);
-  transition: width 0.85s cubic-bezier(0.22, 1, 0.36, 1);
+  background: linear-gradient(92deg, #6780ff 0%, #2ad3ff 52%, #19f0c0 100%);
+  box-shadow: 0 0 28px rgba(63, 198, 255, 0.45);
+  transition: width 0.9s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .progress-track__fill::after {
   content: '';
   position: absolute;
-  top: -1px;
-  right: -42px;
-  width: 74px;
-  height: calc(100% + 2px);
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.72), transparent);
-  animation: trackScan 1.8s linear infinite;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.82) 44%, transparent 100%);
+  transform: translateX(-100%);
+  animation: trackScan 1.95s linear infinite;
 }
 
 .progress-meta {
   position: relative;
   z-index: 1;
-  margin-top: 10px;
+  margin-top: 12px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -2105,13 +2110,13 @@ select {
 
 .progress-meta span {
   font-size: 12px;
-  color: rgba(168, 188, 219, 0.9);
+  color: rgba(173, 198, 232, 0.88);
 }
 
 .progress-meta span:last-child {
-  color: #8ce4ff;
+  color: #93ebff;
   font-weight: 700;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.06em;
 }
 
 .success-toast {
@@ -2373,6 +2378,15 @@ summary:focus-visible {
   }
 }
 
+@keyframes haloRotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @keyframes cardSweep {
   0% {
     transform: translateX(-60%);
@@ -2465,10 +2479,19 @@ summary:focus-visible {
 
 @keyframes trackScan {
   from {
-    transform: translateX(-110px);
+    transform: translateX(-100%);
   }
   to {
-    transform: translateX(90px);
+    transform: translateX(100%);
+  }
+}
+
+@keyframes trackSweep {
+  from {
+    transform: translateX(-120%);
+  }
+  to {
+    transform: translateX(120%);
   }
 }
 
