@@ -57,6 +57,16 @@ export function buildTemplatePayload(templateMeta, document, generatedAt) {
     return payload
   }
 
+  if (templateMeta.id === 'template-08') {
+    payload.viewModel.splitMagazine = buildSplitMagazineViewModel(shared)
+    return payload
+  }
+
+  if (templateMeta.id === 'template-09') {
+    payload.viewModel.swissGrid = buildSwissGridViewModel(shared)
+    return payload
+  }
+
   payload.viewModel.cyber = buildCyberViewModel(shared)
   return payload
 }
@@ -213,6 +223,54 @@ function buildCyberViewModel(shared) {
       defense: shared.defense,
       system: shared.systemProgress.slice(0, 5),
       cooperation: shared.cooperationProgress.slice(0, 6),
+    },
+    footer: shared.footer,
+  }
+}
+
+function buildSplitMagazineViewModel(shared) {
+  return {
+    masthead: {
+      title: shared.metaLine.title || '工作周报',
+      issue: `${shared.metaLine.issueLabel} · ${shared.metaLine.periodText}`,
+      foot: shared.footer.dateOnly || shared.metaLine.issuedDateText,
+    },
+    stats: shared.stats.slice(0, 6),
+    overview: shared.overview.slice(0, 6),
+    groups: shared.groups,
+    data: {
+      keyMetrics: shared.keyMetrics.slice(0, 8),
+      cooperation: shared.cooperationProgress.slice(0, 6),
+      defense: shared.defense,
+    },
+    footer: shared.footer,
+  }
+}
+
+function buildSwissGridViewModel(shared) {
+  const issueNumber = String(shared.metaLine.issueLabel.match(/\d+/)?.[0] || '1').padStart(2, '0')
+  const tickerSource = shared.keyMetrics.length > 0 ? shared.keyMetrics : shared.stats
+  const ticker = tickerSource.slice(0, 6).map((item) => ({
+    label: item.label || '指标',
+    value: `${item.value || '--'}${item.unit || ''}`,
+  }))
+
+  return {
+    masthead: {
+      name: shared.metaLine.title || '周报',
+      issue: `VOL.${issueNumber}`,
+      date: shared.metaLine.issuedDateText,
+      logo: (shared.metaLine.title || '报').trim().slice(0, 1) || '报',
+      publisher: `${shared.footer.issuedBy || 'Internal Bulletin'} · 内部资料`,
+    },
+    ticker,
+    stats: shared.stats.slice(0, 5),
+    overview: shared.overview.slice(0, 5),
+    groups: shared.groups,
+    data: {
+      keyMetrics: shared.keyMetrics.slice(0, 6),
+      cooperation: shared.cooperationProgress.slice(0, 6),
+      defense: shared.defense,
     },
     footer: shared.footer,
   }

@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>file2web 模板预览</title>
+  <style id="template-inline-style">__TEMPLATE_STYLE__</style>
+</head>
+<body data-template-id="template-08">
+<div class="wrap">
+  <aside class="L">
+    <div class="Ltop">
+      <div class="Ldots"><div class="Ldot"></div><div class="Ldot"></div><div class="Ldot"></div></div>
+      <div class="Ltitle" id="left-title">工作周报</div>
+      <div class="Lmeta" id="left-meta">内部资料</div>
+    </div>
+    <div class="Lkpis" id="left-kpis"></div>
+    <nav class="Lnav" id="left-nav"></nav>
+    <div class="Lfoot" id="left-foot">--</div>
+  </aside>
+
+  <div class="R" id="rp">
+    <div class="Rinner">
+      <section id="ov">
+        <div class="Ssh"><div class="Sstag">Weekly Highlights</div><div class="Ssline"></div></div>
+        <div class="Shtitle" id="ov-title">本周<em>要览</em></div>
+        <div class="Elist" id="ov-list"></div>
+      </section>
+
+      <section id="wk" class="rev">
+        <div class="Ssh"><div class="Sstag">Internal Work</div><div class="Ssline"></div></div>
+        <div class="Shtitle">内部<em>协同</em></div>
+        <div class="Wgrid" id="wk-grid"></div>
+      </section>
+
+      <section id="co" class="rev">
+        <div class="Ssh"><div class="Sstag">External Partners</div><div class="Ssline"></div></div>
+        <div class="Shtitle">对外<em>合作</em></div>
+        <div class="Wgrid" id="co-grid"></div>
+      </section>
+
+      <section id="vi" class="rev">
+        <div class="Ssh"><div class="Sstag">Academic Exchange</div><div class="Ssline"></div></div>
+        <div class="Shtitle">交流<em>互访</em></div>
+        <div class="Wgrid" id="vi-grid"></div>
+      </section>
+
+      <section id="sy" class="rev">
+        <div class="Ssh"><div class="Sstag">System Building</div><div class="Ssline"></div></div>
+        <div class="Shtitle">体系<em>建设</em></div>
+        <div class="Wgrid" id="sy-grid"></div>
+      </section>
+
+      <section id="dt" class="rev">
+        <div class="Ssh"><div class="Sstag">Data Dashboard</div><div class="Ssline"></div></div>
+        <div class="Shtitle">数据<em>看板</em></div>
+        <div class="Bigrow" id="dt-bigrow"></div>
+        <div class="Vtwo">
+          <div class="Vbox">
+            <div class="Vtag">对外合作推进度</div>
+            <div class="Blist" id="dt-cooperation-bars"></div>
+          </div>
+          <div class="Vbox">
+            <div class="Vtag" id="dt-defense-title">博士生答辩结果</div>
+            <div class="Dleg" id="dt-defense-legend"></div>
+          </div>
+        </div>
+      </section>
+
+      <div class="Rfooter rev" id="right-footer"></div>
+    </div>
+  </div>
+</div>
+
+  <script id="template-data" type="application/json">__TEMPLATE_DATA__</script>
+  <script id="template-script" type="application/json">__TEMPLATE_SCRIPT__</script>
+  <script>
+    (() => {
+      const styleNode = document.getElementById('template-inline-style')
+      const dataNode = document.getElementById('template-data')
+      const scriptNode = document.getElementById('template-script')
+      const isLivePreview =
+        styleNode?.textContent.includes('__TEMPLATE_STYLE__') ||
+        dataNode?.textContent.includes('__TEMPLATE_DATA__') ||
+        scriptNode?.textContent.includes('__TEMPLATE_SCRIPT__')
+
+      if (isLivePreview) {
+        const loader = document.createElement('script')
+        loader.src = '../_runtime/live-preview.js'
+        loader.dataset.templateId = document.body.dataset.templateId || ''
+        loader.dataset.styleHref = './style.css'
+        loader.dataset.scriptSrc = './app.js'
+        document.body.appendChild(loader)
+        return
+      }
+
+      const runtimeScript = document.createElement('script')
+      runtimeScript.textContent = scriptNode?.textContent || ''
+      document.body.appendChild(runtimeScript)
+    })()
+  </script>
+</body>
+</html>

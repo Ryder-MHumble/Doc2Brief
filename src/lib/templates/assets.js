@@ -19,6 +19,12 @@ import template06Js from '../../../template/06/app.js?raw'
 import template07Html from '../../../template/07/index.html?raw'
 import template07Css from '../../../template/07/style.css?raw'
 import template07Js from '../../../template/07/app.js?raw'
+import template08Html from '../../../template/08/index.html?raw'
+import template08Css from '../../../template/08/style.css?raw'
+import template08Js from '../../../template/08/app.js?raw'
+import template09Html from '../../../template/09/index.html?raw'
+import template09Css from '../../../template/09/style.css?raw'
+import template09Js from '../../../template/09/app.js?raw'
 
 export const templateAssets = {
   'template-01': { html: template01Html, css: template01Css, js: template01Js },
@@ -28,4 +34,6 @@ export const templateAssets = {
   'template-05': { html: template05Html, css: template05Css, js: template05Js },
   'template-06': { html: template06Html, css: template06Css, js: template06Js },
   'template-07': { html: template07Html, css: template07Css, js: template07Js },
+  'template-08': { html: template08Html, css: template08Css, js: template08Js },
+  'template-09': { html: template09Html, css: template09Css, js: template09Js },
 }

@@ -1,0 +1,853 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,400;1,700&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --G: #1b2b1e;
+  --G2: #243428;
+  --G3: #2f4232;
+  --sage: #7bae7f;
+  --sage2: #a8cca8;
+  --C: #faf7f2;
+  --C2: #f3eee6;
+  --C3: #eae3d5;
+  --ink: #1a160f;
+  --ink3: #6b6055;
+  --ink5: #a09080;
+  --rule: #ddd5c8;
+  --red: #c44235;
+  --gold: #b8922a;
+  --shadow-strong: 0 20px 50px rgba(10, 15, 10, 0.28);
+  --shadow-soft: 0 14px 30px rgba(20, 20, 20, 0.1);
+  --radius-xl: 18px;
+  --radius-lg: 14px;
+  --sidebar-w: clamp(260px, 24vw, 320px);
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background:
+    radial-gradient(circle at 20% 10%, rgba(123, 174, 127, 0.2), transparent 38%),
+    radial-gradient(circle at 80% 90%, rgba(196, 66, 53, 0.12), transparent 34%),
+    var(--G);
+  color: var(--ink);
+  line-height: 1.45;
+  overflow: hidden;
+}
+
+.wrap {
+  display: grid;
+  grid-template-columns: var(--sidebar-w) 1fr;
+  height: 100vh;
+}
+
+.L {
+  background:
+    linear-gradient(165deg, rgba(36, 52, 40, 0.98), rgba(27, 43, 30, 0.98)),
+    var(--G);
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  position: relative;
+  z-index: 4;
+  box-shadow: var(--shadow-strong);
+}
+
+.L::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 7%;
+  bottom: 7%;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.Ltop {
+  padding: 30px 26px 22px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.Ldots {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.Ldot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--sage);
+  opacity: 0.3;
+}
+
+.Ldot:first-child {
+  opacity: 1;
+}
+
+.Ltitle {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: clamp(20px, 2.2vw, 28px);
+  font-weight: 700;
+  color: rgba(232, 245, 232, 0.92);
+  line-height: 1.2;
+  margin-bottom: 8px;
+  text-wrap: balance;
+}
+
+.Lmeta {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.34);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.Lkpis {
+  padding: 10px 24px 14px;
+  flex: 1;
+  overflow: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+}
+
+.Lkpis::-webkit-scrollbar {
+  width: 4px;
+}
+
+.Lkpis::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 2px;
+}
+
+.Lkpi {
+  padding: 14px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.Lkpi:last-child {
+  border-bottom: none;
+}
+
+.Lnum {
+  font-family: 'DM Mono', monospace;
+  font-size: clamp(32px, 3.4vw, 42px);
+  font-weight: 500;
+  color: var(--sage);
+  line-height: 1;
+  letter-spacing: -1.8px;
+}
+
+.Lunit {
+  font-size: 12px;
+  color: rgba(123, 174, 127, 0.58);
+  margin-left: 2px;
+}
+
+.Linfo {
+  text-align: right;
+}
+
+.Llabel {
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.34);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  line-height: 1.6;
+}
+
+.Lbar {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+  margin-top: 8px;
+  position: relative;
+  overflow: visible;
+}
+
+.Lbarfill {
+  position: absolute;
+  left: 0;
+  top: -1px;
+  height: 3px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #7bae7f, #a8cca8);
+  opacity: 0.4;
+  transition: width 1.4s ease;
+}
+
+.Lnav {
+  padding: 14px 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.Lni {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 2px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.35);
+  cursor: pointer;
+  transition: color 0.22s ease;
+  border: none;
+  background: none;
+  font-family: inherit;
+  width: 100%;
+  text-align: left;
+  letter-spacing: 0.6px;
+}
+
+.Lni:hover,
+.Lni.on {
+  color: rgba(255, 255, 255, 0.86);
+}
+
+.Lni.on {
+  color: var(--sage2);
+}
+
+.Lnarrow {
+  margin-left: auto;
+  font-size: 10px;
+  opacity: 0;
+  transition: opacity 0.22s ease;
+}
+
+.Lni.on .Lnarrow,
+.Lni:hover .Lnarrow {
+  opacity: 1;
+  color: var(--sage2);
+}
+
+.Lfoot {
+  padding: 12px 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.2);
+  letter-spacing: 2px;
+}
+
+.R {
+  background:
+    radial-gradient(circle at 96% 12%, rgba(196, 66, 53, 0.09), transparent 28%),
+    linear-gradient(180deg, var(--C), #f8f3ea);
+  height: 100vh;
+  overflow-y: auto;
+}
+
+.R::-webkit-scrollbar {
+  width: 6px;
+}
+
+.R::-webkit-scrollbar-thumb {
+  background: #d9d0c1;
+  border-radius: 4px;
+}
+
+.Rinner {
+  max-width: min(1200px, 100%);
+  margin: 0 auto;
+  padding: clamp(36px, 4vw, 56px) clamp(20px, 3.5vw, 56px) 90px;
+}
+
+.Ssh {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 12px;
+  margin-top: 64px;
+}
+
+.Ssh:first-child {
+  margin-top: 0;
+}
+
+.Sstag {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: var(--ink5);
+}
+
+.Ssline {
+  flex: 1;
+  height: 1px;
+  background: var(--rule);
+}
+
+.Shtitle {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: clamp(34px, 4vw, 48px);
+  font-weight: 900;
+  color: var(--ink);
+  line-height: 1.06;
+  letter-spacing: -1.2px;
+  margin-bottom: 28px;
+}
+
+.Shtitle em {
+  font-style: italic;
+  color: var(--red);
+  font-weight: 700;
+}
+
+.Eitem {
+  display: grid;
+  grid-template-columns: 36px 1fr;
+  gap: 20px;
+  padding: 20px 0;
+  border-bottom: 1px solid var(--rule);
+  opacity: 0;
+  transform: translateX(-10px);
+}
+
+.Eitem:last-child {
+  border-bottom: none;
+}
+
+.Eitem.vis {
+  opacity: 1;
+  transform: translateX(0);
+  transition: opacity 0.55s ease, transform 0.55s ease;
+}
+
+.Enum {
+  font-family: 'Playfair Display', serif;
+  font-style: italic;
+  font-size: 28px;
+  color: #c8beb0;
+  line-height: 1;
+}
+
+.Ecat {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.Etitle {
+  font-family: 'Playfair Display', serif;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.32;
+  margin-bottom: 7px;
+}
+
+.Ebody {
+  font-size: 13px;
+  color: var(--ink3);
+  line-height: 1.8;
+}
+
+.Wgrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--rule);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.Wcell {
+  background: linear-gradient(180deg, #fffdf9, #f9f4eb);
+  padding: 20px 22px;
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.Wcell.vis {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.Wstatus {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.Wsdot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+}
+
+.Wtitle {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  line-height: 1.35;
+}
+
+.Wbody {
+  font-size: 12px;
+  color: var(--ink3);
+  line-height: 1.72;
+  margin-bottom: 10px;
+}
+
+.Wprog {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.Wtrack {
+  flex: 1;
+  height: 2px;
+  background: var(--C3);
+}
+
+.Wfill {
+  height: 100%;
+  transition: width 1.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.Wval {
+  font-family: 'DM Mono', monospace;
+  font-size: 9.5px;
+  color: var(--ink5);
+}
+
+.Bigrow {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--rule);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+
+.Bcell {
+  background: linear-gradient(180deg, #fffdf9, #f9f4eb);
+  padding: 22px 16px;
+  text-align: center;
+}
+
+.Bnum {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(36px, 4.6vw, 52px);
+  font-weight: 900;
+  line-height: 1;
+  margin-bottom: 6px;
+}
+
+.Blabel {
+  font-size: 10px;
+  color: var(--ink3);
+  letter-spacing: 1px;
+  line-height: 1.5;
+}
+
+.Vtwo {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--rule);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-soft);
+}
+
+.Vbox {
+  background: linear-gradient(180deg, #fffdf9, #f9f4eb);
+  padding: 24px 24px;
+}
+
+.Vtag {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--ink3);
+  margin-bottom: 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.Vtag::before {
+  content: '';
+  width: 3px;
+  height: 12px;
+  background: var(--red);
+  flex-shrink: 0;
+}
+
+.Blist {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+
+.Bitem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.Bname {
+  font-size: 11px;
+  color: var(--ink3);
+  width: 92px;
+  text-align: right;
+  flex-shrink: 0;
+  line-height: 1.3;
+}
+
+.Btrack {
+  flex: 1;
+  height: 3px;
+  background: var(--C3);
+}
+
+.Bfill {
+  height: 100%;
+  transition: width 1.4s ease;
+}
+
+.Bval {
+  font-family: 'DM Mono', monospace;
+  font-size: 10.5px;
+  color: var(--ink);
+  width: 36px;
+}
+
+.Dleg {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.Drow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.Ddot {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.Dname {
+  color: var(--ink3);
+  flex: 1;
+}
+
+.Dval {
+  font-weight: 700;
+  color: var(--ink);
+  font-family: 'DM Mono', monospace;
+}
+
+.Rfooter {
+  margin-top: 52px;
+  padding-top: 24px;
+  border-top: 2px solid var(--ink);
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.Rflabel {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--ink5);
+  margin-bottom: 5px;
+}
+
+.Rfval {
+  font-size: 13px;
+  color: var(--ink);
+}
+
+.rev {
+  opacity: 0;
+  transform: translateY(14px);
+}
+
+.rev.vis {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+@media (max-width: 1200px) {
+  .wrap {
+    grid-template-columns: clamp(220px, 28vw, 270px) 1fr;
+  }
+
+  .Rinner {
+    padding-inline: clamp(16px, 2.6vw, 28px);
+  }
+
+  .Bigrow {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 980px) {
+  body {
+    overflow: auto;
+    background: linear-gradient(180deg, var(--G2), var(--G));
+  }
+
+  .wrap {
+    grid-template-columns: 1fr;
+    height: auto;
+    min-height: 100vh;
+  }
+
+  .L {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    height: auto;
+    max-height: 52vh;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(8px);
+  }
+
+  .L::after {
+    display: none;
+  }
+
+  .Ltop {
+    padding: 14px 14px 10px;
+    border-bottom: none;
+  }
+
+  .Ldots {
+    display: none;
+  }
+
+  .Ltitle {
+    font-size: 20px;
+    margin-bottom: 4px;
+  }
+
+  .Lmeta {
+    font-size: 9px;
+    letter-spacing: 1.4px;
+  }
+
+  .Lkpis {
+    padding: 0 14px 10px;
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(132px, 1fr);
+    gap: 8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    flex: 0;
+  }
+
+  .Lkpi {
+    padding: 11px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 11px;
+    min-height: 86px;
+    background: rgba(250, 247, 242, 0.05);
+    backdrop-filter: blur(6px);
+  }
+
+  .Lnum {
+    font-size: 28px;
+  }
+
+  .Llabel {
+    font-size: 8px;
+    letter-spacing: 1.1px;
+  }
+
+  .Lbar {
+    display: none;
+  }
+
+  .Lnav {
+    padding: 0 14px 12px;
+    border-top: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+  }
+
+  .Lnav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .Lni {
+    width: auto;
+    flex-shrink: 0;
+    font-size: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 999px;
+    padding: 7px 12px;
+    background: rgba(255, 255, 255, 0.03);
+    color: rgba(255, 255, 255, 0.76);
+  }
+
+  .Lni.on {
+    color: #0f1e12;
+    background: linear-gradient(90deg, #7bae7f, #a8cca8);
+    border-color: transparent;
+  }
+
+  .Lnarrow {
+    display: none;
+  }
+
+  .Lfoot {
+    display: none;
+  }
+
+  .R {
+    height: auto;
+    overflow: visible;
+    background: linear-gradient(180deg, var(--C), #f5ede1);
+  }
+
+  .Rinner {
+    padding: 20px 14px 48px;
+  }
+
+  .Ssh {
+    margin-top: 36px;
+    margin-bottom: 8px;
+  }
+
+  .Sstag {
+    letter-spacing: 2.2px;
+  }
+
+  .Shtitle {
+    margin-bottom: 16px;
+    font-size: clamp(30px, 9.4vw, 38px);
+  }
+
+  .Eitem {
+    grid-template-columns: 28px 1fr;
+    gap: 12px;
+    padding: 14px 0;
+  }
+
+  .Enum {
+    font-size: 22px;
+  }
+
+  .Etitle {
+    font-size: 16px;
+  }
+
+  .Ebody {
+    font-size: 12px;
+    line-height: 1.68;
+  }
+
+  .Wgrid,
+  .Vtwo,
+  .Rfooter {
+    grid-template-columns: 1fr;
+  }
+
+  .Bigrow {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .Bcell,
+  .Vbox {
+    padding: 16px 14px;
+  }
+
+  .Bname {
+    width: 76px;
+    font-size: 10px;
+  }
+
+  .Bval {
+    width: 28px;
+  }
+
+  .Rfooter {
+    margin-top: 34px;
+    padding-top: 18px;
+    gap: 12px;
+  }
+
+  .Rfval {
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 640px) {
+  .L {
+    max-height: 58vh;
+  }
+
+  .Lkpis {
+    grid-auto-columns: minmax(122px, 1fr);
+  }
+
+  .Bigrow {
+    grid-template-columns: 1fr;
+  }
+
+  .Bnum {
+    font-size: 42px;
+  }
+
+  .Wstatus,
+  .Vtag,
+  .Rflabel {
+    letter-spacing: 1.8px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
