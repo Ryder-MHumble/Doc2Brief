@@ -73,7 +73,7 @@ export default function App() {
         <div className="topbar-actions">
           <button
             className="icon-button topbar-monitor-button"
-            onClick={() => window.open('/ops/usage', '_blank', 'noopener,noreferrer')}
+            onClick={() => window.open('/dashboard', '_blank', 'noopener,noreferrer')}
             type="button"
           >
             <span aria-hidden="true">▦</span>

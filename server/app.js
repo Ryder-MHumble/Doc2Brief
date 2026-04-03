@@ -42,6 +42,11 @@ const openrouterModelPricing = parseModelPricingMap(
 )
 let reportCleanupTask = null
 let usageCleanupTask = null
+let usageRecordsCache = []
+let usageRecordsReady = false
+let usageRealtimeVersion = 0
+let usageStreamClientSeq = 0
+const usageStreamClients = new Map()
 
 function hydrateEnvFromDotEnv(filePath) {
   if (!existsSync(filePath)) {
@@ -510,59 +515,109 @@ async function ensureUsageStorage() {
   }
 }
 
-async function loadUsageRecords() {
+function normalizeUsageRecord(item) {
+  if (!item || typeof item !== 'object') {
+    return null
+  }
+  const ts = Number(item.ts || Date.parse(String(item.createdAt || '')))
+  if (!Number.isFinite(ts) || ts <= 0) {
+    return null
+  }
+  const createdAt = item.createdAt || new Date(ts).toISOString()
+  return {
+    ...item,
+    ts,
+    createdAt,
+  }
+}
+
+function parseUsageLogContent(raw) {
+  if (!String(raw || '').trim()) {
+    return []
+  }
+  const lines = String(raw || '').split('\n')
+  const records = []
+  for (const line of lines) {
+    const text = line.trim()
+    if (!text) {
+      continue
+    }
+    try {
+      const normalized = normalizeUsageRecord(JSON.parse(text))
+      if (normalized) {
+        records.push(normalized)
+      }
+    } catch {
+      // 跳过损坏行，保持服务可用
+    }
+  }
+  return records
+}
+
+async function loadUsageRecordsFromDisk() {
   try {
     if (!existsSync(usageLogPath)) {
       return []
     }
     const raw = await fs.readFile(usageLogPath, 'utf-8')
-    if (!raw.trim()) {
-      return []
-    }
-
-    const lines = raw.split('\n')
-    const records = []
-    for (const line of lines) {
-      const text = line.trim()
-      if (!text) {
-        continue
-      }
-      try {
-        const item = JSON.parse(text)
-        if (!item || typeof item !== 'object') {
-          continue
-        }
-        const ts = Number(item.ts || Date.parse(String(item.createdAt || '')))
-        if (!Number.isFinite(ts) || ts <= 0) {
-          continue
-        }
-        records.push({
-          ...item,
-          ts,
-          createdAt: item.createdAt || new Date(ts).toISOString(),
-        })
-      } catch {
-        // 跳过损坏行，保持服务可用
-      }
-    }
-    return records
+    return parseUsageLogContent(raw).sort((a, b) => Number(a.ts || 0) - Number(b.ts || 0))
   } catch (error) {
     printSystemLog('用量监控', '读取记录失败', { message: error.message }, true)
     return []
   }
 }
 
+async function loadUsageRecords(forceReload = false) {
+  if (!forceReload && usageRecordsReady) {
+    return usageRecordsCache
+  }
+  const records = await loadUsageRecordsFromDisk()
+  usageRecordsCache = records
+  usageRecordsReady = true
+  printBusinessJson('用量监控', '缓存同步', {
+    reason: forceReload ? 'force-reload' : 'load',
+    records: usageRecordsCache.length,
+    version: usageRealtimeVersion,
+  })
+  return usageRecordsCache
+}
+
 async function overwriteUsageRecords(records) {
-  const lines = records.map((item) => JSON.stringify(item)).join('\n')
+  const normalized = records
+    .map((item) => normalizeUsageRecord(item))
+    .filter(Boolean)
+    .sort((a, b) => Number(a.ts || 0) - Number(b.ts || 0))
+  const lines = normalized.map((item) => JSON.stringify(item)).join('\n')
   await fs.writeFile(usageLogPath, lines ? `${lines}\n` : '', 'utf-8')
+  usageRecordsCache = normalized
+  usageRecordsReady = true
+  usageRealtimeVersion += 1
+  if (usageStreamClients.size > 0) {
+    void broadcastUsageRealtimeUpdate('overwrite')
+  }
 }
 
 async function appendUsageRecord(record) {
+  const normalized = normalizeUsageRecord(record)
+  if (!normalized) {
+    printSystemLog('用量监控', '写入被拒绝', { reason: 'invalid-record' }, true)
+    return null
+  }
   try {
     await ensureUsageStorage()
-    await fs.appendFile(usageLogPath, `${JSON.stringify(record)}\n`, 'utf-8')
+    await fs.appendFile(usageLogPath, `${JSON.stringify(normalized)}\n`, 'utf-8')
+    if (!usageRecordsReady) {
+      await loadUsageRecords()
+    }
+    usageRecordsCache.push(normalized)
+    usageRealtimeVersion += 1
+    if (usageStreamClients.size > 0) {
+      void broadcastUsageRealtimeUpdate('append', normalized.id)
+    }
+    return normalized
   } catch (error) {
     printSystemLog('用量监控', '写入记录失败', { message: error.message }, true)
+    return null
   }
 }
 
@@ -681,6 +736,7 @@ function summarizeUsageRecords(records) {
     totalCostUsd: 0,
     models: {},
   }
+  const durationSamples = []
 
   for (const item of records) {
     const status = Number(item.statusCode || 0)
@@ -695,12 +751,16 @@ function summarizeUsageRecords(records) {
     const totalTokens =
       parsePositiveNumber(item.totalTokens, 0) || Math.max(0, Math.round(promptTokens + completionTokens))
     const costUsd = parsePositiveNumber(item.costUsd, 0)
+    const durationMs = parsePositiveNumber(item.durationMs, 0)
     const model = String(item.model || 'unknown')
 
     summary.promptTokens += promptTokens
     summary.completionTokens += completionTokens
     summary.totalTokens += totalTokens
     summary.totalCostUsd += costUsd
+    if (durationMs > 0) {
+      durationSamples.push(durationMs)
+    }
 
     if (!summary.models[model]) {
       summary.models[model] = {
@@ -715,12 +775,156 @@ function summarizeUsageRecords(records) {
     summary.models[model].totalCostUsd += costUsd
   }
 
-  const modelList = Object.values(summary.models).sort((a, b) => b.requests - a.requests)
+  const modelList = Object.values(summary.models).sort((a, b) => {
+    const diffByCost = b.totalCostUsd - a.totalCostUsd
+    if (Math.abs(diffByCost) > 1e-9) {
+      return diffByCost
+    }
+    return b.requests - a.requests
+  })
+  const sortedDurationSamples = durationSamples.slice().sort((a, b) => a - b)
+  const p95Index = sortedDurationSamples.length > 0 ? Math.min(sortedDurationSamples.length - 1, Math.floor(sortedDurationSamples.length * 0.95)) : -1
+  const avgDurationMs =
+    durationSamples.length > 0 ? Number((durationSamples.reduce((sum, value) => sum + value, 0) / durationSamples.length).toFixed(2)) : 0
+  const p95DurationMs = p95Index >= 0 ? Number(sortedDurationSamples[p95Index].toFixed(2)) : 0
+  const successRate = summary.requests > 0 ? Number(((summary.successRequests / summary.requests) * 100).toFixed(2)) : 0
+
   return {
     ...summary,
     models: modelList,
     totalCostUsd: Number(summary.totalCostUsd.toFixed(6)),
+    avgDurationMs,
+    p95DurationMs,
+    successRate,
   }
+}
+
+function parseUsageLimit(searchParams, fallback = 200) {
+  return Math.max(1, Math.min(1000, parseNonNegativeInt(searchParams.get('limit'), fallback)))
+}
+
+function parseUsageOffset(searchParams) {
+  return Math.max(0, parseNonNegativeInt(searchParams.get('offset'), 0))
+}
+
+function toUsageRecordRow(item) {
+  return {
+    id: item.id,
+    createdAt: item.createdAt,
+    model: item.model || 'unknown',
+    statusCode: item.statusCode,
+    durationMs: item.durationMs,
+    promptTokens: item.promptTokens || 0,
+    completionTokens: item.completionTokens || 0,
+    totalTokens: item.totalTokens || 0,
+    costUsd: Number(parsePositiveNumber(item.costUsd, 0).toFixed(6)),
+    costSource: item.costSource || 'unavailable',
+    finishReason: item.finishReason || '',
+    error: item.error || '',
+  }
+}
+
+function buildUsageWindowSummary(records, durationMs, nowMs) {
+  const fromMs = nowMs - durationMs
+  const scoped = records.filter((item) => item.ts >= fromMs && item.ts <= nowMs)
+  const summary = summarizeUsageRecords(scoped)
+  return {
+    from: new Date(fromMs).toISOString(),
+    to: new Date(nowMs).toISOString(),
+    requests: summary.requests,
+    totalTokens: summary.totalTokens,
+    totalCostUsd: summary.totalCostUsd,
+    successRate: summary.successRate,
+  }
+}
+
+function buildUsageSnapshotPayload(records, searchParams) {
+  const range = parseTimeRange(searchParams)
+  const limit = parseUsageLimit(searchParams, 300)
+  const offset = parseUsageOffset(searchParams)
+  const scoped = records
+    .filter((item) => item.ts >= range.fromMs && item.ts <= range.toMs)
+    .sort((a, b) => b.ts - a.ts)
+  const summary = summarizeUsageRecords(scoped)
+  const nowMs = Date.now()
+
+  return {
+    range: {
+      from: new Date(range.fromMs).toISOString(),
+      to: new Date(range.toMs).toISOString(),
+      period: range.period,
+    },
+    summary,
+    total: scoped.length,
+    offset,
+    limit,
+    records: scoped.slice(offset, offset + limit).map(toUsageRecordRow),
+    realtime: {
+      version: usageRealtimeVersion,
+      serverTime: new Date(nowMs).toISOString(),
+      streamClients: usageStreamClients.size,
+      window1m: buildUsageWindowSummary(records, 60 * 1000, nowMs),
+      window5m: buildUsageWindowSummary(records, 5 * 60 * 1000, nowMs),
+    },
+  }
+}
+
+async function buildUsageSnapshot(searchParams) {
+  const source = await loadUsageRecords()
+  return buildUsageSnapshotPayload(source, searchParams)
+}
+
+function writeSseEvent(res, eventName, payload) {
+  res.write(`event: ${eventName}\n`)
+  res.write(`data: ${JSON.stringify(payload)}\n\n`)
+}
+
+async function pushUsageSnapshotToClient(client, reason, lastRecordId = '') {
+  try {
+    const params = new URLSearchParams(client.query)
+    const snapshot = await buildUsageSnapshot(params)
+    writeSseEvent(client.res, 'snapshot', {
+      ...snapshot,
+      event: reason,
+      lastRecordId,
+    })
+  } catch (error) {
+    printSystemLog('用量监控', '推送失败', { clientId: client.id, message: error.message }, true)
+    closeUsageStreamClient(client.id, 'push-failed')
+  }
+}
+
+function closeUsageStreamClient(clientId, reason) {
+  const client = usageStreamClients.get(clientId)
+  if (!client) {
+    return
+  }
+  clearInterval(client.pingTimer)
+  try {
+    client.res.end()
+  } catch {
+    // 忽略连接已关闭异常
+  }
+  usageStreamClients.delete(clientId)
+  printSystemLog('用量监控', '实时订阅关闭', {
+    clientId,
+    reason,
+    activeClients: usageStreamClients.size,
+  })
+}
+
+async function broadcastUsageRealtimeUpdate(reason, lastRecordId = '') {
+  if (usageStreamClients.size === 0) {
+    return
+  }
+  const clients = Array.from(usageStreamClients.values())
+  await Promise.all(clients.map((client) => pushUsageSnapshotToClient(client, reason, lastRecordId)))
+  printBusinessJson('用量监控', '实时推送', {
+    reason,
+    lastRecordId,
+    version: usageRealtimeVersion,
+    activeClients: usageStreamClients.size,
+  })
 }
 
 async function readJsonBody(req, limitBytes = publishBodyLimitBytes) {
@@ -1107,40 +1311,112 @@ function buildUsageMonitorPage() {
     body {
       margin: 0;
       font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
-      background: #0b1020;
+      background:
+        radial-gradient(60% 80% at 85% -10%, rgba(56, 162, 255, 0.25), transparent 72%),
+        radial-gradient(62% 90% at -10% 110%, rgba(45, 196, 255, 0.2), transparent 72%),
+        #0a1020;
       color: #e6eeff;
     }
-    .wrap { max-width: 1320px; margin: 0 auto; padding: 20px; }
+    .wrap { max-width: 1440px; margin: 0 auto; padding: 20px; }
     .top {
       display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
       margin-bottom: 16px;
     }
     .title { font-size: 24px; font-weight: 700; }
-    .controls { display: flex; align-items: center; gap: 10px; }
+    .controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
     select, button {
       height: 34px; border-radius: 8px; border: 1px solid rgba(134, 171, 231, 0.4);
       background: #111a31; color: #e6eeff; padding: 0 10px;
     }
+    button { cursor: pointer; }
+    .stream-badge {
+      display: inline-flex;
+      align-items: center;
+      height: 28px;
+      border-radius: 999px;
+      padding: 0 10px;
+      border: 1px solid rgba(125, 167, 227, 0.35);
+      background: rgba(15, 26, 45, 0.9);
+      color: #9eb9e5;
+      font-size: 12px;
+    }
+    .stream-badge.is-ok {
+      border-color: rgba(98, 224, 158, 0.45);
+      color: #80f0bb;
+      background: rgba(19, 45, 34, 0.92);
+    }
+    .stream-badge.is-warn {
+      border-color: rgba(255, 198, 112, 0.44);
+      color: #ffd197;
+      background: rgba(56, 37, 18, 0.92);
+    }
+    .stream-badge.is-pending {
+      border-color: rgba(108, 185, 255, 0.48);
+      color: #b8dcff;
+      background: rgba(17, 33, 62, 0.92);
+    }
     .cards {
-      display: grid; gap: 12px; margin-bottom: 16px;
-      grid-template-columns: repeat(5, minmax(0, 1fr));
+      display: grid;
+      gap: 12px;
+      margin-bottom: 16px;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
     }
     .card {
       border: 1px solid rgba(126, 168, 237, 0.28);
       border-radius: 12px;
       background: rgba(17, 26, 49, 0.92);
       padding: 12px;
+      box-shadow: inset 0 1px 0 rgba(208, 227, 255, 0.08);
     }
     .card .k { color: #9ab2d8; font-size: 12px; }
-    .card .v { margin-top: 6px; font-size: 24px; font-weight: 700; }
-    .meta { color: #8fa8d0; font-size: 12px; margin-bottom: 10px; }
+    .card .v { margin-top: 6px; font-size: 22px; font-weight: 700; letter-spacing: -0.01em; }
+    .card .sub { margin-top: 6px; color: #8ca6d2; font-size: 11px; }
+    .meta-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+      color: #8fa8d0;
+      font-size: 12px;
+      margin-bottom: 12px;
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(300px, 34%) minmax(0, 1fr);
+      gap: 12px;
+      min-height: 0;
+    }
+    .panel {
+      border: 1px solid rgba(126, 168, 237, 0.28);
+      border-radius: 12px;
+      background: rgba(14, 22, 42, 0.95);
+      overflow: hidden;
+    }
+    .panel-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 11px 12px;
+      border-bottom: 1px solid rgba(126, 168, 237, 0.2);
+      background: rgba(17, 31, 58, 0.64);
+    }
+    .panel-head strong {
+      font-size: 13px;
+      color: #d8e8ff;
+    }
+    .panel-head span {
+      font-size: 11px;
+      color: #9ab7e2;
+    }
+    .scroll-zone {
+      max-height: 62vh;
+      overflow: auto;
+    }
     table {
       width: 100%;
       border-collapse: collapse;
-      border: 1px solid rgba(126, 168, 237, 0.28);
-      background: rgba(14, 22, 42, 0.95);
-      border-radius: 12px;
-      overflow: hidden;
     }
     thead th {
       text-align: left;
@@ -1160,8 +1436,17 @@ function buildUsageMonitorPage() {
     .status-ok { color: #60d394; }
     .status-err { color: #ff8b8b; }
     .mono { font-family: "SFMono-Regular", Consolas, monospace; }
-    @media (max-width: 1180px) { .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-    @media (max-width: 760px) { .cards { grid-template-columns: 1fr; } .wrap { padding: 12px; } }
+    .muted { color: #8fa8d0; }
+    @media (max-width: 1180px) {
+      .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .layout { grid-template-columns: 1fr; }
+      .scroll-zone { max-height: 46vh; }
+    }
+    @media (max-width: 760px) {
+      .cards { grid-template-columns: 1fr; }
+      .wrap { padding: 12px; }
+      .title { font-size: 20px; }
+    }
   </style>
 </head>
 <body>
@@ -1179,93 +1464,266 @@ function buildUsageMonitorPage() {
           </select>
         </label>
         <button id="refresh">立即刷新</button>
+        <span class="stream-badge is-pending" id="streamState">实时流连接中</span>
       </div>
     </div>
-    <div class="meta" id="range"></div>
+    <div class="meta-row">
+      <div id="range">统计区间：-</div>
+      <div id="updatedAt">最后更新：-</div>
+    </div>
     <section class="cards">
       <article class="card"><div class="k">请求总数</div><div class="v" id="reqTotal">-</div></article>
-      <article class="card"><div class="k">成功 / 失败</div><div class="v" id="reqStatus">-</div></article>
-      <article class="card"><div class="k">总 Token</div><div class="v" id="tokenTotal">-</div></article>
-      <article class="card"><div class="k">输入 / 输出 Token</div><div class="v" id="tokenSplit">-</div></article>
-      <article class="card"><div class="k">总费用 (USD)</div><div class="v" id="costTotal">-</div></article>
+      <article class="card"><div class="k">总费用 (USD)</div><div class="v mono" id="costTotal">-</div></article>
+      <article class="card"><div class="k">总 Token</div><div class="v" id="tokenTotal">-</div><div class="sub" id="tokenSplit">输入 - / 输出 -</div></article>
+      <article class="card"><div class="k">成功率 / P95 耗时</div><div class="v" id="successAndP95">-</div><div class="sub" id="avgLatency">平均耗时 - ms</div></article>
+      <article class="card"><div class="k">近 1 分钟</div><div class="v" id="window1mReq">-</div><div class="sub mono" id="window1mCost">费用 -</div></article>
+      <article class="card"><div class="k">近 5 分钟</div><div class="v" id="window5mReq">-</div><div class="sub mono" id="window5mCost">费用 -</div></article>
+      <article class="card"><div class="k">订阅状态</div><div class="v" id="streamVersion">v-</div><div class="sub" id="streamClients">在线订阅 -</div></article>
+      <article class="card"><div class="k">失败请求</div><div class="v" id="failedReq">-</div><div class="sub" id="successReq">成功请求 -</div></article>
     </section>
-    <table>
-      <thead>
-        <tr>
-          <th>时间</th>
-          <th>模型</th>
-          <th>状态</th>
-          <th>耗时(ms)</th>
-          <th>Prompt</th>
-          <th>Completion</th>
-          <th>Total</th>
-          <th>费用(USD)</th>
-          <th>费用来源</th>
-          <th>错误</th>
-        </tr>
-      </thead>
-      <tbody id="rows"></tbody>
-    </table>
+    <section class="layout">
+      <article class="panel">
+        <div class="panel-head">
+          <strong>模型费用分布</strong>
+          <span id="modelCount">0 个模型</span>
+        </div>
+        <div class="scroll-zone">
+          <table>
+            <thead>
+              <tr>
+                <th>模型</th>
+                <th>请求数</th>
+                <th>Total Token</th>
+                <th>费用(USD)</th>
+                <th>费用占比</th>
+              </tr>
+            </thead>
+            <tbody id="modelRows"></tbody>
+          </table>
+        </div>
+      </article>
+      <article class="panel">
+        <div class="panel-head">
+          <strong>最近请求明细</strong>
+          <span id="recordCount">0 条</span>
+        </div>
+        <div class="scroll-zone">
+          <table>
+            <thead>
+              <tr>
+                <th>时间</th>
+                <th>模型</th>
+                <th>状态</th>
+                <th>耗时(ms)</th>
+                <th>Prompt</th>
+                <th>Completion</th>
+                <th>Total</th>
+                <th>费用(USD)</th>
+                <th>费用来源</th>
+                <th>错误</th>
+              </tr>
+            </thead>
+            <tbody id="rows"></tbody>
+          </table>
+        </div>
+      </article>
+    </section>
   </main>
   <script>
     const formatNum = (value) => new Intl.NumberFormat('zh-CN').format(Number(value || 0));
     const formatUsd = (value) => Number(value || 0).toFixed(6);
+    const formatPct = (value) => Number(value || 0).toFixed(2) + '%';
+    const formatMs = (value) => Number(value || 0).toFixed(2);
+    const escapeHtml = (value) =>
+      String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+
     const periodEl = document.getElementById('period');
     const rowsEl = document.getElementById('rows');
+    const modelRowsEl = document.getElementById('modelRows');
+    const streamStateEl = document.getElementById('streamState');
+    const state = {
+      eventSource: null,
+      fallbackTimer: null,
+      latestPeriod: periodEl.value,
+    };
 
-    async function loadData() {
-      const period = periodEl.value;
-      const [summaryRes, recordsRes] = await Promise.all([
-        fetch('/api/ops/usage/summary?period=' + encodeURIComponent(period), { cache: 'no-store' }),
-        fetch('/api/ops/usage/records?period=' + encodeURIComponent(period) + '&limit=300', { cache: 'no-store' }),
-      ]);
-      const summaryData = await summaryRes.json();
-      const recordsData = await recordsRes.json();
+    function setStreamState(text, tone) {
+      streamStateEl.textContent = text;
+      streamStateEl.className = 'stream-badge ' + tone;
+    }
 
-      const summary = summaryData.summary || {};
-      const range = summaryData.range || {};
-      document.getElementById('range').textContent =
-        '统计区间：' + (range.from || '-') + ' ~ ' + (range.to || '-') + '（周期：' + (range.period || period) + '）';
-      document.getElementById('reqTotal').textContent = formatNum(summary.requests || 0);
-      document.getElementById('reqStatus').textContent =
-        formatNum(summary.successRequests || 0) + ' / ' + formatNum(summary.failedRequests || 0);
-      document.getElementById('tokenTotal').textContent = formatNum(summary.totalTokens || 0);
-      document.getElementById('tokenSplit').textContent =
-        formatNum(summary.promptTokens || 0) + ' / ' + formatNum(summary.completionTokens || 0);
-      document.getElementById('costTotal').textContent = formatUsd(summary.totalCostUsd || 0);
+    function stopFallbackPolling() {
+      if (state.fallbackTimer) {
+        clearInterval(state.fallbackTimer);
+        state.fallbackTimer = null;
+      }
+    }
 
-      const rows = recordsData.records || [];
-      rowsEl.innerHTML = rows
+    function startFallbackPolling() {
+      if (state.fallbackTimer) {
+        return;
+      }
+      state.fallbackTimer = setInterval(() => { void loadSnapshot('polling'); }, 5000);
+    }
+
+    function renderModels(summary) {
+      const models = Array.isArray(summary.models) ? summary.models : [];
+      document.getElementById('modelCount').textContent = models.length + ' 个模型';
+      if (models.length === 0) {
+        modelRowsEl.innerHTML = '<tr><td colspan="5" class="muted">暂无模型数据</td></tr>';
+        return;
+      }
+      const totalCost = Number(summary.totalCostUsd || 0);
+      modelRowsEl.innerHTML = models
+        .map((model) => {
+          const share = totalCost > 0 ? formatPct((Number(model.totalCostUsd || 0) / totalCost) * 100) : '-';
+          return '<tr>' +
+            '<td class="mono">' + escapeHtml(model.model || 'unknown') + '</td>' +
+            '<td>' + formatNum(model.requests || 0) + '</td>' +
+            '<td>' + formatNum(model.totalTokens || 0) + '</td>' +
+            '<td class="mono">' + formatUsd(model.totalCostUsd || 0) + '</td>' +
+            '<td>' + share + '</td>' +
+          '</tr>';
+        })
+        .join('');
+    }
+
+    function renderRecords(records) {
+      document.getElementById('recordCount').textContent = (records || []).length + ' 条';
+      rowsEl.innerHTML = (records || [])
         .map((item) => {
           const ok = Number(item.statusCode || 0) >= 200 && Number(item.statusCode || 0) < 400 && !item.error;
           return '<tr>' +
-            '<td class="mono">' + (item.createdAt || '-') + '</td>' +
-            '<td class="mono">' + (item.model || '-') + '</td>' +
-            '<td class="' + (ok ? 'status-ok' : 'status-err') + '">' + (item.statusCode || '-') + '</td>' +
+            '<td class="mono">' + escapeHtml(item.createdAt || '-') + '</td>' +
+            '<td class="mono">' + escapeHtml(item.model || '-') + '</td>' +
+            '<td class="' + (ok ? 'status-ok' : 'status-err') + '">' + escapeHtml(item.statusCode || '-') + '</td>' +
             '<td>' + formatNum(item.durationMs || 0) + '</td>' +
             '<td>' + formatNum(item.promptTokens || 0) + '</td>' +
             '<td>' + formatNum(item.completionTokens || 0) + '</td>' +
             '<td>' + formatNum(item.totalTokens || 0) + '</td>' +
             '<td class="mono">' + formatUsd(item.costUsd || 0) + '</td>' +
-            '<td>' + (item.costSource || '-') + '</td>' +
-            '<td title="' + (item.error || '') + '">' + ((item.error || '').slice(0, 80) || '-') + '</td>' +
-          '</tr>'
+            '<td>' + escapeHtml(item.costSource || '-') + '</td>' +
+            '<td title="' + escapeHtml(item.error || '') + '">' + escapeHtml((item.error || '').slice(0, 80) || '-') + '</td>' +
+          '</tr>';
         })
         .join('');
-    }
-
-    async function safeLoad() {
-      try {
-        await loadData();
-      } catch (error) {
-        rowsEl.innerHTML = '<tr><td colspan="10" class="status-err">加载失败：' + String(error.message || error) + '</td></tr>';
+      if (!rowsEl.innerHTML) {
+        rowsEl.innerHTML = '<tr><td colspan="10" class="muted">当前筛选区间暂无请求记录</td></tr>';
       }
     }
 
-    document.getElementById('refresh').addEventListener('click', () => { void safeLoad(); });
-    periodEl.addEventListener('change', () => { void safeLoad(); });
-    void safeLoad();
-    setInterval(() => { void safeLoad(); }, 10000);
+    function renderSnapshot(payload) {
+      const summary = payload.summary || {};
+      const range = payload.range || {};
+      const realtime = payload.realtime || {};
+      const window1m = realtime.window1m || {};
+      const window5m = realtime.window5m || {};
+      document.getElementById('range').textContent =
+        '统计区间：' + (range.from || '-') + ' ~ ' + (range.to || '-') + '（周期：' + (range.period || periodEl.value) + '）';
+      document.getElementById('updatedAt').textContent = '最后更新：' + (realtime.serverTime || new Date().toISOString());
+      document.getElementById('reqTotal').textContent = formatNum(summary.requests || 0);
+      document.getElementById('failedReq').textContent = formatNum(summary.failedRequests || 0);
+      document.getElementById('successReq').textContent = '成功请求 ' + formatNum(summary.successRequests || 0);
+      document.getElementById('costTotal').textContent = formatUsd(summary.totalCostUsd || 0);
+      document.getElementById('tokenTotal').textContent = formatNum(summary.totalTokens || 0);
+      document.getElementById('tokenSplit').textContent =
+        '输入 ' + formatNum(summary.promptTokens || 0) + ' / 输出 ' + formatNum(summary.completionTokens || 0);
+      document.getElementById('successAndP95').textContent =
+        formatPct(summary.successRate || 0) + ' / ' + formatMs(summary.p95DurationMs || 0) + ' ms';
+      document.getElementById('avgLatency').textContent = '平均耗时 ' + formatMs(summary.avgDurationMs || 0) + ' ms';
+      document.getElementById('window1mReq').textContent = formatNum(window1m.requests || 0) + ' 次';
+      document.getElementById('window1mCost').textContent =
+        '费用 ' + formatUsd(window1m.totalCostUsd || 0) + ' / Token ' + formatNum(window1m.totalTokens || 0);
+      document.getElementById('window5mReq').textContent = formatNum(window5m.requests || 0) + ' 次';
+      document.getElementById('window5mCost').textContent =
+        '费用 ' + formatUsd(window5m.totalCostUsd || 0) + ' / Token ' + formatNum(window5m.totalTokens || 0);
+      document.getElementById('streamVersion').textContent = 'v' + formatNum(realtime.version || 0);
+      document.getElementById('streamClients').textContent = '在线订阅 ' + formatNum(realtime.streamClients || 0);
+      renderModels(summary);
+      renderRecords(payload.records || []);
+    }
+
+    async function loadSnapshot(reason) {
+      const period = periodEl.value;
+      const response = await fetch(
+        '/api/dashboard/live?period=' + encodeURIComponent(period) + '&limit=300',
+        { cache: 'no-store' }
+      );
+      if (!response.ok) {
+        throw new Error('快照请求失败(' + response.status + ')');
+      }
+      const payload = await response.json();
+      renderSnapshot(payload);
+      if (reason === 'manual') {
+        setStreamState('手动刷新完成', 'is-ok');
+      }
+    }
+
+    function connectStream() {
+      if (state.eventSource) {
+        state.eventSource.close();
+        state.eventSource = null;
+      }
+      const period = periodEl.value;
+      state.latestPeriod = period;
+      const streamUrl = '/api/dashboard/stream?period=' + encodeURIComponent(period) + '&limit=300';
+      setStreamState('实时流连接中', 'is-pending');
+      const es = new EventSource(streamUrl);
+      state.eventSource = es;
+
+      es.addEventListener('connected', () => {
+        stopFallbackPolling();
+        setStreamState('实时流已连接', 'is-ok');
+      });
+
+      es.addEventListener('snapshot', (event) => {
+        try {
+          const payload = JSON.parse(event.data || '{}');
+          if (periodEl.value !== state.latestPeriod) {
+            return;
+          }
+          renderSnapshot(payload);
+          stopFallbackPolling();
+          setStreamState('实时流已连接', 'is-ok');
+        } catch (error) {
+          setStreamState('实时流数据异常，切换轮询', 'is-warn');
+          startFallbackPolling();
+        }
+      });
+
+      es.onerror = () => {
+        setStreamState('实时流中断，切换轮询', 'is-warn');
+        startFallbackPolling();
+      };
+    }
+
+    async function bootstrap() {
+      try {
+        await loadSnapshot('init');
+      } catch (error) {
+        rowsEl.innerHTML =
+          '<tr><td colspan="10" class="status-err">首次加载失败：' + escapeHtml(error.message || String(error)) + '</td></tr>';
+      }
+      connectStream();
+    }
+
+    document.getElementById('refresh').addEventListener('click', () => { void loadSnapshot('manual'); });
+    periodEl.addEventListener('change', () => {
+      void loadSnapshot('period');
+      connectStream();
+    });
+    window.addEventListener('beforeunload', () => {
+      if (state.eventSource) {
+        state.eventSource.close();
+      }
+      stopFallbackPolling();
+    });
+    void bootstrap();
   </script>
 </body>
 </html>`
@@ -1283,18 +1741,18 @@ async function handleUsageSummary(req, res, urlObj) {
     return
   }
 
-  const range = parseTimeRange(urlObj.searchParams)
-  const source = await loadUsageRecords()
-  const scoped = source.filter((item) => item.ts >= range.fromMs && item.ts <= range.toMs)
-  const summary = summarizeUsageRecords(scoped)
+  const snapshot = await buildUsageSnapshot(urlObj.searchParams)
+  printBusinessJson('用量监控', '摘要查询', {
+    period: snapshot.range.period,
+    total: snapshot.summary.requests,
+    totalTokens: snapshot.summary.totalTokens,
+    totalCostUsd: snapshot.summary.totalCostUsd,
+  })
 
   writeJson(res, 200, {
-    range: {
-      from: new Date(range.fromMs).toISOString(),
-      to: new Date(range.toMs).toISOString(),
-      period: range.period,
-    },
-    summary,
+    range: snapshot.range,
+    summary: snapshot.summary,
+    realtime: snapshot.realtime,
   })
 }
 
@@ -1310,34 +1768,96 @@ async function handleUsageRecords(req, res, urlObj) {
     return
   }
 
-  const range = parseTimeRange(urlObj.searchParams)
-  const limit = Math.max(1, Math.min(1000, parseNonNegativeInt(urlObj.searchParams.get('limit'), 200)))
-  const offset = Math.max(0, parseNonNegativeInt(urlObj.searchParams.get('offset'), 0))
-  const source = await loadUsageRecords()
-  const scoped = source
-    .filter((item) => item.ts >= range.fromMs && item.ts <= range.toMs)
-    .sort((a, b) => b.ts - a.ts)
-
-  const rows = scoped.slice(offset, offset + limit).map((item) => ({
-    id: item.id,
-    createdAt: item.createdAt,
-    model: item.model || 'unknown',
-    statusCode: item.statusCode,
-    durationMs: item.durationMs,
-    promptTokens: item.promptTokens || 0,
-    completionTokens: item.completionTokens || 0,
-    totalTokens: item.totalTokens || 0,
-    costUsd: Number(parsePositiveNumber(item.costUsd, 0).toFixed(6)),
-    costSource: item.costSource || 'unavailable',
-    finishReason: item.finishReason || '',
-    error: item.error || '',
-  }))
+  const snapshot = await buildUsageSnapshot(urlObj.searchParams)
+  printBusinessJson('用量监控', '明细查询', {
+    period: snapshot.range.period,
+    total: snapshot.total,
+    offset: snapshot.offset,
+    limit: snapshot.limit,
+  })
 
   writeJson(res, 200, {
-    total: scoped.length,
-    offset,
-    limit,
-    records: rows,
+    total: snapshot.total,
+    offset: snapshot.offset,
+    limit: snapshot.limit,
+    records: snapshot.records,
+    realtime: snapshot.realtime,
+  })
+}
+
+async function handleUsageLive(req, res, urlObj) {
+  applyCorsHeaders(res)
+  if (req.method === 'OPTIONS') {
+    res.statusCode = 204
+    res.end()
+    return
+  }
+  if (req.method !== 'GET') {
+    writeJson(res, 405, { code: 'METHOD_NOT_ALLOWED', message: '仅支持 GET' })
+    return
+  }
+
+  const snapshot = await buildUsageSnapshot(urlObj.searchParams)
+  printBusinessJson('用量监控', '实时快照', {
+    period: snapshot.range.period,
+    total: snapshot.summary.requests,
+    records: snapshot.records.length,
+    version: snapshot.realtime.version,
+  })
+  writeJson(res, 200, snapshot)
+}
+
+async function handleUsageStream(req, res, urlObj) {
+  applyCorsHeaders(res)
+  if (req.method === 'OPTIONS') {
+    res.statusCode = 204
+    res.end()
+    return
+  }
+  if (req.method !== 'GET') {
+    writeJson(res, 405, { code: 'METHOD_NOT_ALLOWED', message: '仅支持 GET' })
+    return
+  }
+
+  const clientId = `usage-stream-${Date.now().toString(36)}-${(usageStreamClientSeq += 1)}`
+  const query = urlObj.searchParams.toString()
+
+  res.statusCode = 200
+  res.setHeader('Content-Type', 'text/event-stream; charset=utf-8')
+  res.setHeader('Cache-Control', 'no-cache, no-transform')
+  res.setHeader('Connection', 'keep-alive')
+  res.setHeader('X-Accel-Buffering', 'no')
+  if (typeof res.flushHeaders === 'function') {
+    res.flushHeaders()
+  }
+
+  const client = {
+    id: clientId,
+    res,
+    query,
+    pingTimer: setInterval(() => {
+      res.write(': ping\n\n')
+    }, 15000),
+  }
+  usageStreamClients.set(clientId, client)
+  printSystemLog('用量监控', '实时订阅建立', {
+    clientId,
+    query,
+    activeClients: usageStreamClients.size,
+  })
+
+  writeSseEvent(res, 'connected', {
+    clientId,
+    serverTime: new Date().toISOString(),
+    version: usageRealtimeVersion,
+  })
+  await pushUsageSnapshotToClient(client, 'connected')
+
+  req.on('close', () => {
+    closeUsageStreamClient(clientId, 'request-close')
+  })
+  req.on('aborted', () => {
+    closeUsageStreamClient(clientId, 'request-aborted')
   })
 }
 
@@ -1491,17 +2011,27 @@ const server = http.createServer(async (req, res) => {
       return
     }
 
-    if (pathname === '/api/ops/usage/summary') {
+    if (pathname === '/api/dashboard/summary' || pathname === '/api/ops/usage/summary') {
       await handleUsageSummary(req, res, urlObj)
       return
     }
 
-    if (pathname === '/api/ops/usage/records') {
+    if (pathname === '/api/dashboard/records' || pathname === '/api/ops/usage/records') {
       await handleUsageRecords(req, res, urlObj)
       return
     }
 
-    if (pathname === '/ops/usage') {
+    if (pathname === '/api/dashboard/live' || pathname === '/api/ops/usage/live') {
+      await handleUsageLive(req, res, urlObj)
+      return
+    }
+
+    if (pathname === '/api/dashboard/stream' || pathname === '/api/ops/usage/stream') {
+      await handleUsageStream(req, res, urlObj)
+      return
+    }
+
+    if (pathname === '/dashboard' || pathname === '/ops/usage') {
       await handleUsagePage(req, res)
       return
     }

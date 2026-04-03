@@ -151,9 +151,17 @@ npm run build
 
 服务启动后可访问：
 
-- `/ops/usage`
+- `/dashboard`
+- `/ops/usage`（兼容别名）
 
-页面会按周期展示请求总数、token 总量、费用总额，以及每次请求的明细记录。
+页面支持实时订阅（SSE）+ 轮询兜底，会按周期展示请求总数、token 总量、费用总额、成功率、时延、模型费用分布，以及最近请求明细。
+
+可用接口：
+
+- `GET /api/dashboard/live`：实时快照（汇总 + 最近记录）
+- `GET /api/dashboard/stream`：SSE 实时推送
+- `GET /api/dashboard/summary`：汇总接口（兼容）
+- `GET /api/dashboard/records`：明细接口（兼容）
 
 ## 7. 环境变量说明
 
