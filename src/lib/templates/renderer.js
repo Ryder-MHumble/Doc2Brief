@@ -1,12 +1,12 @@
-import { templateAssets } from './assets'
+import { loadTemplateAsset } from './assets'
 import { templateCatalog } from './catalog'
 import { normalizeDocument } from './document-normalizer'
 import { buildTemplatePayload } from './view-models'
 
-export function renderTemplateHtml(templateId, document, generatedAt, options = {}) {
+export async function renderTemplateHtml(templateId, document, generatedAt, options = {}) {
   const { runtimeMode = 'preview' } = options
   const templateMeta = templateCatalog.find((item) => item.id === templateId)
-  const asset = templateAssets[templateId]
+  const asset = await loadTemplateAsset(templateId)
 
   if (!templateMeta || !asset) {
     return buildFallbackHtml(document, generatedAt)
@@ -19,13 +19,38 @@ export function renderTemplateHtml(templateId, document, generatedAt, options = 
 
 function injectTemplate(asset, payload, runtimeMode) {
   const serializedPayload = serializePayload(payload)
-  const styleBlock = asset.css
+  const styleBlock = buildRuntimeStyle(asset.css, runtimeMode)
   const scriptBlock = buildRuntimeScript(asset.js, runtimeMode)
 
   return asset.html
     .replace('__TEMPLATE_STYLE__', styleBlock)
     .replace('__TEMPLATE_DATA__', serializedPayload)
     .replace('__TEMPLATE_SCRIPT__', scriptBlock)
+}
+
+function buildRuntimeStyle(templateCss, runtimeMode) {
+  // 分享页/预览页都移除远端字体导入，避免内网环境字体请求阻塞渲染。
+  const sanitizedCss = templateCss.replace(/@import\s+url\((['"])https:\/\/fonts\.googleapis\.com[^;]+;\s*/gi, '')
+  if (runtimeMode !== 'preview') {
+    return sanitizedCss
+  }
+
+  const previewScrollbarStyle = `
+html, body {
+  scrollbar-width: none !important;
+}
+
+* {
+  scrollbar-width: none !important;
+}
+
+*::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+}
+`
+
+  return `${sanitizedCss}\n${previewScrollbarStyle}`
 }
 
 function buildRuntimeScript(templateScript, runtimeMode) {

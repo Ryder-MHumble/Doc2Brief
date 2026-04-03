@@ -15,6 +15,8 @@ export function parseJsonObject(value) {
   const repairedCandidates = [
     repairLikelyBrokenJson(stripped),
     repairLikelyBrokenJson(extractFirstBalancedObject(stripped)),
+    repairByTruncatingTail(stripped),
+    repairByTruncatingTail(extractFirstBalancedObject(stripped)),
   ].filter(Boolean)
 
   const deduped = Array.from(new Set(repairedCandidates))
@@ -183,4 +185,41 @@ function repairLikelyBrokenJson(source) {
   }
 
   return output.replace(/,\s*([}\]])/g, '$1')
+}
+
+function repairByTruncatingTail(source) {
+  const candidate = sanitizeJsonText(source)
+  if (!candidate) {
+    return ''
+  }
+
+  const start = candidate.indexOf('{')
+  if (start < 0) {
+    return ''
+  }
+
+  const text = candidate.slice(start)
+  const checkpoints = collectTailCheckpoints(text)
+  for (const cutIndex of checkpoints) {
+    const repaired = repairLikelyBrokenJson(text.slice(0, cutIndex))
+    if (safeJsonParse(repaired)) {
+      return repaired
+    }
+  }
+
+  return ''
+}
+
+function collectTailCheckpoints(text) {
+  const checkpoints = [text.length]
+  for (let index = text.length - 1; index >= 1; index -= 1) {
+    const char = text[index]
+    if (char === '\n' || char === ',' || char === '}' || char === ']') {
+      checkpoints.push(index)
+      if (checkpoints.length >= 180) {
+        break
+      }
+    }
+  }
+  return checkpoints
 }

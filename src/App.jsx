@@ -5,6 +5,7 @@ import { PreviewPane } from './components/PreviewPane'
 import { SourceSection } from './components/SourceSection'
 import { TemplateBridgePanel } from './components/TemplateBridgePanel'
 import { useWorkbenchController } from './hooks/use-workbench-controller'
+import brandLogo from '../data/img/logo.png'
 
 export default function App() {
   const {
@@ -61,6 +62,34 @@ export default function App() {
 
   return (
     <div className={`app-shell ${isGenerating ? 'is-generating' : ''}`}>
+      <header className="app-topbar">
+        <div className="brand-lockup">
+          <img alt="Docs2Brief Logo" className="brand-logo" src={brandLogo} />
+          <div>
+            <div className="brand-title font-headline">Docs2Brief</div>
+            <div className="brand-subtitle">document to weekly brief</div>
+          </div>
+        </div>
+        <div className="topbar-actions">
+          <button
+            className="icon-button topbar-monitor-button"
+            onClick={() => window.open('/ops/usage', '_blank', 'noopener,noreferrer')}
+            type="button"
+          >
+            <span aria-hidden="true">▦</span>
+            <span>API监控</span>
+          </button>
+          <button
+            aria-label="帮助提示"
+            className="icon-button topbar-help-icon"
+            title="如遇问题相关问题请联系孙铭浩"
+            type="button"
+          >
+            <span aria-hidden="true">ⓘ</span>
+          </button>
+        </div>
+      </header>
+
       <main className={`workspace ${showTemplateBridge ? 'workspace--with-template-bridge' : ''}`}>
         <aside className="control-panel control-panel--refined">
           <PreferenceSection
@@ -97,6 +126,13 @@ export default function App() {
             isReportReady={isReportReady}
             onGenerateAction={handleGenerateAction}
           />
+
+          <div aria-label="反馈与支持" className="support-contact-note" role="note">
+            <p className="support-contact-note__title font-headline">反馈与支持</p>
+            <p className="support-contact-note__text">
+              如遇使用问题或有新增需求，请联系 <strong>孙铭浩</strong>，我们会尽快跟进处理。
+            </p>
+          </div>
 
           {errorMessage ? <div className="status-banner status-banner--error">{errorMessage}</div> : null}
           {warnings.length > 0 ? (

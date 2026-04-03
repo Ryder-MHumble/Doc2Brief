@@ -6,10 +6,10 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "start:prod": "node server/app.js"
   },
   "dependencies": {
-    "@radix-ui/react-select": "^2.2.6",
     "mammoth": "^1.11.0",
     "pdfjs-dist": "^5.4.296",
     "react": "^19.2.0",

@@ -3,10 +3,53 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ReportFlow 工作台</title>
+    <title>Docs2Brief 工作台</title>
+    <link rel="icon" type="image/png" href="./data/img/logo.png" />
+    <style>
+      html,
+      body,
+      #root {
+        width: 100%;
+        min-height: 100%;
+      }
+
+      body {
+        margin: 0;
+        background: linear-gradient(180deg, #070b15 0%, #0a1020 58%, #070c16 100%);
+        color: #dde4f4;
+        font-family: 'PingFang SC', 'Microsoft YaHei', 'Noto Sans CJK SC', sans-serif;
+      }
+
+      .boot-splash {
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+      }
+
+      .boot-splash span {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 14px;
+        color: #9fb7d8;
+      }
+
+      .boot-splash span::before {
+        content: '';
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: #25c7ff;
+        box-shadow: 0 0 10px rgba(37, 199, 255, 0.55);
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div class="boot-splash">
+        <span>系统加载中...</span>
+      </div>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

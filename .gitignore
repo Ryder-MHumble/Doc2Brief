@@ -5,7 +5,11 @@
 node_modules
 dist
 *.db
+.service.pid
+logs/
+data/reports/
 __pycache__
 **/__pycache__
 *.pyc
 .pytest_cache
+.playwright-cli/

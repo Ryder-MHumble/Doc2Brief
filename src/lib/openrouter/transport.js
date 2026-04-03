@@ -2,6 +2,79 @@ import { OPENROUTER_API_KEY, OPENROUTER_BASE_URL } from './config'
 import { stripNoise, toCleanString } from './text-utils'
 
 export async function requestOpenRouter(payload) {
+  const { endpoint: proxyEndpoint, proxyDisabled } = resolveProxyEndpoint()
+  const directFallbackEnabled = resolveDirectFallbackEnabled()
+  const allowDirectFallback = Boolean(OPENROUTER_API_KEY) && (proxyDisabled || directFallbackEnabled)
+
+  if (proxyEndpoint) {
+    try {
+      return await requestViaProxy(proxyEndpoint, payload)
+    } catch (error) {
+      if (!allowDirectFallback) {
+        const message = error instanceof Error ? error.message : String(error)
+        throw new Error(
+          `代理请求失败：${message}。为保证用量监控准确，已阻止自动前端直连。请检查服务端代理，或显式设置 VITE_OPENROUTER_ALLOW_DIRECT_FALLBACK=1（或 VITE_OPENROUTER_PROXY_DISABLED=1）后重试。`,
+        )
+      }
+      console.warn(
+        `系统日志 | 模块=模型编排 | 事件=代理调用失败，降级直连 | 内容=${JSON.stringify({
+          message: error instanceof Error ? error.message : String(error),
+        })}`,
+      )
+    }
+  }
+
+  if (!OPENROUTER_API_KEY) {
+    throw new Error('未配置 OpenRouter API Key，且代理不可用')
+  }
+
+  return requestDirect(payload)
+}
+
+function resolveProxyEndpoint() {
+  const disabled = String(import.meta.env.VITE_OPENROUTER_PROXY_DISABLED || '').trim()
+  if (disabled === '1' || disabled.toLowerCase() === 'true') {
+    return { endpoint: '', proxyDisabled: true }
+  }
+
+  const base = String(import.meta.env.VITE_REPORT_API_BASE_URL || '').trim().replace(/\/+$/, '')
+  if (!base) {
+    return { endpoint: '/api/openrouter/chat/completions', proxyDisabled: false }
+  }
+  return { endpoint: `${base}/api/openrouter/chat/completions`, proxyDisabled: false }
+}
+
+function resolveDirectFallbackEnabled() {
+  const flag = String(import.meta.env.VITE_OPENROUTER_ALLOW_DIRECT_FALLBACK || '')
+    .trim()
+    .toLowerCase()
+  return flag === '1' || flag === 'true'
+}
+
+async function requestViaProxy(endpoint, payload) {
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  })
+
+  if (!response.ok) {
+    let errorDetail = ''
+    try {
+      const bodyText = await response.text()
+      errorDetail = bodyText ? `，响应=${bodyText.slice(0, 300)}` : ''
+    } catch {
+      errorDetail = ''
+    }
+    throw new Error(`代理请求失败：${response.status}${errorDetail}`)
+  }
+
+  return await response.json()
+}
+
+async function requestDirect(payload) {
   const response = await fetch(`${OPENROUTER_BASE_URL}/chat/completions`, {
     method: 'POST',
     headers: {

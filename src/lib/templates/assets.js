@@ -1,39 +1,95 @@
-import template01Html from '../../../template/01/index.html?raw'
-import template01Css from '../../../template/01/style.css?raw'
-import template01Js from '../../../template/01/app.js?raw'
-import template02Html from '../../../template/02/index.html?raw'
-import template02Css from '../../../template/02/style.css?raw'
-import template02Js from '../../../template/02/app.js?raw'
-import template03Html from '../../../template/03/index.html?raw'
-import template03Css from '../../../template/03/style.css?raw'
-import template03Js from '../../../template/03/app.js?raw'
-import template04Html from '../../../template/04/index.html?raw'
-import template04Css from '../../../template/04/style.css?raw'
-import template04Js from '../../../template/04/app.js?raw'
-import template05Html from '../../../template/05/index.html?raw'
-import template05Css from '../../../template/05/style.css?raw'
-import template05Js from '../../../template/05/app.js?raw'
-import template06Html from '../../../template/06/index.html?raw'
-import template06Css from '../../../template/06/style.css?raw'
-import template06Js from '../../../template/06/app.js?raw'
-import template07Html from '../../../template/07/index.html?raw'
-import template07Css from '../../../template/07/style.css?raw'
-import template07Js from '../../../template/07/app.js?raw'
-import template08Html from '../../../template/08/index.html?raw'
-import template08Css from '../../../template/08/style.css?raw'
-import template08Js from '../../../template/08/app.js?raw'
-import template09Html from '../../../template/09/index.html?raw'
-import template09Css from '../../../template/09/style.css?raw'
-import template09Js from '../../../template/09/app.js?raw'
+const templateAssetCache = new Map()
 
-export const templateAssets = {
-  'template-01': { html: template01Html, css: template01Css, js: template01Js },
-  'template-02': { html: template02Html, css: template02Css, js: template02Js },
-  'template-03': { html: template03Html, css: template03Css, js: template03Js },
-  'template-04': { html: template04Html, css: template04Css, js: template04Js },
-  'template-05': { html: template05Html, css: template05Css, js: template05Js },
-  'template-06': { html: template06Html, css: template06Css, js: template06Js },
-  'template-07': { html: template07Html, css: template07Css, js: template07Js },
-  'template-08': { html: template08Html, css: template08Css, js: template08Js },
-  'template-09': { html: template09Html, css: template09Css, js: template09Js },
+const templateAssetLoaders = {
+  'template-01': async () => {
+    const [html, css, js] = await Promise.all([
+      import('../../../template/01/index.html?raw'),
+      import('../../../template/01/style.css?raw'),
+      import('../../../template/01/app.js?raw'),
+    ])
+    return { html: html.default, css: css.default, js: js.default }
+  },
+  'template-02': async () => {
+    const [html, css, js] = await Promise.all([
+      import('../../../template/02/index.html?raw'),
+      import('../../../template/02/style.css?raw'),
+      import('../../../template/02/app.js?raw'),
+    ])
+    return { html: html.default, css: css.default, js: js.default }
+  },
+  'template-03': async () => {
+    const [html, css, js] = await Promise.all([
+      import('../../../template/03/index.html?raw'),
+      import('../../../template/03/style.css?raw'),
+      import('../../../template/03/app.js?raw'),
+    ])
+    return { html: html.default, css: css.default, js: js.default }
+  },
+  'template-04': async () => {
+    const [html, css, js] = await Promise.all([
+      import('../../../template/04/index.html?raw'),
+      import('../../../template/04/style.css?raw'),
+      import('../../../template/04/app.js?raw'),
+    ])
+    return { html: html.default, css: css.default, js: js.default }
+  },
+  'template-05': async () => {
+    const [html, css, js] = await Promise.all([
+      import('../../../template/05/index.html?raw'),
+      import('../../../template/05/style.css?raw'),
+      import('../../../template/05/app.js?raw'),
+    ])
+    return { html: html.default, css: css.default, js: js.default }
+  },
+  'template-06': async () => {
+    const [html, css, js] = await Promise.all([
+      import('../../../template/06/index.html?raw'),
+      import('../../../template/06/style.css?raw'),
+      import('../../../template/06/app.js?raw'),
+    ])
+    return { html: html.default, css: css.default, js: js.default }
+  },
+  'template-07': async () => {
+    const [html, css, js] = await Promise.all([
+      import('../../../template/07/index.html?raw'),
+      import('../../../template/07/style.css?raw'),
+      import('../../../template/07/app.js?raw'),
+    ])
+    return { html: html.default, css: css.default, js: js.default }
+  },
+  'template-08': async () => {
+    const [html, css, js] = await Promise.all([
+      import('../../../template/08/index.html?raw'),
+      import('../../../template/08/style.css?raw'),
+      import('../../../template/08/app.js?raw'),
+    ])
+    return { html: html.default, css: css.default, js: js.default }
+  },
+  'template-09': async () => {
+    const [html, css, js] = await Promise.all([
+      import('../../../template/09/index.html?raw'),
+      import('../../../template/09/style.css?raw'),
+      import('../../../template/09/app.js?raw'),
+    ])
+    return { html: html.default, css: css.default, js: js.default }
+  },
+}
+
+export async function loadTemplateAsset(templateId) {
+  if (templateAssetCache.has(templateId)) {
+    return templateAssetCache.get(templateId)
+  }
+
+  const loader = templateAssetLoaders[templateId]
+  if (!loader) {
+    return null
+  }
+
+  const asset = await loader()
+  templateAssetCache.set(templateId, asset)
+  return asset
+}
+
+export function hasTemplateAsset(templateId) {
+  return templateId in templateAssetLoaders
 }

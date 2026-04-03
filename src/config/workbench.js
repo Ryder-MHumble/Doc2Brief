@@ -1,18 +1,20 @@
-import { templateCatalog } from '../lib/templates'
+import { templateCatalog } from '../lib/templates/catalog'
 
 const templateMap = new Map(templateCatalog.map((item) => [item.id, item]))
 const previewVariantMap = {
-  'template-01': 'project-pulse',
-  'template-02': 'dark-tech',
+  'template-01': 'minimal-brief',
+  'template-02': 'magazine-cover',
   'template-03': 'minimal-brief',
   'template-04': 'exec-summary',
   'template-05': 'business-pro',
   'template-06': 'data-insight',
   'template-07': 'project-pulse',
   'template-08': 'business-pro',
-  'template-09': 'dark-tech',
-  'template-10': 'exec-summary',
+  'template-09': 'swiss-grid',
 }
+
+const templateDisplayOrder = ['template-09', 'template-02', 'template-01', 'template-03', 'template-04', 'template-05', 'template-06', 'template-07', 'template-08']
+const templateDisplayRank = new Map(templateDisplayOrder.map((id, index) => [id, index]))
 
 export const generationModeCatalog = [
   { id: 'structured-template', name: '模板生成', description: '结构化后套用模板，输出最稳定。' },
@@ -68,5 +70,22 @@ export const templateOptionCatalog = templateCatalog
     templateMeta: templateMap.get(item.id),
   }))
   .filter((item) => item.templateMeta)
+  .sort((a, b) => {
+    const rankA = templateDisplayRank.get(a.id) ?? Number.MAX_SAFE_INTEGER
+    const rankB = templateDisplayRank.get(b.id) ?? Number.MAX_SAFE_INTEGER
+    if (rankA !== rankB) {
+      return rankA - rankB
+    }
+    return a.id.localeCompare(b.id)
+  })
+  .map((item, index) => {
+    const displayIndex = index + 1
+    const groupLabel = String(item.templateMeta.chip || item.templateMeta.renderer || 'TEMPLATE').split('/')[0]
+    return {
+      ...item,
+      displayIndex,
+      displayChip: `${groupLabel}/${String(displayIndex).padStart(2, '0')}`,
+    }
+  })
 
 export const recentReportStorageKey = 'reportflow-recent-reports'

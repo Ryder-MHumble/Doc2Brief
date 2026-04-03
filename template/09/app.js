@@ -1,5 +1,6 @@
 (() => {
   const MODULE_NAME = 'template-swiss-grid-runtime'
+  const isPreviewLite = Boolean(window.__FILE2WEB_PREVIEW_LITE__)
 
   const escapeHtml = (value) =>
     String(value ?? '')
@@ -186,37 +187,53 @@
       `
     }
 
-    document.querySelectorAll('.kb-n[data-target]').forEach((node) => {
-      const target = Number(node.dataset.target || 0)
-      if (!Number.isFinite(target) || target <= 0) return
-      let current = 0
-      const step = Math.max(1, Math.ceil(target / 36))
-      const timer = setInterval(() => {
-        current = Math.min(target, current + step)
-        node.firstChild.textContent = String(current)
-        if (current >= target) clearInterval(timer)
-      }, 26)
-    })
+    if (!isPreviewLite) {
+      document.querySelectorAll('.kb-n[data-target]').forEach((node) => {
+        const target = Number(node.dataset.target || 0)
+        if (!Number.isFinite(target) || target <= 0) return
+        let current = 0
+        const step = Math.max(1, Math.ceil(target / 36))
+        const timer = window.setInterval(() => {
+          current = Math.min(target, current + step)
+          node.firstChild.textContent = String(current)
+          if (current >= target) window.clearInterval(timer)
+        }, 26)
+      })
+    }
 
-    const io = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (!entry.isIntersecting) return
-          entry.target.classList.add('vis')
-          entry.target.querySelectorAll('.ev,.tc,[data-w]').forEach((el, index) => {
-            setTimeout(() => {
-              el.classList.add('vis')
-              const target = el.getAttribute('data-w')
-              if (target) el.style.width = target
-            }, index * 60)
+    const revealImmediately = () => {
+      document.querySelectorAll('.rev,.ev,.tc').forEach((el) => el.classList.add('vis'))
+      document.querySelectorAll('[data-w]').forEach((el) => {
+        const target = el.getAttribute('data-w')
+        if (target) {
+          el.style.width = target
+        }
+      })
+    }
+
+    if (isPreviewLite) {
+      revealImmediately()
+    } else {
+      const io = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (!entry.isIntersecting) return
+            entry.target.classList.add('vis')
+            entry.target.querySelectorAll('.ev,.tc,[data-w]').forEach((el, index) => {
+              window.setTimeout(() => {
+                el.classList.add('vis')
+                const target = el.getAttribute('data-w')
+                if (target) el.style.width = target
+              }, index * 24)
+            })
+            io.unobserve(entry.target)
           })
-          io.unobserve(entry.target)
-        })
-      },
-      { threshold: 0.04 },
-    )
-    document.querySelectorAll('.rev,.ev-list,.two-col,.data-grid').forEach((el) => io.observe(el))
-    document.querySelectorAll('.ev').forEach((el, index) => setTimeout(() => el.classList.add('vis'), 280 + index * 90))
+        },
+        { threshold: 0.04 },
+      )
+      document.querySelectorAll('.rev,.ev-list,.two-col,.data-grid').forEach((el) => io.observe(el))
+      document.querySelectorAll('.ev').forEach((el, index) => window.setTimeout(() => el.classList.add('vis'), 80 + index * 30))
+    }
 
     logBusinessJson('render_payload', {
       stats: stats.length,

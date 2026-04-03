@@ -1,10 +1,6 @@
-import mammoth from 'mammoth/mammoth.browser'
-import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist'
-import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
-
-GlobalWorkerOptions.workerSrc = pdfWorker
-
 const TEXT_SUFFIX = new Set(['txt', 'md', 'csv'])
+let mammothModulePromise = null
+let pdfRuntimePromise = null
 
 export async function extractSourceText(params) {
   const startedAt = performance.now()
@@ -109,12 +105,13 @@ async function extractFromFile(params) {
   }
 
   if (suffix === 'pdf') {
-    const text = await extractPdfText(file)
+    const text = await extractPdfText(file, pushLog)
     const warnings = text ? [] : ['PDF 未抽取到足够文本，可能是扫描件，建议补充粘贴正文。']
     return { text: normalizeText(text), sourceType: 'pdf', warnings }
   }
 
   if (suffix === 'docx') {
+    const mammoth = await loadMammothModule(pushLog)
     const buffer = await file.arrayBuffer()
     const result = await mammoth.extractRawText({ arrayBuffer: buffer })
     const warningMessages = result.messages.map((item) => item.message)
@@ -165,7 +162,8 @@ async function extractFromFile(params) {
   throw new Error('目前支持 PDF、DOCX、DOC、TXT、MD、CSV 文件。')
 }
 
-async function extractPdfText(file) {
+async function extractPdfText(file, pushLog) {
+  const { getDocument } = await loadPdfRuntime(pushLog)
   const buffer = await file.arrayBuffer()
   const pdf = await getDocument({ data: buffer }).promise
   const pageTexts = []
@@ -185,6 +183,44 @@ async function extractPdfText(file) {
   }
 
   return pageTexts.join('\n')
+}
+
+async function loadMammothModule(pushLog) {
+  if (!mammothModulePromise) {
+    pushLog({
+      kind: 'system',
+      module: '文件抽取',
+      event: '按需加载DOCX解析模块',
+      payload: {},
+      timestamp: new Date().toISOString(),
+    })
+    mammothModulePromise = import('mammoth/mammoth.browser').then((module) => module.default)
+  }
+  return mammothModulePromise
+}
+
+async function loadPdfRuntime(pushLog) {
+  if (!pdfRuntimePromise) {
+    pushLog?.({
+      kind: 'system',
+      module: '文件抽取',
+      event: '按需加载PDF解析模块',
+      payload: {},
+      timestamp: new Date().toISOString(),
+    })
+    pdfRuntimePromise = Promise.all([import('pdfjs-dist'), import('pdfjs-dist/build/pdf.worker.min.mjs?url')]).then(
+      ([pdfjsModule, workerModule]) => {
+        const workerSrc = workerModule.default
+        if (pdfjsModule.GlobalWorkerOptions.workerSrc !== workerSrc) {
+          pdfjsModule.GlobalWorkerOptions.workerSrc = workerSrc
+        }
+        return {
+          getDocument: pdfjsModule.getDocument,
+        }
+      },
+    )
+  }
+  return pdfRuntimePromise
 }
 
 function getSuffix(fileName) {

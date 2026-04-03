@@ -1,27 +1,65 @@
-import * as Select from '@radix-ui/react-select'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 export function ModernSelect({ label, options, value, onValueChange }) {
+  const [open, setOpen] = useState(false)
+  const rootRef = useRef(null)
+  const selectedItem = useMemo(() => options.find((item) => item.id === value) ?? options[0] ?? null, [options, value])
+
+  useEffect(() => {
+    const onPointerDown = (event) => {
+      if (!rootRef.current?.contains(event.target)) {
+        setOpen(false)
+      }
+    }
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        setOpen(false)
+      }
+    }
+
+    window.addEventListener('pointerdown', onPointerDown)
+    window.addEventListener('keydown', onKeyDown)
+    return () => {
+      window.removeEventListener('pointerdown', onPointerDown)
+      window.removeEventListener('keydown', onKeyDown)
+    }
+  }, [])
+
   return (
-    <div className="compact-field">
-      <span>{label}</span>
-      <Select.Root value={value} onValueChange={onValueChange}>
-        <Select.Trigger className="radix-select-trigger" aria-label={label}>
-          <Select.Value />
-          <Select.Icon className="radix-select-icon">⌄</Select.Icon>
-        </Select.Trigger>
-        <Select.Portal>
-          <Select.Content className="radix-select-content" position="popper" sideOffset={8}>
-            <Select.Viewport className="radix-select-viewport">
-              {options.map((item) => (
-                <Select.Item className="radix-select-item" key={item.id} value={item.id}>
-                  <Select.ItemText>{item.name}</Select.ItemText>
-                  <Select.ItemIndicator className="radix-select-item-indicator">✓</Select.ItemIndicator>
-                </Select.Item>
-              ))}
-            </Select.Viewport>
-          </Select.Content>
-        </Select.Portal>
-      </Select.Root>
+    <div className="compact-field" ref={rootRef}>
+      <span className="compact-field__label">{label}</span>
+      <div className={`compact-native-select-wrap ${open ? 'is-open' : ''}`}>
+        <button
+          aria-expanded={open}
+          aria-haspopup="listbox"
+          aria-label={label}
+          className="compact-select-trigger"
+          onClick={() => setOpen((prev) => !prev)}
+          type="button"
+        >
+          <span className="compact-select-trigger__value">{selectedItem?.name ?? '请选择'}</span>
+          <i className="compact-native-select-icon" aria-hidden="true">
+            ⌄
+          </i>
+        </button>
+        <div className={`compact-select-list ${open ? 'is-open' : ''}`} role="listbox">
+          {options.map((item) => (
+            <button
+              aria-selected={item.id === value}
+              className={`compact-select-option ${item.id === value ? 'is-active' : ''}`}
+              key={item.id}
+              onClick={() => {
+                onValueChange(item.id)
+                setOpen(false)
+              }}
+              role="option"
+              type="button"
+            >
+              {item.name}
+            </button>
+          ))}
+        </div>
+      </div>
     </div>
   )
 }

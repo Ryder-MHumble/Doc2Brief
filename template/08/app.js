@@ -2,6 +2,7 @@
   const MODULE_NAME = 'template-split-magazine-runtime'
   const MOBILE_SCROLL_OFFSET = 92
   const DESKTOP_SCROLL_OFFSET = 32
+  const isPreviewLite = Boolean(window.__FILE2WEB_PREVIEW_LITE__)
 
   const escapeHtml = (value) =>
     String(value ?? '')
@@ -197,29 +198,40 @@
       `
     }
 
-    setTimeout(() => {
+    const applyProgressTargets = () => {
       document.querySelectorAll('[data-w]').forEach((el) => {
         const target = el.getAttribute('data-w')
-        if (target) el.style.width = target
+        if (target) {
+          el.style.width = target
+        }
       })
-    }, 320)
+    }
 
-    const rp = document.getElementById('rp')
-    const observerRoot = getScrollHost() === window ? null : rp
-    const io = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (!entry.isIntersecting) return
-          entry.target.classList.add('vis')
-          entry.target.querySelectorAll('.Wcell,.Eitem').forEach((el, index) => {
-            setTimeout(() => el.classList.add('vis'), index * 70)
+    if (isPreviewLite) {
+      document.querySelectorAll('.rev,.Wcell,.Eitem').forEach((el) => el.classList.add('vis'))
+      applyProgressTargets()
+    } else {
+      window.setTimeout(() => {
+        applyProgressTargets()
+      }, 120)
+
+      const rp = document.getElementById('rp')
+      const observerRoot = getScrollHost() === window ? null : rp
+      const io = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (!entry.isIntersecting) return
+            entry.target.classList.add('vis')
+            entry.target.querySelectorAll('.Wcell,.Eitem').forEach((el, index) => {
+              window.setTimeout(() => el.classList.add('vis'), index * 24)
+            })
+            io.unobserve(entry.target)
           })
-          io.unobserve(entry.target)
-        })
-      },
-      { threshold: 0.04, root: observerRoot },
-    )
-    document.querySelectorAll('.rev,.Wgrid,.Elist,.Bigrow,.Vtwo').forEach((el) => io.observe(el))
+        },
+        { threshold: 0.04, root: observerRoot },
+      )
+      document.querySelectorAll('.rev,.Wgrid,.Elist,.Bigrow,.Vtwo').forEach((el) => io.observe(el))
+    }
 
     logBusinessJson('render_payload', {
       stats: stats.length,

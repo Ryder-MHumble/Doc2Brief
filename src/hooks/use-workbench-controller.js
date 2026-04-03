@@ -7,13 +7,40 @@ import {
   styleCatalog,
   templateOptionCatalog,
 } from '../config/workbench'
-import { extractSourceText } from '../lib/file-extractor'
-import { generateReport } from '../lib/openrouter-client'
+import { publishReportHtml } from '../lib/report-publisher'
 import { demoDocument } from '../lib/mock'
-import { renderTemplateHtml } from '../lib/templates'
 import { copyTextToClipboard, loadRecentReports, storeRecentReport } from '../lib/ui-helpers'
 
 const maxSourceChars = Number(import.meta.env.MAX_SOURCE_CHARS || 18000)
+let extractSourceTextLoader = null
+let generateReportLoader = null
+let renderTemplateHtmlLoader = null
+
+async function loadExtractSourceText() {
+  if (!extractSourceTextLoader) {
+    extractSourceTextLoader = import('../lib/file-extractor').then((module) => module.extractSourceText)
+  }
+  return extractSourceTextLoader
+}
+
+async function loadGenerateReport() {
+  if (!generateReportLoader) {
+    generateReportLoader = import('../lib/openrouter-client').then((module) => module.generateReport)
+  }
+  return generateReportLoader
+}
+
+async function loadRenderTemplateHtml() {
+  if (!renderTemplateHtmlLoader) {
+    renderTemplateHtmlLoader = import('../lib/templates').then((module) => module.renderTemplateHtml)
+  }
+  return renderTemplateHtmlLoader
+}
+
+async function buildTemplateHtml(templateId, document, generatedAt, options = {}) {
+  const renderTemplateHtml = await loadRenderTemplateHtml()
+  return renderTemplateHtml(templateId, document, generatedAt, options)
+}
 
 export function useWorkbenchController() {
   const [inputMode, setInputMode] = useState('file')
@@ -35,6 +62,7 @@ export function useWorkbenchController() {
   const [sourceType, setSourceType] = useState('manual')
   const [generatedAt, setGeneratedAt] = useState('')
   const [generatedHtml, setGeneratedHtml] = useState(null)
+  const [previewHtml, setPreviewHtml] = useState('')
   const [extractedPreview, setExtractedPreview] = useState('')
   const [requestPayload, setRequestPayload] = useState(null)
   const [responsePayload, setResponsePayload] = useState(null)
@@ -44,6 +72,7 @@ export function useWorkbenchController() {
   const [showSuccessToast, setShowSuccessToast] = useState(false)
   const [copiedReady, setCopiedReady] = useState(false)
   const [reportLink, setReportLink] = useState('')
+  const [isPublishingLink, setIsPublishingLink] = useState(false)
   const [recentReports, setRecentReports] = useState(() => loadRecentReports(recentReportStorageKey))
   const [isFullscreen, setIsFullscreen] = useState(false)
 
@@ -61,8 +90,8 @@ export function useWorkbenchController() {
   const canGenerate = Boolean(hasContent && (generationMode === 'llm-html' || selectedTemplate)) && !isGenerating
   const canResetReport = Boolean(isReportReady && !isGenerating)
   const canPrimaryAction = canGenerate || canResetReport
-  const exportReady = Boolean(isReportReady && reportLink)
-  const copyReady = Boolean(isReportReady && reportLink)
+  const exportReady = Boolean(isReportReady)
+  const copyReady = Boolean(isReportReady && !isPublishingLink)
 
   const context = {
     department,
@@ -80,23 +109,6 @@ export function useWorkbenchController() {
         : 'idle'
   const showTemplateBridge = generationMode === 'structured-template' && !isReportReady
   const fullscreenReady = Boolean(isReportReady || previewState === 'template')
-
-  const previewHtml = useMemo(() => {
-    if (generationMode === 'llm-html') {
-      if (!isReportReady) {
-        return ''
-      }
-      return generatedHtml || ''
-    }
-
-    if (!selectedTemplate) {
-      return ''
-    }
-
-    const stamp = generatedAt || new Date().toLocaleString('zh-CN')
-    const templateData = isReportReady ? documentData : demoDocument
-    return renderTemplateHtml(selectedTemplate.templateMeta.id, templateData, stamp, { runtimeMode: 'preview' })
-  }, [documentData, generatedAt, generatedHtml, generationMode, isReportReady, selectedTemplate])
 
   const iframeKey = `${generationMode}-${selectedTemplate?.id || 'none'}-${generatedAt || 'preview'}`
 
@@ -119,6 +131,7 @@ export function useWorkbenchController() {
     setIsReportReady(false)
     setGeneratedAt('')
     setGeneratedHtml(null)
+    setPreviewHtml('')
     setErrorMessage('')
     setWarnings([])
     setModelUsed('待生成')
@@ -128,6 +141,8 @@ export function useWorkbenchController() {
     setResponsePayload(null)
     setShowSuccessToast(false)
     setCopiedReady(false)
+    setReportLink('')
+    setIsPublishingLink(false)
     setDocumentData(demoDocument)
   }
 
@@ -154,6 +169,8 @@ export function useWorkbenchController() {
     setWarnings([])
     setIsReportReady(false)
     setShowSuccessToast(false)
+    setCopiedReady(false)
+    setReportLink('')
 
     pushLog({
       kind: 'system',
@@ -172,6 +189,8 @@ export function useWorkbenchController() {
     })
 
     try {
+      const [extractSourceText, generateReport] = await Promise.all([loadExtractSourceText(), loadGenerateReport()])
+
       const extraction = await extractSourceText({
         file: inputMode === 'file' ? selectedFile : null,
         text: inputMode === 'text' ? manualText : '',
@@ -207,6 +226,8 @@ export function useWorkbenchController() {
       setResponsePayload(result.responsePayload)
       setIsReportReady(true)
       setShowSuccessToast(true)
+      setCopiedReady(false)
+      setReportLink('')
 
       const nextRecentReports = storeRecentReport(recentReportStorageKey, {
         id: `${Date.now()}`,
@@ -275,35 +296,127 @@ export function useWorkbenchController() {
   }
 
   const handleExport = () => {
-    if (!previewHtml) {
-      return
-    }
+    void (async () => {
+      try {
+        const exportHtml =
+          generationMode === 'structured-template' && selectedTemplate
+            ? await buildTemplateHtml(
+                selectedTemplate.templateMeta.id,
+                documentData,
+                generatedAt || new Date().toLocaleString('zh-CN'),
+                { runtimeMode: 'full' },
+              )
+            : previewHtml
 
-    const exportHtml =
-      generationMode === 'structured-template' && selectedTemplate
-        ? renderTemplateHtml(selectedTemplate.templateMeta.id, documentData, generatedAt || new Date().toLocaleString('zh-CN'), {
-            runtimeMode: 'full',
-          })
-        : previewHtml
+        if (!exportHtml) {
+          return
+        }
 
-    const blob = new Blob([exportHtml], { type: 'text/html;charset=utf-8' })
-    const url = URL.createObjectURL(blob)
-    const anchor = document.createElement('a')
-    anchor.href = url
-    anchor.download = `${documentData.title || selectedTemplate?.name || 'reportflow'}.html`
-    anchor.click()
-    URL.revokeObjectURL(url)
+        const blob = new Blob([exportHtml], { type: 'text/html;charset=utf-8' })
+        const url = URL.createObjectURL(blob)
+        const anchor = document.createElement('a')
+        anchor.href = url
+        anchor.download = `${documentData.title || selectedTemplate?.name || 'docs2brief'}.html`
+        anchor.click()
+        URL.revokeObjectURL(url)
+      } catch (error) {
+        const message = error instanceof Error ? error.message : '导出失败'
+        setErrorMessage(message)
+        pushLog({
+          kind: 'error',
+          module: '报告导出',
+          event: '导出失败',
+          payload: { message },
+          timestamp: new Date().toISOString(),
+        })
+      }
+    })()
   }
 
   const handleCopyLink = async () => {
-    if (!reportLink) {
+    if (!isReportReady || isPublishingLink) {
       return
     }
+
+    setIsPublishingLink(true)
+    setCopiedReady(false)
+
+    pushLog({
+      kind: 'system',
+      module: '报告分享',
+      event: '开始复制链接',
+      payload: {
+        generationMode,
+        title: documentData.title || selectedTemplate?.name || '未命名报告',
+        hasCachedLink: Boolean(reportLink),
+      },
+      timestamp: new Date().toISOString(),
+    })
+
     try {
-      await copyTextToClipboard(reportLink)
+      let nextLink = reportLink
+
+      if (!nextLink) {
+        const shareHtml =
+          generationMode === 'structured-template' && selectedTemplate
+            ? await buildTemplateHtml(
+                selectedTemplate.templateMeta.id,
+                documentData,
+                generatedAt || new Date().toLocaleString('zh-CN', { hour12: false }),
+                { runtimeMode: 'full' },
+              )
+            : generatedHtml || previewHtml
+
+        if (!shareHtml) {
+          throw new Error('当前报告没有可发布的 HTML 内容')
+        }
+
+        const publishResult = await publishReportHtml({
+          title: documentData.title || selectedTemplate?.name || '未命名报告',
+          html: shareHtml,
+          generationMode,
+          templateId: selectedTemplate?.id || '',
+          generatedAt,
+          sourceType,
+        })
+        nextLink = publishResult.shareUrl
+        setReportLink(nextLink)
+
+        pushLog({
+          kind: 'business',
+          module: '报告分享',
+          event: '发布成功',
+          payload: {
+            reportId: publishResult.reportId,
+            shareUrl: publishResult.shareUrl,
+            createdAt: publishResult.createdAt,
+          },
+          timestamp: new Date().toISOString(),
+        })
+      }
+
+      await copyTextToClipboard(nextLink)
       setCopiedReady(true)
+
+      pushLog({
+        kind: 'system',
+        module: '报告分享',
+        event: '复制成功',
+        payload: { shareUrl: nextLink },
+        timestamp: new Date().toISOString(),
+      })
     } catch (error) {
-      console.error('复制报告链接失败', error)
+      const message = error instanceof Error ? error.message : '复制链接失败'
+      setErrorMessage(message)
+      pushLog({
+        kind: 'error',
+        module: '报告分享',
+        event: '复制失败',
+        payload: { message },
+        timestamp: new Date().toISOString(),
+      })
+    } finally {
+      setIsPublishingLink(false)
     }
   }
 
@@ -340,6 +453,42 @@ export function useWorkbenchController() {
   }, [handleShortcut])
 
   useEffect(() => {
+    let cancelled = false
+
+    const renderPreview = async () => {
+      if (generationMode === 'llm-html') {
+        setPreviewHtml(isReportReady ? generatedHtml || '' : '')
+        return
+      }
+
+      if (!selectedTemplate) {
+        setPreviewHtml('')
+        return
+      }
+
+      try {
+        const stamp = generatedAt || new Date().toLocaleString('zh-CN')
+        const templateData = isReportReady ? documentData : demoDocument
+        const html = await buildTemplateHtml(selectedTemplate.templateMeta.id, templateData, stamp, { runtimeMode: 'preview' })
+        if (!cancelled) {
+          setPreviewHtml(html)
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setPreviewHtml('')
+          console.error('预览模板渲染失败', error)
+        }
+      }
+    }
+
+    void renderPreview()
+
+    return () => {
+      cancelled = true
+    }
+  }, [documentData, generatedAt, generatedHtml, generationMode, isReportReady, selectedTemplate])
+
+  useEffect(() => {
     if (!showSuccessToast) {
       return undefined
     }
@@ -371,31 +520,20 @@ export function useWorkbenchController() {
   }, [])
 
   useEffect(() => {
-    if (!isReportReady || !previewHtml) {
-      setReportLink('')
-      return undefined
-    }
-
-    const blob = new Blob([previewHtml], { type: 'text/html;charset=utf-8' })
-    const url = URL.createObjectURL(blob)
-    setReportLink(url)
-
-    return () => {
-      URL.revokeObjectURL(url)
-    }
-  }, [isReportReady, previewHtml])
-
-  useEffect(() => {
     if (!showTemplateBridge || !selectedTemplate?.id || !templateBridgeListRef.current) {
       return
     }
 
-    const target = templateBridgeListRef.current.querySelector(`[data-template-id="${selectedTemplate.id}"]`)
+    const container = templateBridgeListRef.current
+    const target = container.querySelector(`[data-template-id="${selectedTemplate.id}"]`)
     if (!target) {
       return
     }
 
-    target.scrollIntoView({ block: 'center', behavior: 'smooth' })
+    const targetTop = target.offsetTop - (container.clientHeight - target.clientHeight) / 2
+    const maxScrollTop = Math.max(container.scrollHeight - container.clientHeight, 0)
+    const nextScrollTop = Math.max(0, Math.min(targetTop, maxScrollTop))
+    container.scrollTo({ top: nextScrollTop, behavior: 'smooth' })
   }, [selectedTemplate?.id, showTemplateBridge])
 
   return {
@@ -422,6 +560,7 @@ export function useWorkbenchController() {
     iframeKey,
     inputMode,
     isGenerating,
+    isPublishingLink,
     isReportReady,
     manualText,
     onAudienceChange: (value) => {

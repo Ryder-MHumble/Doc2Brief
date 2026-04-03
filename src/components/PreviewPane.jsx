@@ -156,7 +156,7 @@ export function PreviewPane({
               key={iframeKey}
               className={`preview-frame ${previewDevice === 'mobile' ? 'is-mobile' : ''}`}
               srcDoc={iframeHtml}
-              title={previewTitle || selectedTemplate?.name || 'ReportFlow Preview'}
+              title={previewTitle || selectedTemplate?.name || 'Docs2Brief Preview'}
             />
           </div>
         ) : null}

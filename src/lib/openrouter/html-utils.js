@@ -169,11 +169,12 @@ export function evaluateHtmlQuality(html) {
     ['决策请求', '待决策事项', '请示事项'],
   ]
   const keywordHit = moduleKeywords.filter((group) => group.some((item) => plainText.includes(item))).length
+  const headingGatePassed = headingCount >= 2 || keywordHit >= 4
 
   const ok =
     scaffoldHit >= 3 &&
     textLength >= 320 &&
-    headingCount >= 2 &&
+    headingGatePassed &&
     sectionLikeCount >= 6 &&
     (keywordHit >= 3 || headingCount >= 4)
   const reason = `文本长度=${textLength}, 标题数=${headingCount}, 结构块=${sectionLikeCount}, 模块命中=${keywordHit}, 脚手架命中=${scaffoldHit}`
