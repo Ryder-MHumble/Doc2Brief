@@ -24,7 +24,6 @@ export function SourceSection({
   return (
     <section className="control-section glass-panel">
       <div className="section-header section-header--compact">
-        <span className="section-index">内容来源</span>
         <div>
           <h2 className="font-headline">内容来源</h2>
           <p>上传文档或直接输入正文，AI 会自动提取结构。</p>

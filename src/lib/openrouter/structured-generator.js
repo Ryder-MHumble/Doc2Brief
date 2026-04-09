@@ -20,6 +20,7 @@ export async function generateStructuredReport(params) {
   const { rawText, sensitiveMode, styleMeta, templateMeta, context, pushLog } = params
   const startedAt = performance.now()
   const warnings = []
+  const polishTimeoutMs = 18000
   const model = OPENROUTER_STRUCTURED_MODEL
   const polishModel = OPENROUTER_POLISH_MODEL || OPENROUTER_STRUCTURED_MODEL
   const promptStrategy = resolvePromptProfile({ mode: 'structured-template', rawText, context })
@@ -192,6 +193,7 @@ export async function generateStructuredReport(params) {
         rawLength: rawText.length,
         baseScore,
         maxTokens: polishRequestPayload.max_tokens,
+        timeoutMs: polishTimeoutMs,
         promptProfile,
       },
       timestamp: new Date().toISOString(),
@@ -202,11 +204,11 @@ export async function generateStructuredReport(params) {
         kind: 'system',
         module: '模型编排',
         event: '结构化润色补全开始',
-        payload: { model: polishModel },
+        payload: { model: polishModel, timeoutMs: polishTimeoutMs },
         timestamp: new Date().toISOString(),
       })
 
-      responsePayload.polish = await requestOpenRouter(polishRequestPayload)
+      responsePayload.polish = await requestOpenRouter(polishRequestPayload, { timeoutMs: polishTimeoutMs })
       const polishedContent = extractResponseContent(responsePayload.polish)
       const polishedParsed = parseJsonObject(polishedContent)
       const polishedDocument = normalizeDocument(polishedParsed, rawText, sensitiveMode)
@@ -233,11 +235,14 @@ export async function generateStructuredReport(params) {
       })
     } catch (error) {
       polishError = error instanceof Error ? error.message : '润色阶段异常'
+      if (polishError.includes('超时')) {
+        warnings.push(`结构化润色超时（>${Math.floor(polishTimeoutMs / 1000)} 秒），已保留主结果。`)
+      }
       pushLog({
         kind: 'system',
         module: '模型编排',
         event: '结构化润色失败，保留主结果',
-        payload: { model: polishModel, error: polishError },
+        payload: { model: polishModel, error: polishError, timeoutMs: polishTimeoutMs },
         timestamp: new Date().toISOString(),
       })
     }

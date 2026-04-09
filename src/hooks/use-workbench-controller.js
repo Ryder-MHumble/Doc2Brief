@@ -42,11 +42,26 @@ async function buildTemplateHtml(templateId, document, generatedAt, options = {}
   return renderTemplateHtml(templateId, document, generatedAt, options)
 }
 
+function extractTitleFromHtml(htmlText) {
+  const html = String(htmlText || '')
+  if (!html) {
+    return ''
+  }
+
+  const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)
+  const h1Match = html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i)
+  const candidate = titleMatch?.[1] || h1Match?.[1] || ''
+  return String(candidate)
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 export function useWorkbenchController() {
   const [inputMode, setInputMode] = useState('file')
   const [selectedFile, setSelectedFile] = useState(null)
   const [manualText, setManualText] = useState('')
-  const [selectedTemplateId, setSelectedTemplateId] = useState(null)
+  const [selectedTemplateId, setSelectedTemplateId] = useState(() => templateOptionCatalog[0]?.id ?? null)
   const [generationMode, setGenerationMode] = useState('structured-template')
   const [stylePreference, setStylePreference] = useState('official')
   const [department, setDepartment] = useState('science-research-center')
@@ -62,6 +77,8 @@ export function useWorkbenchController() {
   const [sourceType, setSourceType] = useState('manual')
   const [generatedAt, setGeneratedAt] = useState('')
   const [generatedHtml, setGeneratedHtml] = useState(null)
+  const [editedHtml, setEditedHtml] = useState('')
+  const [isEditMode, setIsEditMode] = useState(false)
   const [previewHtml, setPreviewHtml] = useState('')
   const [extractedPreview, setExtractedPreview] = useState('')
   const [requestPayload, setRequestPayload] = useState(null)
@@ -75,9 +92,12 @@ export function useWorkbenchController() {
   const [isPublishingLink, setIsPublishingLink] = useState(false)
   const [recentReports, setRecentReports] = useState(() => loadRecentReports(recentReportStorageKey))
   const [isFullscreen, setIsFullscreen] = useState(false)
+  const [editorFrameVersion, setEditorFrameVersion] = useState(0)
 
   const previewStageRef = useRef(null)
+  const previewFullscreenRef = useRef(null)
   const templateBridgeListRef = useRef(null)
+  const editChangeCountRef = useRef(0)
 
   const selectedTemplate = useMemo(
     () => templateOptionCatalog.find((item) => item.id === selectedTemplateId) ?? null,
@@ -110,7 +130,7 @@ export function useWorkbenchController() {
   const showTemplateBridge = generationMode === 'structured-template' && !isReportReady
   const fullscreenReady = Boolean(isReportReady || previewState === 'template')
 
-  const iframeKey = `${generationMode}-${selectedTemplate?.id || 'none'}-${generatedAt || 'preview'}`
+  const iframeKey = `${generationMode}-${selectedTemplate?.id || 'none'}-${generatedAt || 'preview'}-${editorFrameVersion}`
 
   const pushLog = (entry) => {
     const serialized = JSON.stringify(entry.payload, null, 2)
@@ -131,7 +151,8 @@ export function useWorkbenchController() {
     setIsReportReady(false)
     setGeneratedAt('')
     setGeneratedHtml(null)
-    setPreviewHtml('')
+    setEditedHtml('')
+    setIsEditMode(false)
     setErrorMessage('')
     setWarnings([])
     setModelUsed('待生成')
@@ -144,6 +165,34 @@ export function useWorkbenchController() {
     setReportLink('')
     setIsPublishingLink(false)
     setDocumentData(demoDocument)
+    editChangeCountRef.current = 0
+    setEditorFrameVersion((prev) => prev + 1)
+  }
+
+  const resolveReportHtml = async (htmlOverride = '') => {
+    if (htmlOverride) {
+      return htmlOverride
+    }
+
+    if (editedHtml) {
+      return editedHtml
+    }
+
+    if (generationMode === 'structured-template' && selectedTemplate) {
+      return buildTemplateHtml(
+        selectedTemplate.templateMeta.id,
+        documentData,
+        generatedAt || new Date().toLocaleString('zh-CN', { hour12: false }),
+        { runtimeMode: 'full' },
+      )
+    }
+
+    return generatedHtml || previewHtml
+  }
+
+  const resolveReportTitle = (htmlOverride = '') => {
+    const editedTitle = extractTitleFromHtml(htmlOverride || editedHtml)
+    return editedTitle || documentData.title || selectedTemplate?.name || '未命名报告'
   }
 
   const handleGenerate = async () => {
@@ -221,6 +270,8 @@ export function useWorkbenchController() {
       setSourceType(extraction.sourceType)
       setGeneratedAt(now)
       setGeneratedHtml(result.generatedHtml ?? null)
+      setEditedHtml('')
+      setIsEditMode(false)
       setExtractedPreview(extraction.extractedPreview)
       setRequestPayload(result.requestPayload)
       setResponsePayload(result.responsePayload)
@@ -228,6 +279,8 @@ export function useWorkbenchController() {
       setShowSuccessToast(true)
       setCopiedReady(false)
       setReportLink('')
+      editChangeCountRef.current = 0
+      setEditorFrameVersion((prev) => prev + 1)
 
       const nextRecentReports = storeRecentReport(recentReportStorageKey, {
         id: `${Date.now()}`,
@@ -295,28 +348,48 @@ export function useWorkbenchController() {
     setSelectedTemplateId(templateId)
   }
 
-  const handleExport = () => {
+  const handleExport = (options = {}) => {
+    if (isEditMode) {
+      const message = '请先应用修改后再导出 HTML。'
+      setErrorMessage(message)
+      pushLog({
+        kind: 'system',
+        module: '报告导出',
+        event: '编辑态禁止导出',
+        payload: { message },
+        timestamp: new Date().toISOString(),
+      })
+      return
+    }
+
     void (async () => {
       try {
-        const exportHtml =
-          generationMode === 'structured-template' && selectedTemplate
-            ? await buildTemplateHtml(
-                selectedTemplate.templateMeta.id,
-                documentData,
-                generatedAt || new Date().toLocaleString('zh-CN'),
-                { runtimeMode: 'full' },
-              )
-            : previewHtml
+        const htmlOverride = options.htmlOverride || ''
+        const exportHtml = await resolveReportHtml(htmlOverride)
 
         if (!exportHtml) {
           return
         }
 
+        const reportTitle = resolveReportTitle(htmlOverride)
+
+        pushLog({
+          kind: 'system',
+          module: '报告导出',
+          event: '开始导出',
+          payload: {
+            title: reportTitle,
+            generationMode,
+            usesEditedHtml: Boolean(htmlOverride || editedHtml),
+          },
+          timestamp: new Date().toISOString(),
+        })
+
         const blob = new Blob([exportHtml], { type: 'text/html;charset=utf-8' })
         const url = URL.createObjectURL(blob)
         const anchor = document.createElement('a')
         anchor.href = url
-        anchor.download = `${documentData.title || selectedTemplate?.name || 'docs2brief'}.html`
+        anchor.download = `${reportTitle || 'docs2brief'}.html`
         anchor.click()
         URL.revokeObjectURL(url)
       } catch (error) {
@@ -333,8 +406,21 @@ export function useWorkbenchController() {
     })()
   }
 
-  const handleCopyLink = async () => {
+  const handleCopyLink = async (options = {}) => {
     if (!isReportReady || isPublishingLink) {
+      return
+    }
+
+    if (isEditMode) {
+      const message = '请先应用修改后再复制链接。'
+      setErrorMessage(message)
+      pushLog({
+        kind: 'system',
+        module: '报告分享',
+        event: '编辑态禁止复制链接',
+        payload: { message },
+        timestamp: new Date().toISOString(),
+      })
       return
     }
 
@@ -349,30 +435,25 @@ export function useWorkbenchController() {
         generationMode,
         title: documentData.title || selectedTemplate?.name || '未命名报告',
         hasCachedLink: Boolean(reportLink),
+        usesEditedHtml: Boolean(options.htmlOverride || editedHtml),
       },
       timestamp: new Date().toISOString(),
     })
 
     try {
-      let nextLink = reportLink
+      const htmlOverride = options.htmlOverride || ''
+      const reportTitle = resolveReportTitle(htmlOverride)
+      let nextLink = htmlOverride ? '' : reportLink
 
       if (!nextLink) {
-        const shareHtml =
-          generationMode === 'structured-template' && selectedTemplate
-            ? await buildTemplateHtml(
-                selectedTemplate.templateMeta.id,
-                documentData,
-                generatedAt || new Date().toLocaleString('zh-CN', { hour12: false }),
-                { runtimeMode: 'full' },
-              )
-            : generatedHtml || previewHtml
+        const shareHtml = await resolveReportHtml(htmlOverride)
 
         if (!shareHtml) {
           throw new Error('当前报告没有可发布的 HTML 内容')
         }
 
         const publishResult = await publishReportHtml({
-          title: documentData.title || selectedTemplate?.name || '未命名报告',
+          title: reportTitle,
           html: shareHtml,
           generationMode,
           templateId: selectedTemplate?.id || '',
@@ -421,7 +502,8 @@ export function useWorkbenchController() {
   }
 
   const handleFullscreen = async () => {
-    if (!previewStageRef.current) {
+    const target = previewFullscreenRef.current || previewStageRef.current
+    if (!target) {
       return
     }
 
@@ -430,8 +512,8 @@ export function useWorkbenchController() {
         await document.exitFullscreen()
         return
       }
-      if (previewStageRef.current.requestFullscreen) {
-        await previewStageRef.current.requestFullscreen()
+      if (target.requestFullscreen) {
+        await target.requestFullscreen()
       }
     } catch (error) {
       console.error('切换全屏失败', error)
@@ -445,6 +527,113 @@ export function useWorkbenchController() {
     }
   })
 
+  const handleEditStart = () => {
+    if (!isReportReady) {
+      return
+    }
+
+    editChangeCountRef.current = 0
+    setIsEditMode(true)
+
+    pushLog({
+      kind: 'system',
+      module: '报告编辑',
+      event: '开始编辑',
+      payload: {
+        generationMode,
+        title: documentData.title || selectedTemplate?.name || '未命名报告',
+        hasEditedContent: Boolean(editedHtml),
+      },
+      timestamp: new Date().toISOString(),
+    })
+  }
+
+  const handleEditChange = (payload = {}) => {
+    if (!isEditMode) {
+      return
+    }
+
+    editChangeCountRef.current += 1
+    if (editChangeCountRef.current !== 1 && editChangeCountRef.current % 20 !== 0) {
+      return
+    }
+
+    pushLog({
+      kind: 'business',
+      module: '报告编辑',
+      event: '编辑变更',
+      payload: {
+        changeCount: editChangeCountRef.current,
+        htmlLength: payload.htmlLength || 0,
+      },
+      timestamp: new Date().toISOString(),
+    })
+  }
+
+  const handleApplyEdit = (nextHtml, payload = {}) => {
+    const normalizedHtml = String(nextHtml || '').trim()
+    if (!normalizedHtml) {
+      return ''
+    }
+
+    setEditedHtml(normalizedHtml)
+    setPreviewHtml(normalizedHtml)
+    setGeneratedHtml(normalizedHtml)
+    setIsEditMode(false)
+    setCopiedReady(false)
+    setReportLink('')
+    editChangeCountRef.current = 0
+
+    pushLog({
+      kind: 'system',
+      module: '报告编辑',
+      event: '应用编辑内容',
+      payload: {
+        title: documentData.title || selectedTemplate?.name || '未命名报告',
+        generationMode,
+        htmlLength: normalizedHtml.length,
+        trigger: payload.trigger || 'manual',
+      },
+      timestamp: new Date().toISOString(),
+    })
+
+    pushLog({
+      kind: 'business',
+      module: '报告编辑',
+      event: '编辑输出',
+      payload: {
+        title: documentData.title || selectedTemplate?.name || '未命名报告',
+        generationMode,
+        htmlLength: normalizedHtml.length,
+        invalidatedShareLink: true,
+      },
+      timestamp: new Date().toISOString(),
+    })
+
+    return normalizedHtml
+  }
+
+  const handleCancelEdit = () => {
+    if (!isEditMode) {
+      return
+    }
+
+    setIsEditMode(false)
+    editChangeCountRef.current = 0
+    setEditorFrameVersion((prev) => prev + 1)
+
+    pushLog({
+      kind: 'system',
+      module: '报告编辑',
+      event: '取消编辑',
+      payload: {
+        title: documentData.title || selectedTemplate?.name || '未命名报告',
+        generationMode,
+      },
+      timestamp: new Date().toISOString(),
+    })
+  }
+
   useEffect(() => {
     window.addEventListener('keydown', handleShortcut)
     return () => {
@@ -456,6 +645,11 @@ export function useWorkbenchController() {
     let cancelled = false
 
     const renderPreview = async () => {
+      if (isReportReady && editedHtml) {
+        setPreviewHtml(editedHtml)
+        return
+      }
+
       if (generationMode === 'llm-html') {
         setPreviewHtml(isReportReady ? generatedHtml || '' : '')
         return
@@ -486,7 +680,7 @@ export function useWorkbenchController() {
     return () => {
       cancelled = true
     }
-  }, [documentData, generatedAt, generatedHtml, generationMode, isReportReady, selectedTemplate])
+  }, [documentData, editedHtml, generatedAt, generatedHtml, generationMode, isReportReady, selectedTemplate])
 
   useEffect(() => {
     if (!showSuccessToast) {
@@ -546,19 +740,25 @@ export function useWorkbenchController() {
     department,
     departmentCatalog,
     documentData,
+    editedHtml,
     errorMessage,
     exportReady,
     fullscreenReady,
     generationMode,
     generationModeCatalog,
     generationProgress,
+    handleApplyEdit,
     handleCopyLink,
+    handleCancelEdit,
+    handleEditChange,
+    handleEditStart,
     handleExport,
     handleFullscreen,
     handleGenerateAction,
     handleTemplateSelect,
     iframeKey,
     inputMode,
+    isEditMode,
     isGenerating,
     isPublishingLink,
     isReportReady,
@@ -601,6 +801,7 @@ export function useWorkbenchController() {
     },
     previewDevice,
     previewHtml,
+    previewFullscreenRef,
     previewStageRef,
     previewState,
     recentReports,

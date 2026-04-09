@@ -19,7 +19,6 @@ export function PreferenceSection({
   return (
     <section className="control-section control-section--compact glass-panel">
       <div className="section-header section-header--compact">
-        <span className="section-index">生成配置</span>
         <div>
           <h2 className="font-headline">控制台</h2>
           <p>先配置生成模式和上下文；模板生成模式可在中间模板卡片列切换模板。</p>

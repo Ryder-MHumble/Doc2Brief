@@ -1,58 +1,236 @@
-function buildGenerationSteps(activeStep, generationMode) {
-  const steps = [
-    { id: 'extract', title: '步骤 1', description: '解析文档内容' },
-    { id: 'analyze', title: '步骤 2', description: 'AI 分析并提取结构' },
-    {
-      id: 'render',
-      title: '步骤 3',
-      description: generationMode === 'llm-html' ? '生成 HTML 页面' : '渲染可视化报告',
-    },
-  ]
+import { useEffect, useRef, useState } from 'react'
 
-  const currentIndex = steps.findIndex((item) => item.id === activeStep)
+const desktopMinFrameHeight = 960
+const mobileMinFrameHeight = 760
+const mobileFrameWidth = 390
 
-  return steps.map((item, index) => {
-    if (currentIndex < 0) {
-      return { ...item, status: 'pending', label: '待处理' }
+function extractIframeHtml(iframeElement) {
+  const documentElement = iframeElement?.contentDocument?.documentElement
+  if (!documentElement) {
+    return ''
+  }
+  return `<!doctype html>\n${documentElement.outerHTML}`
+}
+
+function toggleIframeEditing(iframeElement, enabled) {
+  const doc = iframeElement?.contentDocument
+  if (!doc?.body) {
+    return
+  }
+
+  const styleId = '__docs2brief_inline_edit_style__'
+  const existingStyle = doc.getElementById(styleId)
+
+  if (enabled) {
+    doc.designMode = 'on'
+    doc.body.setAttribute('contenteditable', 'true')
+
+    if (!existingStyle) {
+      const style = doc.createElement('style')
+      style.id = styleId
+      style.textContent = `
+html {
+  scroll-behavior: smooth;
+}
+
+body[contenteditable="true"] {
+  caret-color: #0ea5e9;
+  outline: 3px solid rgba(14, 165, 233, 0.2);
+  outline-offset: -6px;
+}
+
+body[contenteditable="true"] *:focus {
+  outline: 2px dashed rgba(14, 165, 233, 0.42);
+  outline-offset: 3px;
+}
+
+body[contenteditable="true"] ::selection {
+  background: rgba(14, 165, 233, 0.2);
+}
+`
+      doc.head.append(style)
     }
 
-    if (index < currentIndex) {
-      return { ...item, status: 'done', label: '完成' }
-    }
+    return
+  }
 
-    if (index === currentIndex) {
-      return { ...item, status: 'running', label: '处理中' }
-    }
-
-    return { ...item, status: 'pending', label: '待处理' }
-  })
+  doc.designMode = 'off'
+  doc.body.removeAttribute('contenteditable')
+  existingStyle?.remove()
 }
 
 export function PreviewPane({
-  generationMode,
   copiedReady,
   copyReady,
-  previewState,
-  previewDevice,
-  onCopyLink,
-  onDeviceChange,
-  onFullscreen,
-  onExport,
-  fullscreenReady,
   exportReady,
+  fullscreenTargetRef,
+  fullscreenReady,
+  hasEditedContent,
   iframeHtml,
   iframeKey,
-  previewTitle,
-  templates,
-  selectedTemplate,
-  progress,
-  recentReports,
-  showSuccessToast,
+  isEditMode,
+  onApplyEdit,
+  onCancelEdit,
+  onCopyLink,
+  onDeviceChange,
+  onEditChange,
+  onEditStart,
+  onExport,
+  onFullscreen,
+  previewDevice,
   previewStageRef,
+  previewState,
+  previewTitle,
 }) {
-  const steps = buildGenerationSteps(progress.step, generationMode)
-  const showTemplateRail = generationMode === 'structured-template' && Boolean(selectedTemplate)
-  const activeStep = steps.find((item) => item.status === 'running') ?? steps[steps.length - 1]
+  const [frameHeight, setFrameHeight] = useState(desktopMinFrameHeight)
+  const [frameReady, setFrameReady] = useState(false)
+  const iframeRef = useRef(null)
+  const boundDocumentRef = useRef(null)
+  const boundInputHandlerRef = useRef(null)
+  const measureTimersRef = useRef([])
+
+  const clearMeasureTimers = () => {
+    measureTimersRef.current.forEach((timerId) => window.clearTimeout(timerId))
+    measureTimersRef.current = []
+  }
+
+  const getFallbackFrameHeight = () => (previewDevice === 'mobile' ? mobileMinFrameHeight : desktopMinFrameHeight)
+
+  const syncFrameLayout = () => {
+    const iframeElement = iframeRef.current
+    const doc = iframeElement?.contentDocument
+    const root = doc?.documentElement
+    const body = doc?.body
+
+    if (!root || !body) {
+      return
+    }
+
+    const nextHeight = Math.max(
+      root.scrollHeight,
+      body.scrollHeight,
+      root.offsetHeight,
+      body.offsetHeight,
+      getFallbackFrameHeight(),
+    )
+
+    setFrameHeight((prev) => (Math.abs(prev - nextHeight) > 2 ? nextHeight : prev))
+    setFrameReady(true)
+  }
+
+  const scheduleFrameMeasurement = () => {
+    clearMeasureTimers()
+
+    const runMeasurement = () => {
+      window.requestAnimationFrame(() => {
+        syncFrameLayout()
+      })
+    }
+
+    runMeasurement()
+    measureTimersRef.current = [80, 240, 520].map((delay) => window.setTimeout(runMeasurement, delay))
+  }
+
+  const detachInputListener = () => {
+    if (boundDocumentRef.current && boundInputHandlerRef.current) {
+      boundDocumentRef.current.removeEventListener('input', boundInputHandlerRef.current, true)
+    }
+    boundDocumentRef.current = null
+    boundInputHandlerRef.current = null
+  }
+
+  const syncEditorMode = () => {
+    const iframeElement = iframeRef.current
+    const doc = iframeElement?.contentDocument
+    if (!doc?.body) {
+      return
+    }
+
+    detachInputListener()
+    toggleIframeEditing(iframeElement, isEditMode)
+
+    if (!isEditMode) {
+      scheduleFrameMeasurement()
+      return
+    }
+
+    const handleInput = () => {
+      onEditChange({ htmlLength: extractIframeHtml(iframeElement).length })
+      scheduleFrameMeasurement()
+    }
+
+    doc.addEventListener('input', handleInput, true)
+    boundDocumentRef.current = doc
+    boundInputHandlerRef.current = handleInput
+    scheduleFrameMeasurement()
+  }
+
+  const captureCurrentHtml = () => extractIframeHtml(iframeRef.current)
+
+  const handleEditToggle = () => {
+    onEditStart()
+  }
+
+  const handleApplyClick = () => {
+    const currentHtml = captureCurrentHtml()
+    if (!currentHtml) {
+      return
+    }
+    onApplyEdit(currentHtml, { trigger: 'toolbar-save' })
+  }
+
+  const handleCancelClick = () => {
+    onCancelEdit()
+  }
+
+  const handleExportClick = () => {
+    onExport()
+  }
+
+  const handleCopyClick = () => {
+    void onCopyLink()
+  }
+
+  const handleFrameLoad = () => {
+    setFrameReady(false)
+    syncEditorMode()
+    scheduleFrameMeasurement()
+  }
+
+  useEffect(() => {
+    setFrameReady(false)
+    setFrameHeight(getFallbackFrameHeight())
+
+    const frameRequest = window.requestAnimationFrame(() => {
+      scheduleFrameMeasurement()
+    })
+
+    return () => {
+      window.cancelAnimationFrame(frameRequest)
+    }
+  }, [iframeHtml, iframeKey, previewDevice])
+
+  useEffect(() => {
+    syncEditorMode()
+    return () => {
+      detachInputListener()
+      clearMeasureTimers()
+    }
+  }, [iframeHtml, iframeKey, isEditMode])
+
+  useEffect(() => {
+    const handleResize = () => {
+      scheduleFrameMeasurement()
+    }
+
+    window.addEventListener('resize', handleResize)
+    return () => {
+      window.removeEventListener('resize', handleResize)
+    }
+  }, [iframeHtml, iframeKey, previewDevice])
+
+  const canEdit = previewState === 'done' && Boolean(iframeHtml)
+  const frameSource = iframeHtml || '<!doctype html><html><head><meta charset="utf-8" /></head><body></body></html>'
 
   return (
     <section className={`preview-pane-shell glass-panel preview-pane-shell--${previewState}`}>
@@ -74,6 +252,30 @@ export function PreviewPane({
               手机视图
             </button>
           </div>
+
+          {!isEditMode ? (
+            <button className="toolbar-button toolbar-button--ghost" disabled={!canEdit} onClick={handleEditToggle} type="button">
+              <span className="toolbar-button__icon" aria-hidden="true">
+                ✎
+              </span>
+              <span>{hasEditedContent ? '继续润色' : '编辑内容'}</span>
+            </button>
+          ) : (
+            <>
+              <button className="toolbar-button toolbar-button--primary" onClick={handleApplyClick} type="button">
+                <span className="toolbar-button__icon" aria-hidden="true">
+                  ✓
+                </span>
+                <span>应用修改</span>
+              </button>
+              <button className="toolbar-button toolbar-button--ghost" onClick={handleCancelClick} type="button">
+                <span className="toolbar-button__icon" aria-hidden="true">
+                  ↺
+                </span>
+                <span>取消编辑</span>
+              </button>
+            </>
+          )}
         </div>
 
         <div className="preview-toolbar__right">
@@ -85,8 +287,8 @@ export function PreviewPane({
           </button>
           <button
             className={`toolbar-button toolbar-button--ghost ${copiedReady ? 'toolbar-button--copied' : ''}`}
-            disabled={!copyReady}
-            onClick={onCopyLink}
+            disabled={!copyReady || isEditMode}
+            onClick={handleCopyClick}
             type="button"
           >
             <span className="toolbar-button__icon" aria-hidden="true">
@@ -94,7 +296,7 @@ export function PreviewPane({
             </span>
             <span>{copiedReady ? '已复制' : '复制链接'}</span>
           </button>
-          <button className="toolbar-button toolbar-button--primary" disabled={!exportReady} onClick={onExport} type="button">
+          <button className="toolbar-button toolbar-button--primary" disabled={!exportReady || isEditMode} onClick={handleExportClick} type="button">
             <span className="toolbar-button__icon" aria-hidden="true">
               ⬇
             </span>
@@ -110,117 +312,29 @@ export function PreviewPane({
           <span className="preview-atmosphere__grain" />
         </div>
 
-        {previewState === 'idle' ? (
-          <div className="idle-state">
-            <div className="orbital-wrapper">
-              <span className="orbital-halo orbital-halo--outer" />
-              <span className="orbital-halo orbital-halo--inner" />
-              <svg className="orbital-sphere" viewBox="0 0 240 240" aria-hidden="true">
-                <circle cx="120" cy="120" r="76" />
-                <ellipse cx="120" cy="120" rx="92" ry="32" />
-                <ellipse cx="120" cy="120" rx="92" ry="32" transform="rotate(60 120 120)" />
-                <ellipse cx="120" cy="120" rx="92" ry="32" transform="rotate(120 120 120)" />
-              </svg>
-              <span className="orbital-spark orbital-spark--1" />
-              <span className="orbital-spark orbital-spark--2" />
-              <span className="orbital-spark orbital-spark--3" />
-              <span className="orbital-core" />
-            </div>
-            <p>{generationMode === 'llm-html' ? 'LLM 模式下将直接展示模型返回的 HTML 页面。' : '在中间模板卡片列选择模板后，点击生成即可。'}</p>
-
-            {recentReports.length > 0 ? (
-              <div className="recent-reports">
-                <span>最近生成</span>
-                <ul>
-                  {recentReports.map((item) => (
-                    <li key={item.id}>
-                      <strong>{item.title}</strong>
-                      <span>{item.generatedAt}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
-
-            {showTemplateRail && templates.length > 0 ? (
-              <div className="idle-template-hint">
-                已接入 {templates.length} 个内置模板，支持纵向滚动浏览并点击切换
-              </div>
-            ) : null}
-          </div>
-        ) : null}
-
-        {previewState === 'template' || previewState === 'done' ? (
-          <div className={`iframe-shell ${previewDevice === 'mobile' ? 'is-mobile' : ''}`}>
-            <iframe
-              key={iframeKey}
-              className={`preview-frame ${previewDevice === 'mobile' ? 'is-mobile' : ''}`}
-              srcDoc={iframeHtml}
-              title={previewTitle || selectedTemplate?.name || 'Docs2Brief Preview'}
-            />
-          </div>
-        ) : null}
-
-        {previewState === 'generating' ? (
-          <div className="generating-state">
-            <div className="progress-card glass-panel" role="status" aria-live="polite">
-              <div className="progress-card__aurora" aria-hidden="true" />
-
-              <div className="progress-card__header">
-                <div className="progress-signal" aria-hidden="true">
-                  <span className="progress-signal__ring" />
-                  <span className="progress-signal__ring progress-signal__ring--outer" />
-                  <span className="progress-signal__core" />
+        <div className="preview-stage-body preview-stage-body--frame preview-stage-body--minimal">
+          <div className="preview-fullscreen-target" ref={fullscreenTargetRef}>
+            <div className={`preview-viewport ${previewDevice === 'mobile' ? 'is-mobile' : ''}`}>
+              <div className="preview-viewport__scroll">
+                <div className={`iframe-shell ${previewDevice === 'mobile' ? 'is-mobile' : ''} ${isEditMode ? 'is-editing' : ''}`}>
+                  <iframe
+                    key={iframeKey}
+                    className={`preview-frame ${previewDevice === 'mobile' ? 'is-mobile' : ''} ${frameReady ? '' : 'is-measuring'}`}
+                    onLoad={handleFrameLoad}
+                    ref={iframeRef}
+                    srcDoc={frameSource}
+                    style={{
+                      height: `${frameHeight}px`,
+                      width: previewDevice === 'mobile' ? `${mobileFrameWidth}px` : '100%',
+                    }}
+                    title={previewTitle || 'Docs2Brief Preview'}
+                  />
                 </div>
-                <div className="progress-card__headline">
-                  <strong>报告生成引擎运行中</strong>
-                  <span>正在并行执行内容抽取、结构推理与页面渲染</span>
-                </div>
-                <div className="progress-percent-chip">{progress.percent}%</div>
-              </div>
-
-              <div className="progress-step-list">
-                {steps.map((item) => (
-                  <div className={`progress-step ${item.status}`} key={item.id}>
-                    <div className="progress-step__icon" aria-hidden="true">
-                      {item.status === 'done' ? (
-                        <span className="step-node step-node--done">✓</span>
-                      ) : item.status === 'running' ? (
-                        <span className="step-node step-node--running" />
-                      ) : (
-                        <span className="step-node" />
-                      )}
-                    </div>
-                    <div className="progress-step__body">
-                      <strong>{item.title}</strong>
-                      <span>{item.description}</span>
-                    </div>
-                    <div className="progress-step__status">{item.label}</div>
-                  </div>
-                ))}
-              </div>
-
-              <div
-                className="progress-track"
-                role="progressbar"
-                aria-label="报告生成进度"
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-valuenow={progress.percent}
-              >
-                <div className="progress-track__fill" style={{ width: `${progress.percent}%` }} />
-              </div>
-
-              <div className="progress-meta">
-                <span>当前阶段：{activeStep?.title ?? '处理中'}</span>
-                <span>{progress.percent}%</span>
               </div>
             </div>
           </div>
-        ) : null}
+        </div>
       </div>
-
-      {showSuccessToast ? <div className="success-toast">✓ 报告生成成功</div> : null}
     </section>
   )
 }

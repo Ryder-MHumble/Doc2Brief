@@ -1,15 +1,18 @@
 import { OPENROUTER_API_KEY, OPENROUTER_BASE_URL } from './config'
 import { stripNoise, toCleanString } from './text-utils'
 
-export async function requestOpenRouter(payload) {
+export async function requestOpenRouter(payload, options = {}) {
   const { endpoint: proxyEndpoint, proxyDisabled } = resolveProxyEndpoint()
   const directFallbackEnabled = resolveDirectFallbackEnabled()
   const allowDirectFallback = Boolean(OPENROUTER_API_KEY) && (proxyDisabled || directFallbackEnabled)
 
   if (proxyEndpoint) {
     try {
-      return await requestViaProxy(proxyEndpoint, payload)
+      return await requestViaProxy(proxyEndpoint, payload, options)
     } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error(resolveTimeoutMessage(options.timeoutMs))
+      }
       if (!allowDirectFallback) {
         const message = error instanceof Error ? error.message : String(error)
         throw new Error(
@@ -28,7 +31,14 @@ export async function requestOpenRouter(payload) {
     throw new Error('未配置 OpenRouter API Key，且代理不可用')
   }
 
-  return requestDirect(payload)
+  try {
+    return await requestDirect(payload, options)
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error(resolveTimeoutMessage(options.timeoutMs))
+    }
+    throw error
+  }
 }
 
 function resolveProxyEndpoint() {
@@ -51,53 +61,119 @@ function resolveDirectFallbackEnabled() {
   return flag === '1' || flag === 'true'
 }
 
-async function requestViaProxy(endpoint, payload) {
-  const response = await fetch(endpoint, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(payload),
-  })
+async function requestViaProxy(endpoint, payload, options = {}) {
+  const { fetchOptions, cleanup } = createFetchOptions(options)
+  try {
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+      ...fetchOptions,
+    })
 
-  if (!response.ok) {
-    let errorDetail = ''
-    try {
-      const bodyText = await response.text()
-      errorDetail = bodyText ? `，响应=${bodyText.slice(0, 300)}` : ''
-    } catch {
-      errorDetail = ''
+    if (!response.ok) {
+      let errorDetail = ''
+      try {
+        const bodyText = await response.text()
+        errorDetail = bodyText ? `，响应=${bodyText.slice(0, 300)}` : ''
+      } catch {
+        errorDetail = ''
+      }
+      throw new Error(`代理请求失败：${response.status}${errorDetail}`)
     }
-    throw new Error(`代理请求失败：${response.status}${errorDetail}`)
-  }
 
-  return await response.json()
+    return await response.json()
+  } finally {
+    cleanup()
+  }
 }
 
-async function requestDirect(payload) {
-  const response = await fetch(`${OPENROUTER_BASE_URL}/chat/completions`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${OPENROUTER_API_KEY}`,
-      'Content-Type': 'application/json',
-      'HTTP-Referer': window.location.origin,
-      'X-Title': 'file2web-frontend',
-    },
-    body: JSON.stringify(payload),
-  })
+async function requestDirect(payload, options = {}) {
+  const { fetchOptions, cleanup } = createFetchOptions(options)
+  try {
+    const response = await fetch(`${OPENROUTER_BASE_URL}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': window.location.origin,
+        'X-Title': 'file2web-frontend',
+      },
+      body: JSON.stringify(payload),
+      ...fetchOptions,
+    })
 
-  if (!response.ok) {
-    let errorDetail = ''
-    try {
-      const bodyText = await response.text()
-      errorDetail = bodyText ? `，响应=${bodyText.slice(0, 300)}` : ''
-    } catch {
-      errorDetail = ''
+    if (!response.ok) {
+      let errorDetail = ''
+      try {
+        const bodyText = await response.text()
+        errorDetail = bodyText ? `，响应=${bodyText.slice(0, 300)}` : ''
+      } catch {
+        errorDetail = ''
+      }
+      throw new Error(`OpenRouter 请求失败：${response.status}${errorDetail}`)
     }
-    throw new Error(`OpenRouter 请求失败：${response.status}${errorDetail}`)
+
+    return await response.json()
+  } finally {
+    cleanup()
+  }
+}
+
+function createFetchOptions(options = {}) {
+  const timeoutMs = Number(options.timeoutMs) || 0
+  const externalSignal = options.signal
+  if (timeoutMs <= 0 && !externalSignal) {
+    return {
+      fetchOptions: {},
+      cleanup: () => {},
+    }
   }
 
-  return await response.json()
+  const controller = new AbortController()
+  let timerId = 0
+  let handleExternalAbort = null
+
+  if (externalSignal) {
+    if (externalSignal.aborted) {
+      controller.abort()
+    } else {
+      handleExternalAbort = () => {
+        controller.abort()
+      }
+      externalSignal.addEventListener('abort', handleExternalAbort, { once: true })
+    }
+  }
+
+  if (timeoutMs > 0) {
+    timerId = globalThis.setTimeout(() => {
+      controller.abort()
+    }, timeoutMs)
+  }
+
+  return {
+    fetchOptions: {
+      signal: controller.signal,
+    },
+    cleanup: () => {
+      if (timerId) {
+        globalThis.clearTimeout(timerId)
+      }
+      if (externalSignal && handleExternalAbort) {
+        externalSignal.removeEventListener('abort', handleExternalAbort)
+      }
+    },
+  }
+}
+
+function resolveTimeoutMessage(timeoutMs) {
+  const normalizedTimeout = Number(timeoutMs) || 0
+  if (normalizedTimeout > 0) {
+    return `模型请求超时（${normalizedTimeout}ms）`
+  }
+  return '模型请求超时'
 }
 
 export function extractResponseContent(payload) {

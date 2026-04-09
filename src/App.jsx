@@ -1,4 +1,6 @@
+import { useRef } from 'react'
 import './index.css'
+import './ui-cleanup.css'
 import { GenerateSection } from './components/GenerateSection'
 import { PreferenceSection } from './components/PreferenceSection'
 import { PreviewPane } from './components/PreviewPane'
@@ -17,19 +19,25 @@ export default function App() {
     department,
     departmentCatalog,
     documentData,
+    editedHtml,
     errorMessage,
     exportReady,
     fullscreenReady,
     generationMode,
     generationModeCatalog,
     generationProgress,
+    handleApplyEdit,
     handleCopyLink,
+    handleCancelEdit,
+    handleEditChange,
+    handleEditStart,
     handleExport,
     handleFullscreen,
     handleGenerateAction,
     handleTemplateSelect,
     iframeKey,
     inputMode,
+    isEditMode,
     isGenerating,
     isReportReady,
     manualText,
@@ -44,6 +52,7 @@ export default function App() {
     onStyleChange,
     previewDevice,
     previewHtml,
+    previewFullscreenRef,
     previewStageRef,
     previewState,
     recentReports,
@@ -60,6 +69,12 @@ export default function App() {
     warnings,
   } = useWorkbenchController()
 
+  const supportContactRef = useRef(null)
+
+  const handleSupportContactClick = () => {
+    supportContactRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
+
   return (
     <div className={`app-shell ${isGenerating ? 'is-generating' : ''}`}>
       <header className="app-topbar">
@@ -71,21 +86,9 @@ export default function App() {
           </div>
         </div>
         <div className="topbar-actions">
-          <button
-            className="icon-button topbar-monitor-button"
-            onClick={() => window.open('/dashboard', '_blank', 'noopener,noreferrer')}
-            type="button"
-          >
-            <span aria-hidden="true">▦</span>
-            <span>API监控</span>
-          </button>
-          <button
-            aria-label="帮助提示"
-            className="icon-button topbar-help-icon"
-            title="如遇问题相关问题请联系孙铭浩"
-            type="button"
-          >
-            <span aria-hidden="true">ⓘ</span>
+          <button className="icon-button topbar-contact-button" onClick={handleSupportContactClick} type="button">
+            <span aria-hidden="true">✦</span>
+            <span>需求反馈：孙铭浩</span>
           </button>
         </div>
       </header>
@@ -127,7 +130,7 @@ export default function App() {
             onGenerateAction={handleGenerateAction}
           />
 
-          <div aria-label="反馈与支持" className="support-contact-note" role="note">
+          <div aria-label="反馈与支持" className="support-contact-note" ref={supportContactRef} role="note">
             <p className="support-contact-note__title font-headline">反馈与支持</p>
             <p className="support-contact-note__text">
               如遇使用问题或有新增需求，请联系 <strong>孙铭浩</strong>，我们会尽快跟进处理。
@@ -136,11 +139,14 @@ export default function App() {
 
           {errorMessage ? <div className="status-banner status-banner--error">{errorMessage}</div> : null}
           {warnings.length > 0 ? (
-            <div className="status-banner status-banner--warning">
-              {warnings.map((warning) => (
-                <div key={warning}>{warning}</div>
-              ))}
-            </div>
+            <details className="status-note-collapsible">
+              <summary>生成说明（可选查看）</summary>
+              <div className="status-note-collapsible__body">
+                {warnings.map((warning) => (
+                  <div key={warning}>{warning}</div>
+                ))}
+              </div>
+            </details>
           ) : null}
         </aside>
 
@@ -160,13 +166,20 @@ export default function App() {
             exportReady={exportReady}
             fullscreenReady={fullscreenReady}
             generationMode={generationMode}
+            hasEditedContent={Boolean(editedHtml)}
             iframeHtml={previewHtml}
             iframeKey={iframeKey}
+            isEditMode={isEditMode}
             onCopyLink={handleCopyLink}
             onDeviceChange={setPreviewDevice}
+            onApplyEdit={handleApplyEdit}
+            onCancelEdit={handleCancelEdit}
+            onEditChange={handleEditChange}
+            onEditStart={handleEditStart}
             onExport={handleExport}
             onFullscreen={handleFullscreen}
             previewDevice={previewDevice}
+            fullscreenTargetRef={previewFullscreenRef}
             previewStageRef={previewStageRef}
             previewState={previewState}
             previewTitle={documentData.title}
