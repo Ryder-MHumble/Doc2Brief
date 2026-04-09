@@ -4,11 +4,11 @@ const templateMap = new Map(templateCatalog.map((item) => [item.id, item]))
 const previewVariantMap = {
   'template-01': 'minimal-brief',
   'template-02': 'magazine-cover',
-  'template-03': 'minimal-brief',
-  'template-04': 'exec-summary',
+  'template-03': 'ink-scroll',
+  'template-04': 'dark-tech',
   'template-05': 'business-pro',
   'template-06': 'data-insight',
-  'template-07': 'project-pulse',
+  'template-07': 'cyber-grid',
   'template-08': 'business-pro',
   'template-09': 'swiss-grid',
 }

@@ -135,7 +135,7 @@
   } catch (error) {
     logSystem('error', '模板渲染失败', { message: error instanceof Error ? error.message : String(error) })
   }
-})()
+})();
 
 // Matrix 雨
 (function(){

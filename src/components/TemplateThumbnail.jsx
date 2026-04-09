@@ -63,6 +63,32 @@ export function TemplateThumbnail({ variant }) {
     )
   }
 
+  if (variant === 'ink-scroll') {
+    return (
+      <svg viewBox="0 0 88 64" className="template-thumb-svg" aria-hidden="true">
+        <rect x="10" y="10" width="68" height="44" rx="8" fill="#20150c" opacity="0.22" />
+        <rect x="14" y="14" width="60" height="36" rx="6" fill="#f5efe4" opacity="0.9" />
+        <line x1="22" y1="22" x2="66" y2="22" stroke="#5a4633" strokeWidth="1.6" />
+        <line x1="22" y1="30" x2="62" y2="30" stroke="#7a6550" strokeWidth="1.4" />
+        <line x1="22" y1="38" x2="58" y2="38" stroke="#9d8468" strokeWidth="1.2" />
+        <circle cx="20" cy="47" r="3" fill="#b93838" />
+      </svg>
+    )
+  }
+
+  if (variant === 'cyber-grid') {
+    return (
+      <svg viewBox="0 0 88 64" className="template-thumb-svg" aria-hidden="true">
+        <rect x="8" y="10" width="72" height="44" rx="6" fill="#060912" stroke="#12304a" />
+        <path d="M8 24 H80 M8 38 H80 M24 10 V54 M40 10 V54 M56 10 V54 M72 10 V54" stroke="#0b2741" strokeWidth="0.8" />
+        <path d="M14 18 H28 M60 46 H74" stroke="#00e5ff" strokeWidth="1.6" />
+        <circle cx="20" cy="30" r="2" fill="#00e5ff" />
+        <circle cx="34" cy="30" r="2" fill="#00ff8a" />
+        <circle cx="48" cy="30" r="2" fill="#ff2ea6" />
+      </svg>
+    )
+  }
+
   if (variant === 'minimal-brief') {
     return (
       <svg viewBox="0 0 88 64" className="template-thumb-svg" aria-hidden="true">

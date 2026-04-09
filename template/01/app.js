@@ -237,6 +237,7 @@ function setN(el, evt) {
 
 // KPI 数字
 function countUp(el, target) {
+  if (!el || !Number.isFinite(target) || target <= 0) return;
   let start = 0;
   const step = () => {
     start += Math.ceil(target / 60);
@@ -247,11 +248,14 @@ function countUp(el, target) {
   requestAnimationFrame(step);
 }
 setTimeout(() => {
-  countUp(document.getElementById('kn1'), 5);
-  countUp(document.getElementById('kn2'), 34);
-  countUp(document.getElementById('kn3'), 19);
-  countUp(document.getElementById('kn4'), 470);
-  countUp(document.getElementById('kn5'), 700);
+  const counters = [
+    ['kn1', 5],
+    ['kn2', 34],
+    ['kn3', 19],
+    ['kn4', 470],
+    ['kn5', 700],
+  ];
+  counters.forEach(([id, target]) => countUp(document.getElementById(id), target));
 }, 600);
 
 // 滚动动画
