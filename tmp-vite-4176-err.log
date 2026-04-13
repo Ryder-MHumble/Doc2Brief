@@ -1,0 +1,28 @@
+[2m20:59:49[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22m[vite] Failed to reload /debug-preview-pane.jsx. This could be due to syntax errors or importing non-existent modules. (see errors above)
+[2m17:01:19[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22m系统日志-错误 | 模块=模型编排 | 事件=结构化请求失败，降级 | 内容={
+  "error": "代理请求失败：代理请求失败：404。为保证用量监控准确，已阻止自动前端直连。请检查服务端代理，或显式设置 VITE_OPENROUTER_ALLOW_DIRECT_FALLBACK=1（或 VITE_OPENROUTER_PROXY_DISABLED=1）后重试。",
+  "model": "minimax/minimax-m2.7",
+  "usedRetry": false,
+  "usedRepair": false,
+  "repairError": "",
+  "usedPolish": false,
+  "polishError": ""
+}
+[2m17:02:32[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22m系统日志-错误 | 模块=模型编排 | 事件=结构化请求失败，降级 | 内容={
+  "error": "代理请求失败：代理请求失败：404。为保证用量监控准确，已阻止自动前端直连。请检查服务端代理，或显式设置 VITE_OPENROUTER_ALLOW_DIRECT_FALLBACK=1（或 VITE_OPENROUTER_PROXY_DISABLED=1）后重试。",
+  "model": "minimax/minimax-m2.7",
+  "usedRetry": false,
+  "usedRepair": false,
+  "repairError": "",
+  "usedPolish": false,
+  "polishError": ""
+}
+[2m17:02:36[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22m系统日志-错误 | 模块=模型编排 | 事件=结构化请求失败，降级 | 内容={
+  "error": "代理请求失败：代理请求失败：404。为保证用量监控准确，已阻止自动前端直连。请检查服务端代理，或显式设置 VITE_OPENROUTER_ALLOW_DIRECT_FALLBACK=1（或 VITE_OPENROUTER_PROXY_DISABLED=1）后重试。",
+  "model": "minimax/minimax-m2.7",
+  "usedRetry": false,
+  "usedRepair": false,
+  "repairError": "",
+  "usedPolish": false,
+  "polishError": ""
+}

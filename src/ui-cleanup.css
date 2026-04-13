@@ -408,6 +408,11 @@ body::after,
   box-shadow: none;
 }
 
+.template-bridge-card:hover .template-bridge-card__details,
+.template-bridge-card:focus-visible .template-bridge-card__details {
+  max-height: 120px;
+}
+
 .template-bridge-card.is-active {
   border-color: rgba(118, 173, 235, 0.3);
   background: rgba(16, 25, 39, 0.94);
@@ -573,19 +578,15 @@ body::after,
   font-weight: 600;
 }
 
-.preview-stage-body {
-  border-radius: 18px;
-  border-color: rgba(132, 152, 180, 0.14);
-  background:
-    linear-gradient(180deg, rgba(11, 19, 30, 0.92), rgba(9, 15, 24, 0.94)),
-    radial-gradient(circle at 14% 0%, rgba(70, 112, 196, 0.08), transparent 42%);
-  box-shadow: none;
+.preview-stage-frame {
+  min-height: min(760px, calc(100vh - 210px));
+  padding: 0;
 }
 
-.preview-stage-body.idle-state,
-.preview-stage-body.generating-state,
-.preview-stage-body--frame {
-  padding: 18px;
+.preview-stage-frame.is-editing {
+  border-radius: 18px;
+  background: rgba(91, 149, 214, 0.12);
+  box-shadow: 0 0 0 1px rgba(118, 173, 235, 0.12);
 }
 
 .idle-state {
@@ -701,31 +702,8 @@ body::after,
   transform: none;
 }
 
-.preview-surface__header {
-  padding: 10px 12px;
-}
-
-.preview-surface__hint {
-  margin: 0;
-  padding: 0;
-  font-size: 12px;
-  line-height: 1.65;
-}
-
-.preview-viewport {
-  border-color: rgba(132, 152, 180, 0.14);
-  background: rgba(9, 15, 24, 0.72);
-  box-shadow: none;
-}
-
-.preview-viewport__scroll {
-  padding: 12px;
-}
-
 .iframe-shell.is-editing {
   border-radius: 18px;
-  background: rgba(91, 149, 214, 0.12);
-  box-shadow: 0 0 0 1px rgba(118, 173, 235, 0.12);
 }
 
 .preview-frame {
@@ -734,7 +712,7 @@ body::after,
 }
 
 .preview-frame:hover,
-.preview-stage-body--frame .preview-frame:hover {
+.preview-stage-frame .preview-frame:hover {
   transform: none;
   box-shadow: 0 22px 48px rgba(0, 0, 0, 0.34);
   filter: none;
@@ -857,10 +835,11 @@ body::after,
 @media (max-width: 780px) {
   .control-panel,
   .template-bridge-panel,
-  .preview-stage,
-  .preview-stage-body.idle-state,
-  .preview-stage-body.generating-state,
-  .preview-stage-body--frame {
+  .preview-stage {
+    padding: 14px;
+  }
+
+  .control-panel--refined .control-section {
     padding: 14px;
   }
 
@@ -884,7 +863,7 @@ body::after,
     padding: 14px 0;
   }
 
-  .preview-viewport__scroll {
+  .preview-stage-frame {
     padding: 0;
   }
 }

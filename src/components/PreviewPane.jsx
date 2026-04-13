@@ -312,26 +312,23 @@ export function PreviewPane({
           <span className="preview-atmosphere__grain" />
         </div>
 
-        <div className="preview-stage-body preview-stage-body--frame preview-stage-body--minimal">
-          <div className="preview-fullscreen-target" ref={fullscreenTargetRef}>
-            <div className={`preview-viewport ${previewDevice === 'mobile' ? 'is-mobile' : ''}`}>
-              <div className="preview-viewport__scroll">
-                <div className={`iframe-shell ${previewDevice === 'mobile' ? 'is-mobile' : ''} ${isEditMode ? 'is-editing' : ''}`}>
-                  <iframe
-                    key={iframeKey}
-                    className={`preview-frame ${previewDevice === 'mobile' ? 'is-mobile' : ''} ${frameReady ? '' : 'is-measuring'}`}
-                    onLoad={handleFrameLoad}
-                    ref={iframeRef}
-                    srcDoc={frameSource}
-                    style={{
-                      height: `${frameHeight}px`,
-                      width: previewDevice === 'mobile' ? `${mobileFrameWidth}px` : '100%',
-                    }}
-                    title={previewTitle || 'Docs2Brief Preview'}
-                  />
-                </div>
-              </div>
-            </div>
+        <div
+          className={`preview-stage-frame ${previewDevice === 'mobile' ? 'is-mobile' : ''} ${isEditMode ? 'is-editing' : ''}`}
+          ref={fullscreenTargetRef}
+        >
+          <div className={`iframe-shell ${previewDevice === 'mobile' ? 'is-mobile' : ''} ${isEditMode ? 'is-editing' : ''}`}>
+            <iframe
+              key={iframeKey}
+              className={`preview-frame ${previewDevice === 'mobile' ? 'is-mobile' : ''} ${frameReady ? '' : 'is-measuring'}`}
+              onLoad={handleFrameLoad}
+              ref={iframeRef}
+              srcDoc={frameSource}
+              style={{
+                height: `${frameHeight}px`,
+                width: previewDevice === 'mobile' ? `${mobileFrameWidth}px` : '100%',
+              }}
+              title={previewTitle || 'Docs2Brief Preview'}
+            />
           </div>
         </div>
       </div>

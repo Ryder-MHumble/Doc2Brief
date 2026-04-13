@@ -1,5 +1,6 @@
 (() => {
   const MODULE_NAME = 'template-magazine-runtime'
+  const previewLite = Boolean(window.__FILE2WEB_PREVIEW_LITE__)
 
   const escapeHtml = (value) =>
     String(value ?? '')
@@ -11,17 +12,49 @@
 
   const readPayload = () => {
     const node = document.getElementById('template-data')
-    if (!node) throw new Error('缺少 template-data 节点')
+    if (!node) {
+      throw new Error('缺少 template-data 节点')
+    }
     return JSON.parse(node.textContent || '{}')
   }
 
   const logBusinessJson = (stage, payload) => {
-    console.info('[业务JSON]', JSON.stringify({ module: MODULE_NAME, stage, timestamp: new Date().toISOString(), payload }, null, 2))
+    console.info(
+      '[业务JSON]',
+      JSON.stringify(
+        {
+          module: MODULE_NAME,
+          stage,
+          timestamp: new Date().toISOString(),
+          payload,
+        },
+        null,
+        2,
+      ),
+    )
   }
 
   const logSystem = (level, event, payload = {}) => {
     const logger = level === 'error' ? console.error : console.info
-    logger('[系统日志]', JSON.stringify({ module: MODULE_NAME, level, event, timestamp: new Date().toISOString(), payload }, null, 2))
+    logger(
+      '[系统日志]',
+      JSON.stringify(
+        {
+          module: MODULE_NAME,
+          level,
+          event,
+          timestamp: new Date().toISOString(),
+          payload,
+        },
+        null,
+        2,
+      ),
+    )
+  }
+
+  const toArray = (value, limit = Infinity) => {
+    if (!Array.isArray(value)) return []
+    return value.slice(0, limit)
   }
 
   const splitValueUnit = (value, fallbackUnit = '') => {
@@ -35,318 +68,365 @@
     }
   }
 
-  const richTextHtml = (value) =>
-    escapeHtml(value || '暂无补充说明。').replace(/(\d+(?:\.\d+)?(?:\s*[+％%余人项名所位个场国月日期年]))/g, '<strong>$1</strong>')
-
-  const statusClass = (item) => {
-    if (item.tone === 'done') return 'status-done'
-    if (item.tone === 'warning') return 'status-pending'
-    return 'status-progress'
-  }
-
-  const progressColor = (item) => {
-    if (item.tone === 'done') return 'var(--accent-sage)'
-    if (item.tone === 'warning') return 'var(--accent-gold)'
-    return 'var(--accent-red)'
-  }
-
-  const sectionLabelMap = {
-    internal: '内部协同 · Internal Coordination',
-    cooperation: '对外合作 · External Cooperation',
-    visit: '交流互访 · Academic Exchange',
-    system: '体系建设 · System Development',
-  }
-
-  const getIssueNumber = (issueLabel) => {
-    const match = String(issueLabel || '').match(/(\d+)/)
+  const getIssueNo = (label) => {
+    const match = String(label || '').match(/(\d+)/)
     return String(match?.[1] || '1').padStart(2, '0')
   }
 
-  const renderWorkItem = (item, index, total) => {
-    const extraStyle = total === 5 && index === total - 1 ? ' style="grid-column:span 2;"' : ''
-    return `
-      <div class="work-item"${extraStyle}>
-        <div class="work-item-header">
-          <div class="work-item-title">${escapeHtml(item.title || '待补充事项')}</div>
-          <span class="status-pill ${statusClass(item)}">${escapeHtml(item.status || '进行中')}</span>
-        </div>
-        <div class="work-item-text">${richTextHtml(item.body)}</div>
-        <div class="work-progress">
-          <div class="progress-track"><div class="progress-fill" data-w="${escapeHtml(String(item.progress || 0))}%" style="width:0%;background:${progressColor(item)}"></div></div>
-          <span class="progress-num">${escapeHtml(String(item.progress || 0))}%</span>
-        </div>
-      </div>
-    `
+  const toneColor = (tone) => {
+    if (tone === 'done') return 'var(--ok)'
+    if (tone === 'warning') return 'var(--warn)'
+    return 'var(--progress)'
   }
 
-  const renderOverviewItem = (item, index, overviewLength, stats) => {
-    const quote = stats[index]?.value || item.number || String(index + 1).padStart(2, '0')
-    const spanStyle = overviewLength >= 5 && index === overviewLength - 1 ? ' style="grid-column: span 2;"' : ''
-    return `
-      <div class="overview-item"${spanStyle}>
-        <div class="pull-quote-num">${escapeHtml(quote)}</div>
-        <div class="drop-cap-label">${escapeHtml(item.tag || '要览')}</div>
-        <div class="overview-title">${escapeHtml(item.title || '待补充标题')}</div>
-        <div class="overview-text">${richTextHtml(item.body)}</div>
-      </div>
-    `
+  const toPercent = (value, total) => {
+    if (!total || total <= 0) return 0
+    return Number(((Number(value || 0) / total) * 100).toFixed(1))
   }
 
-  const renderChartRow = (label, displayValue, percent, color) => `
-    <div class="chart-row">
-      <span class="chart-label">${escapeHtml(label)}</span>
-      <div class="chart-track"><div class="chart-fill" data-w="${escapeHtml(String(percent))}%" style="width:0%;${color ? `background:${color}` : ''}"></div></div>
-      <span class="chart-val">${escapeHtml(displayValue)}</span>
-    </div>
-  `
+  const renderProgressBars = (root = document) => {
+    root.querySelectorAll('[data-w]').forEach((node) => {
+      const target = node.getAttribute('data-w')
+      if (!target) return
+      node.style.width = target
+    })
+  }
+
+  const sectionGroups = [
+    { key: 'internal', label: '内部协同' },
+    { key: 'cooperation', label: '对外合作' },
+    { key: 'visit', label: '交流互访' },
+    { key: 'system', label: '体系建设' },
+  ]
+
+  const chineseNumbers = ['一', '二', '三', '四', '五', '六', '七', '八', '九', '十']
 
   try {
     const startedAt = performance.now()
-    logSystem('info', '模板启动')
+    logSystem('info', '模块启动', { previewLite })
 
     const payload = readPayload()
     const vm = payload.viewModel?.magazine || {}
     const cover = vm.cover || {}
-    const stats = Array.isArray(vm.stats) ? vm.stats.slice(0, 4) : []
-    const overview = Array.isArray(vm.overview) ? vm.overview.slice(0, 5) : []
+    const stats = toArray(vm.stats, 6)
+    const toc = toArray(vm.toc, 8)
+    const overview = toArray(vm.overview, 6)
     const groups = vm.groups || {}
     const data = vm.data || {}
     const footer = vm.footer || {}
-    const toc = Array.isArray(vm.toc) ? vm.toc : []
-    const decks = Array.isArray(cover.decks) ? cover.decks.filter(Boolean).slice(0, 2) : []
-    const issueNumber = getIssueNumber(cover.issueLabel)
-    const year = String(footer.dateOnly || '').slice(0, 4) || new Date().getFullYear()
+    const issueNo = getIssueNo(cover.issueLabel)
 
-    document.title = cover.headline || payload.meta?.title || '周报预览'
+    const decks = toArray(cover.decks || payload.keyPoints || [], 3).filter((item) => String(item || '').trim())
 
-    const mastheadPre = document.querySelector('.masthead-pre')
-    const issueLabel = document.querySelector('.issue-label')
-    const mastheadCn = document.querySelector('.masthead-cn')
-    const colLeft = document.querySelector('.col-left')
-    const colCenter = document.querySelector('.col-center')
-    const colRight = document.querySelector('.col-right')
-    const toolbarBrand = document.querySelector('.toolbar-brand')
+    const defaultTitle = payload.meta?.title || '周报'
+    const defaultSubtitle = payload.meta?.subtitle || '本周汇总'
 
-    if (mastheadPre) mastheadPre.textContent = `${footer.issuedBy || 'file2web'} · Internal Affairs Report`
-    if (issueLabel) issueLabel.textContent = cover.issueLabel || `Vol.${issueNumber} · ${year} · 第${issueNumber}期`
-    if (mastheadCn) mastheadCn.textContent = `${footer.issuedBy || '自动生成周报'} · 周报`
-    if (toolbarBrand) toolbarBrand.textContent = `周报 · 第${issueNumber}期`
+    document.title = cover.headline || defaultTitle
 
-    if (colLeft) {
-      colLeft.innerHTML = `
-        <div class="col-left-title">本期数据</div>
-        ${stats
-          .map((item) => {
-            const parsed = splitValueUnit(item.value, item.unit)
-            return `
-              <div class="col-left-item">
-                <div class="col-left-label">${escapeHtml(item.label || '关键指标')}</div>
-                <div class="col-left-val">${escapeHtml(parsed.value)}${parsed.unit ? `<span style="font-size:18px;margin-left:4px">${escapeHtml(parsed.unit)}</span>` : ''}</div>
-                <div class="col-left-desc">${escapeHtml(item.detail || '')}</div>
-              </div>
-            `
-          })
-          .join('')}
-      `
+    const coverPretitle = document.getElementById('cover-pretitle')
+    const coverIssue = document.getElementById('cover-issue')
+    const coverTitle = document.getElementById('cover-title')
+    const coverHeadline = document.getElementById('cover-headline')
+    const coverDecks = document.getElementById('cover-decks')
+    const coverMeta = document.getElementById('cover-meta')
+    const coverStats = document.getElementById('cover-stats')
+    const coverToc = document.getElementById('cover-toc')
+    const toolbarBrand = document.getElementById('toolbar-brand')
+
+    if (coverPretitle) {
+      coverPretitle.textContent = `${footer.issuedBy || '自动生成周报'} · Internal Affairs Magazine`
     }
-
-    if (colCenter) {
-      colCenter.innerHTML = `
-        <div class="headline">${escapeHtml(cover.headline || payload.meta?.title || '未命名周报')}</div>
-        ${decks.map((item) => `<div class="deck">${escapeHtml(item)}</div>`).join('')}
-        <div class="byline">
-          <span>📅 ${escapeHtml(cover.period || payload.meta?.subtitle || '本周汇总')}</span>
-          <span>🏛️ ${escapeHtml(cover.unit || footer.issuedBy || '自动生成周报')}</span>
-        </div>
-      `
+    if (coverIssue) {
+      coverIssue.textContent = cover.issueLabel || `Vol.${issueNo}`
     }
-
-    if (colRight) {
-      colRight.innerHTML = `
-        <div class="col-right-title">本期目录</div>
-        ${toc
-          .map(
-            (item, index) => `
-              <div class="toc-item">
-                <span class="toc-num">${['一', '二', '三', '四', '五', '六', '七'][index] || String(index + 1)}</span>
-                <span class="toc-dots"></span>
-                <span class="toc-text">${escapeHtml(item)}</span>
-              </div>
-            `,
-          )
-          .join('')}
-      `
+    if (coverTitle) {
+      coverTitle.textContent = defaultTitle
     }
-
-    const overviewGrid = document.querySelector('.overview-grid')
-    if (overviewGrid) {
-      overviewGrid.innerHTML = overview.map((item, index) => renderOverviewItem(item, index, overview.length, stats)).join('')
+    if (coverHeadline) {
+      coverHeadline.textContent = cover.headline || defaultTitle
     }
-
-    const panelConfig = [
-      { id: 'tab-sync2', key: 'internal' },
-      { id: 'tab-collab2', key: 'cooperation' },
-      { id: 'tab-visit2', key: 'visit' },
-      { id: 'tab-system2', key: 'system' },
-    ]
-
-    panelConfig.forEach(({ id, key }) => {
-      const panel = document.getElementById(id)
-      const items = Array.isArray(groups[key]) ? groups[key] : []
-      const labelNode = panel?.querySelector('.work-cat-label')
-      const gridNode = panel?.querySelector('.work-items-grid')
-      if (labelNode) labelNode.textContent = sectionLabelMap[key] || '重点工作'
-      if (gridNode) gridNode.innerHTML = items.map((item, index) => renderWorkItem(item, index, items.length)).join('')
-    })
-
-    const dataStatsRow = document.querySelector('.data-stats-row')
-    if (dataStatsRow) {
-      dataStatsRow.innerHTML = (data.keyMetrics || []).slice(0, 5)
+    if (coverDecks) {
+      const content = decks.length > 0 ? decks : [payload.meta?.summary || '暂无摘要']
+      coverDecks.innerHTML = content.map((item) => `<p>${escapeHtml(item)}</p>`).join('')
+    }
+    if (coverMeta) {
+      coverMeta.textContent = `${cover.period || defaultSubtitle} ｜ ${cover.unit || footer.issuedBy || '自动生成周报'}`
+    }
+    if (coverStats) {
+      const statItems = (stats.length > 0 ? stats : toArray(data.keyMetrics, 4)).slice(0, 4)
+      coverStats.innerHTML = statItems
         .map((item) => {
           const parsed = splitValueUnit(item.value, item.unit)
           return `
-            <div class="data-stat">
-              <div class="data-stat-num">${escapeHtml(parsed.value)}${parsed.unit ? `<span class="data-stat-unit">${escapeHtml(parsed.unit)}</span>` : ''}</div>
-              <div class="data-stat-label">${escapeHtml(item.label || '指标')}</div>
-            </div>
+            <article class="cover-stat">
+              <div class="cover-stat-label">${escapeHtml(item.label || '关键指标')}</div>
+              <div class="cover-stat-value">${escapeHtml(parsed.value)}${
+                parsed.unit ? `<span class="cover-stat-unit">${escapeHtml(parsed.unit)}</span>` : ''
+              }</div>
+              <div class="cover-stat-detail">${escapeHtml(item.detail || item.sub || '')}</div>
+            </article>
+          `
+        })
+        .join('')
+    }
+    if (coverToc) {
+      const tocItems = toc.length > 0 ? toc : ['本周要览', '重点工作', '数据看板', '签发信息']
+      coverToc.innerHTML = tocItems
+        .map(
+          (item, index) =>
+            `<li><span class="cover-toc-no">${chineseNumbers[index] || String(index + 1)}</span><span>${escapeHtml(item)}</span></li>`,
+        )
+        .join('')
+    }
+    if (toolbarBrand) {
+      toolbarBrand.textContent = `周报 · 第 ${issueNo} 期`
+    }
+
+    const overviewList = document.getElementById('overview-list')
+    if (overviewList) {
+      const source = overview.length > 0 ? overview : toArray(payload.keyPoints, 4).map((item, index) => ({
+        number: String(index + 1).padStart(2, '0'),
+        tag: '要点',
+        title: item,
+        body: payload.meta?.summary || '',
+      }))
+
+      overviewList.innerHTML = source
+        .map(
+          (item, index) => `
+            <article class="overview-card">
+              <div class="overview-meta">
+                <span class="overview-no">${escapeHtml(item.number || String(index + 1).padStart(2, '0'))}</span>
+                <span class="overview-tag">${escapeHtml(item.tag || '重点')}</span>
+              </div>
+              <h3>${escapeHtml(item.title || '待补充标题')}</h3>
+              <p>${escapeHtml(item.body || '暂无补充说明。')}</p>
+            </article>
+          `,
+        )
+        .join('')
+    }
+
+    const workTabs = document.getElementById('work-tabs')
+    const workPanel = document.getElementById('work-panel')
+    let activeGroup = sectionGroups.find((item) => toArray(groups[item.key]).length > 0)?.key || 'internal'
+
+    const renderWorkPanel = (groupKey) => {
+      if (!workPanel) return
+      const items = toArray(groups[groupKey], 8)
+      if (items.length === 0) {
+        workPanel.innerHTML = '<article class="work-card"><p class="work-body">当前分组暂无可展示内容。</p></article>'
+        return
+      }
+
+      workPanel.innerHTML = items
+        .map((item) => {
+          const color = toneColor(item.tone)
+          return `
+            <article class="work-card">
+              <div class="work-head">
+                <h3 class="work-title">${escapeHtml(item.title || '待补充事项')}</h3>
+                <span class="work-status" style="color:${color}">${escapeHtml(item.status || '进行中')}</span>
+              </div>
+              <p class="work-body">${escapeHtml(item.body || '暂无补充说明。')}</p>
+              <div class="work-progress">
+                <div class="work-track"><div class="work-fill" data-w="${escapeHtml(String(item.progress || 0))}%" style="background:${color}"></div></div>
+                <span class="work-pct">${escapeHtml(String(item.progress || 0))}%</span>
+              </div>
+            </article>
+          `
+        })
+        .join('')
+
+      renderProgressBars(workPanel)
+    }
+
+    if (workTabs) {
+      workTabs.innerHTML = sectionGroups
+        .map(
+          (group) =>
+            `<button type="button" data-group="${group.key}" class="${group.key === activeGroup ? 'active' : ''}">${group.label}</button>`,
+        )
+        .join('')
+
+      workTabs.querySelectorAll('button[data-group]').forEach((button) => {
+        button.addEventListener('click', () => {
+          const nextGroup = button.getAttribute('data-group')
+          if (!nextGroup) return
+          activeGroup = nextGroup
+          workTabs.querySelectorAll('button').forEach((item) => item.classList.remove('active'))
+          button.classList.add('active')
+          renderWorkPanel(activeGroup)
+        })
+      })
+    }
+
+    renderWorkPanel(activeGroup)
+
+    const dataMetrics = document.getElementById('data-metrics')
+    if (dataMetrics) {
+      const metrics = toArray(data.keyMetrics, 5)
+      const source = metrics.length > 0 ? metrics : stats
+      dataMetrics.innerHTML = source
+        .slice(0, 5)
+        .map((item) => {
+          const parsed = splitValueUnit(item.value, item.unit)
+          return `
+            <article class="metric-card">
+              <div class="metric-value">${escapeHtml(parsed.value)}${
+                parsed.unit ? `<span class="metric-unit">${escapeHtml(parsed.unit)}</span>` : ''
+              }</div>
+              <div class="metric-label">${escapeHtml(item.label || '关键指标')}</div>
+            </article>
           `
         })
         .join('')
     }
 
-    const chartBoxes = document.querySelectorAll('.chart-box')
-    if (chartBoxes[0]) {
+    const defenseNode = document.getElementById('data-defense')
+    if (defenseNode) {
       const defense = data.defense || {}
-      const total = Math.max(Number(defense.total || 0), 1)
-      chartBoxes[0].innerHTML = `
-        <div class="chart-box-title">博士生答辩结果</div>
-        ${renderChartRow('开题通过', `${defense.pass || 0}人`, Number((((defense.pass || 0) / total) * 100).toFixed(1)), '')}
-        ${renderChartRow('未通过', `${defense.fail || 0}人`, Number((((defense.fail || 0) / total) * 100).toFixed(1)), '#C8382A')}
-        ${renderChartRow('修改后通过', `${defense.revised || 0}人`, Number((((defense.revised || 0) / total) * 100).toFixed(1)), '#D4A017')}
-        ${renderChartRow('博资考通过', `${defense.exam || 0}人`, Number((((defense.exam || 0) / total) * 100).toFixed(1)), '#4A6741')}
+      const defenseRows = [
+        { label: '开题通过', value: Number(defense.pass || 0), color: 'var(--ok)' },
+        { label: '未通过', value: Number(defense.fail || 0), color: 'var(--accent)' },
+        { label: '修改后通过', value: Number(defense.revised || 0), color: 'var(--accent-gold)' },
+        { label: '博资考通过', value: Number(defense.exam || 0), color: 'var(--progress)' },
+      ]
+      const total = Math.max(Number(defense.total || 0), defenseRows.reduce((sum, item) => sum + item.value, 0), 1)
+      defenseNode.innerHTML = defenseRows
+        .map(
+          (row) => `
+            <div class="chart-row">
+              <span class="chart-label">${row.label}</span>
+              <div class="chart-track"><div class="chart-fill" data-w="${toPercent(row.value, total)}%" style="background:${row.color}"></div></div>
+              <span class="chart-val">${row.value}人</span>
+            </div>
+          `,
+        )
+        .join('')
+    }
+
+    const cooperationNode = document.getElementById('data-cooperation')
+    if (cooperationNode) {
+      const cooperation = toArray(data.cooperation, 6)
+      if (cooperation.length === 0) {
+        cooperationNode.innerHTML = '<div class="chart-row"><span class="chart-label">暂无数据</span><div class="chart-track"></div><span class="chart-val">--</span></div>'
+      } else {
+        cooperationNode.innerHTML = cooperation
+          .map(
+            (item) => `
+              <div class="chart-row">
+                <span class="chart-label">${escapeHtml(item.title || '合作项')}</span>
+                <div class="chart-track"><div class="chart-fill" data-w="${escapeHtml(String(item.progress || 0))}%" style="background:${toneColor(item.tone)}"></div></div>
+                <span class="chart-val">${escapeHtml(String(item.progress || 0))}%</span>
+              </div>
+            `,
+          )
+          .join('')
+      }
+    }
+
+    const issueFooter = document.getElementById('issue-footer')
+    if (issueFooter) {
+      issueFooter.innerHTML = `
+        <article class="issue-item">
+          <h4>报送对象</h4>
+          <p>${escapeHtml(footer.recipient || '相关负责人')}</p>
+        </article>
+        <article class="issue-item">
+          <h4>发送范围</h4>
+          <p>${escapeHtml(footer.distribution || '相关部门')}</p>
+        </article>
+        <article class="issue-item">
+          <h4>责编 / 核发</h4>
+          <p>责编：${escapeHtml(footer.editor || '（待填写）')}<br>核发：${escapeHtml(footer.reviewer || '（待填写）')}</p>
+        </article>
+        <article class="issue-item">
+          <h4>发布日期</h4>
+          <p>${escapeHtml(footer.date || footer.dateOnly || '')}</p>
+        </article>
       `
     }
 
-    if (chartBoxes[1]) {
-      chartBoxes[1].innerHTML = `
-        <div class="chart-box-title">对外合作推进进度</div>
-        ${(data.cooperation || [])
-          .slice(0, 6)
-          .map((item) => renderChartRow(item.title, `${item.progress || 0}%`, item.progress || 0, progressColor(item)))
-          .join('')}
-      `
+    const navLinks = Array.from(document.querySelectorAll('[data-nav-link]'))
+    navLinks.forEach((link) => {
+      link.addEventListener('click', (event) => {
+        event.preventDefault()
+        const targetId = link.getAttribute('href')?.replace('#', '')
+        if (!targetId) return
+        const target = document.getElementById(targetId)
+        if (!target) return
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      })
+    })
+
+    const sectionIds = ['overview', 'work', 'data', 'issue']
+    const setActiveNav = (id) => {
+      navLinks.forEach((item) => item.classList.toggle('active', item.dataset.navLink === id))
+    }
+    setActiveNav('overview')
+
+    if ('IntersectionObserver' in window) {
+      const navObserver = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              setActiveNav(entry.target.id)
+            }
+          })
+        },
+        { rootMargin: '-30% 0px -55% 0px' },
+      )
+
+      sectionIds.forEach((id) => {
+        const node = document.getElementById(id)
+        if (node) navObserver.observe(node)
+      })
     }
 
-    const colophonInfo = document.querySelector('.colophon-info')
-    const stampNum = document.querySelector('.stamp-num')
-    const stampTexts = document.querySelectorAll('.stamp-text')
-    if (colophonInfo) {
-      colophonInfo.innerHTML = `
-        <strong>报送 · Distribution</strong>
-        报：${escapeHtml(footer.recipient || '相关负责人')}<br>
-        发：${escapeHtml(footer.distribution || '相关部门')}<br><br>
-        <strong>责编 · Editorial</strong>
-        责编：${escapeHtml(footer.editor || '（待填写）')}&emsp;|&emsp;核发：${escapeHtml(footer.reviewer || '（待填写）')}<br>
-        出版日期：${escapeHtml(footer.date || '')}
-      `
+    const runAnimate = () => {
+      renderProgressBars(document)
     }
-    if (stampNum) stampNum.textContent = issueNumber
-    if (stampTexts[0]) stampTexts[0].textContent = 'ISSUE'
-    if (stampTexts[1]) stampTexts[1].textContent = year
+
+    if (previewLite) {
+      runAnimate()
+    } else if ('requestAnimationFrame' in window) {
+      window.requestAnimationFrame(() => {
+        window.setTimeout(runAnimate, 120)
+      })
+    } else {
+      runAnimate()
+    }
+
+    const printButton = document.getElementById('print-btn')
+    if (printButton) {
+      printButton.addEventListener('click', () => window.print())
+    }
+
+    window.exportHTML = () => {
+      const blob = new Blob(['<!DOCTYPE html>\n' + document.documentElement.outerHTML], { type: 'text/html;charset=utf-8' })
+      const link = document.createElement('a')
+      link.href = URL.createObjectURL(blob)
+      link.download = '周报_杂志封面版.html'
+      link.click()
+      window.setTimeout(() => URL.revokeObjectURL(link.href), 3000)
+    }
+
+    const exportButton = document.getElementById('export-btn')
+    if (exportButton) {
+      exportButton.addEventListener('click', () => window.exportHTML())
+    }
 
     logBusinessJson('render_payload', {
       stats: stats.length,
       overview: overview.length,
-      internal: (groups.internal || []).length,
-      cooperation: (groups.cooperation || []).length,
-      visit: (groups.visit || []).length,
-      system: (groups.system || []).length,
+      internal: toArray(groups.internal).length,
+      cooperation: toArray(groups.cooperation).length,
+      visit: toArray(groups.visit).length,
+      system: toArray(groups.system).length,
     })
-    logSystem('info', '模板完成', { elapsedMs: Number((performance.now() - startedAt).toFixed(2)) })
+    logSystem('info', '模块完成', { elapsedMs: Number((performance.now() - startedAt).toFixed(2)) })
   } catch (error) {
-    logSystem('error', '模板渲染失败', { message: error instanceof Error ? error.message : String(error) })
+    logSystem('error', '模块渲染失败', { message: error instanceof Error ? error.message : String(error) })
   }
 })()
-
-function switchTab(name, btn) {
-  const panel = document.getElementById('tab-' + name)
-  if (!panel) return
-  const allPanels = panel.parentElement.querySelectorAll('.tab-panel')
-  const allBtns = btn.parentElement.querySelectorAll('.tab-btn')
-  allPanels.forEach((item) => item.classList.remove('active'))
-  allBtns.forEach((item) => item.classList.remove('active'))
-  panel.classList.add('active')
-  btn.classList.add('active')
-  panel.querySelectorAll('.progress-fill, .chart-fill').forEach((el) => {
-    const width = el.getAttribute('data-w')
-    if (width) {
-      el.style.width = '0%'
-      setTimeout(() => {
-        el.style.width = width
-      }, 60)
-    }
-  })
-}
-
-const navIds = ['overview', 'work', 'data-section', 'footer-col']
-const navLinks = Array.from(document.querySelectorAll('.nav-link'))
-
-function activateNavById(id) {
-  const idx = navIds.indexOf(id)
-  if (idx < 0) return
-  navLinks.forEach((link, linkIdx) => link.classList.toggle('active', linkIdx === idx))
-}
-
-function setNav(el, evt) {
-  evt?.preventDefault()
-  const targetId = (el.getAttribute('href') || '').replace(/^#/, '')
-  if (!targetId) return
-  activateNavById(targetId)
-  const section = document.getElementById(targetId)
-  if (!section) return
-  section.scrollIntoView({ behavior: 'smooth', block: 'start' })
-}
-
-const ro = new IntersectionObserver(
-  (entries) => {
-    entries.forEach((entry) => {
-      if (!entry.isIntersecting) return
-      entry.target.classList.add('visible')
-      entry.target.querySelectorAll('.progress-fill, .chart-fill').forEach((el) => {
-        const width = el.getAttribute('data-w')
-        if (width) {
-          setTimeout(() => {
-            el.style.width = width
-          }, 300)
-        }
-      })
-    })
-  },
-  { threshold: 0.08 },
-)
-
-document.querySelectorAll('.reveal').forEach((el) => ro.observe(el))
-
-const navSpy = new IntersectionObserver(
-  (entries) => {
-    entries.forEach((entry) => {
-      if (!entry.isIntersecting) return
-      activateNavById(entry.target.id)
-    })
-  },
-  { rootMargin: '-35% 0px -55% 0px' },
-)
-
-navIds.forEach((id) => {
-  const section = document.getElementById(id)
-  if (section) navSpy.observe(section)
-})
-
-function exportHTML() {
-  const blob = new Blob(['<!DOCTYPE html>\n' + document.documentElement.outerHTML], { type: 'text/html' })
-  const link = document.createElement('a')
-  link.href = URL.createObjectURL(blob)
-  link.download = '周报_杂志版.html'
-  link.click()
-  setTimeout(() => URL.revokeObjectURL(link.href), 3000)
-}

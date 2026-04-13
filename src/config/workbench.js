@@ -2,43 +2,41 @@ import { templateCatalog } from '../lib/templates/catalog'
 
 const templateMap = new Map(templateCatalog.map((item) => [item.id, item]))
 const previewVariantMap = {
-  'template-01': 'minimal-brief',
   'template-02': 'magazine-cover',
   'template-03': 'ink-scroll',
   'template-04': 'dark-tech',
   'template-05': 'business-pro',
   'template-06': 'data-insight',
-  'template-07': 'cyber-grid',
   'template-08': 'business-pro',
   'template-09': 'swiss-grid',
 }
 
-const templateDisplayOrder = ['template-09', 'template-02', 'template-01', 'template-03', 'template-04', 'template-05', 'template-06', 'template-07', 'template-08']
+const templateDisplayOrder = ['template-09', 'template-02', 'template-03', 'template-04', 'template-05', 'template-06', 'template-08']
 const templateDisplayRank = new Map(templateDisplayOrder.map((id, index) => [id, index]))
 
 export const generationModeCatalog = [
-  { id: 'structured-template', name: '模板生成', description: '结构化后套用模板，输出最稳定。' },
-  { id: 'llm-html', name: 'LLM 生成', description: '模型直接返回 HTML，表达更自由。' },
+  { id: 'structured-template', name: '模板生成', description: '先结构化，再套用模板，输出更稳定。' },
+  { id: 'llm-html', name: 'LLM 生成', description: '模型直接输出 HTML，表达更自由。' },
 ]
 
 export const styleCatalog = [
   {
     id: 'official',
     name: '正式稳重',
-    description: '偏管理层汇报，强调事实和结论。',
+    description: '偏管理层汇报，强调事实与结论。',
     promptHint: '整体语气正式稳重，强调事实与执行结果。',
   },
   {
     id: 'data-driven',
     name: '数据导向',
     description: '优先强调数字、完成度和趋势。',
-    promptHint: '优先提炼量化指标、完成度、同比环比等数值信息。',
+    promptHint: '优先提炼量化指标、完成度和趋势信息。',
   },
   {
     id: 'narrative',
     name: '叙事表达',
     description: '适合对外沟通，突出主线与阶段故事。',
-    promptHint: '更强调叙事主线、阶段成果和上下文关系。',
+    promptHint: '强调叙事主线、阶段成果和上下文关系。',
   },
 ]
 
@@ -55,7 +53,7 @@ export const departmentCatalog = [
 export const audienceCatalog = [
   { id: 'director', name: '院长/主任', description: '先结论后细节，强调决策事项' },
   { id: 'executive', name: '分管领导', description: '强调目标达成度与资源投入产出' },
-  { id: 'operations', name: '执行负责人', description: '强调责任人、节点、落地状态' },
+  { id: 'operations', name: '执行负责人', description: '强调责任人、节点和落地状态' },
   { id: 'risk', name: '风控合规负责人', description: '强调风险等级与应对闭环' },
 ]
 

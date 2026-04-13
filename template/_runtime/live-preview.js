@@ -308,6 +308,85 @@
         },
       },
     },
+    'template-08': {
+      templateId: 'template-08',
+      templateName: '分屏杂志周报',
+      meta: {
+        title: '教科人管理中心周报 · 示例版',
+        subtitle: '中关村两院教科人管理中心 · 2026年4月第1周',
+        summary: '分屏杂志风格，左侧固定边栏，右侧可滚动内容区，呈现本周科研、合作与数据看板。',
+      },
+      viewModel: {
+        splitMagazine: {
+          masthead: {
+            title: '教科人管理中心周报',
+            issue: '第 01 期',
+            foot: '2026-04-02',
+          },
+          stats: [
+            { label: '重大科研成果', value: '5', unit: '项', target: 5 },
+            { label: '国家基金申报', value: '34', unit: '项', target: 34 },
+            { label: '国际青年论坛', value: '19', unit: '名', target: 19 },
+            { label: '深澜计划报名', value: '470', unit: '人', target: 470 },
+            { label: '夏令营报名', value: '700', unit: '+', target: 700 },
+          ],
+          overview: [
+            { number: '01', tag: '科研组织', title: '两院重大科研成果评选完成', body: '经过4轮评审，形成5项重点成果推荐名单，进入论坛发布与转化对接阶段。' },
+            { number: '02', tag: '科研申报', title: '国家自然科学基金集中申报收口', body: '完成34项项目申报材料汇总与提交流程，组织工作按时闭环。' },
+            { number: '03', tag: '国际交流', title: '第四届中关村国际青年论坛召开', body: '论坛吸引19名青年学者到场交流，形成多项后续合作议题。' },
+            { number: '04', tag: '学术研讨', title: '清华-两院AI+数学研讨会举办', body: '围绕交叉研究方向展开深度讨论，现场参会师生超过80人。' },
+          ],
+          groups: {
+            internal: [
+              { title: '第一季度推进会', body: '完成51个项目评审并明确后续资源配置。', status: '已完成', progress: 100, tone: 'done' },
+              { title: '重大项目首轮讨论', body: '三学部完成首轮汇报，进入意见收敛阶段。', status: '进行中', progress: 60, tone: 'progress' },
+              { title: '深澜访学计划启动', body: '完成报名收口与首轮遴选，录取结果同步发布。', status: '已完成', progress: 100, tone: 'done' },
+              { title: '2026年夏令营启动', body: '校园大使与导师招募完成，报名持续增长。', status: '进行中', progress: 45, tone: 'progress' },
+            ],
+            cooperation: [
+              { title: '中央民族大学战略合作协议', body: '协议经院务会审理通过，进入执行准备。', status: '已完成', progress: 80, tone: 'done' },
+              { title: '清华大学求真书院合作', body: '围绕联合培养与教师合作立项持续推进。', status: '推进中', progress: 55, tone: 'progress' },
+              { title: '北邮定向招生班共建', body: '已完成首轮意向对接，进入方案整理。', status: '推进中', progress: 50, tone: 'progress' },
+              { title: '北航共建协议', body: '核心条款仍待协商，会签节点后移。', status: '待推进', progress: 40, tone: 'warning' },
+            ],
+            visit: [
+              { title: '中关村国际青年论坛', body: '论坛环节顺利完成，形成后续对接清单。', status: '已完成', progress: 100, tone: 'done' },
+              { title: '香港科技大学合作交流', body: '围绕联培与课程合作形成下一轮研讨计划。', status: '推进中', progress: 45, tone: 'progress' },
+              { title: '首都体育学院访问', body: '双方围绕科研合作与活动联动交换意见。', status: '已完成', progress: 70, tone: 'done' },
+            ],
+            system: [
+              { title: '国际事务联动平台', body: '推动论坛资源共享与外部引流机制建设。', status: '进行中', progress: 40, tone: 'progress' },
+              { title: '国际AI科学家联盟', body: '完成主管沟通与阶段性汇报。', status: '推进中', progress: 30, tone: 'progress' },
+              { title: '课程建设与质量保证', body: '课程评价分析完成，督导机制持续落地。', status: '进行中', progress: 60, tone: 'progress' },
+              { title: '博士研究生实习管理办法', body: '正式印发并进入执行阶段。', status: '已完成', progress: 100, tone: 'done' },
+            ],
+          },
+          data: {
+            keyMetrics: [
+              { label: '重大科研成果', value: '5', unit: '项' },
+              { label: '国家基金申报', value: '34', unit: '项' },
+              { label: '深澜计划报名', value: '470', unit: '人' },
+              { label: '夏令营报名', value: '700', unit: '+' },
+            ],
+            cooperation: [
+              { title: '中央民族大学战略合作协议', progress: 80, tone: 'done' },
+              { title: '清华大学求真书院合作', progress: 55, tone: 'progress' },
+              { title: '北邮定向招生班共建', progress: 50, tone: 'progress' },
+              { title: '北航共建协议', progress: 40, tone: 'warning' },
+            ],
+            defense: { total: 17, pass: 11, fail: 5, revised: 1, exam: 1 },
+          },
+          footer: {
+            recipient: '中关村两院领导班子成员',
+            distribution: '教科人管理中心各部门',
+            editor: '（待填写）',
+            reviewer: '（待填写）',
+            date: '2026年04月02日',
+            dateOnly: '2026-04-02',
+          },
+        },
+      },
+    },
   }
 
   if (styleNode) {

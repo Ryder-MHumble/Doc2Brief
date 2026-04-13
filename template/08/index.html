@@ -7,70 +7,90 @@
   <style id="template-inline-style">__TEMPLATE_STYLE__</style>
 </head>
 <body data-template-id="template-08">
-<div class="wrap">
-  <aside class="L">
-    <div class="Ltop">
-      <div class="Ldots"><div class="Ldot"></div><div class="Ldot"></div><div class="Ldot"></div></div>
-      <div class="Ltitle" id="left-title">工作周报</div>
-      <div class="Lmeta" id="left-meta">内部资料</div>
-    </div>
-    <div class="Lkpis" id="left-kpis"></div>
-    <nav class="Lnav" id="left-nav"></nav>
-    <div class="Lfoot" id="left-foot">--</div>
-  </aside>
+  <div class="split-shell">
+    <aside class="split-side">
+      <div class="split-head">
+        <p class="split-eyebrow">Split Magazine</p>
+        <h1 class="split-title" id="left-title">工作周报</h1>
+        <p class="split-issue" id="left-issue">第 01 期</p>
+      </div>
+      <div class="split-stats" id="left-stats"></div>
+      <nav class="split-nav" id="left-nav"></nav>
+      <div class="split-foot" id="left-foot"></div>
+      <div class="split-actions">
+        <button type="button" id="print-btn">打印</button>
+        <button type="button" id="export-btn">导出 HTML</button>
+      </div>
+    </aside>
 
-  <div class="R" id="rp">
-    <div class="Rinner">
-      <section id="ov">
-        <div class="Ssh"><div class="Sstag">Weekly Highlights</div><div class="Ssline"></div></div>
-        <div class="Shtitle" id="ov-title">本周<em>要览</em></div>
-        <div class="Elist" id="ov-list"></div>
+    <main class="split-main">
+      <section class="split-section" id="overview" data-section="overview">
+        <div class="split-headline">
+          <p>Weekly Highlights</p>
+          <h2>本周要览</h2>
+        </div>
+        <div class="split-overview" id="overview-list"></div>
       </section>
 
-      <section id="wk" class="rev">
-        <div class="Ssh"><div class="Sstag">Internal Work</div><div class="Ssline"></div></div>
-        <div class="Shtitle">内部<em>协同</em></div>
-        <div class="Wgrid" id="wk-grid"></div>
+      <section class="split-section" id="internal" data-section="internal">
+        <div class="split-headline">
+          <p>Internal Work</p>
+          <h2>内部协同</h2>
+        </div>
+        <div class="split-work-grid" id="wk-grid"></div>
       </section>
 
-      <section id="co" class="rev">
-        <div class="Ssh"><div class="Sstag">External Partners</div><div class="Ssline"></div></div>
-        <div class="Shtitle">对外<em>合作</em></div>
-        <div class="Wgrid" id="co-grid"></div>
+      <section class="split-section" id="cooperation" data-section="cooperation">
+        <div class="split-headline">
+          <p>External Partners</p>
+          <h2>对外合作</h2>
+        </div>
+        <div class="split-work-grid" id="co-grid"></div>
       </section>
 
-      <section id="vi" class="rev">
-        <div class="Ssh"><div class="Sstag">Academic Exchange</div><div class="Ssline"></div></div>
-        <div class="Shtitle">交流<em>互访</em></div>
-        <div class="Wgrid" id="vi-grid"></div>
+      <section class="split-section" id="visit" data-section="visit">
+        <div class="split-headline">
+          <p>Academic Exchange</p>
+          <h2>交流互访</h2>
+        </div>
+        <div class="split-work-grid" id="vi-grid"></div>
       </section>
 
-      <section id="sy" class="rev">
-        <div class="Ssh"><div class="Sstag">System Building</div><div class="Ssline"></div></div>
-        <div class="Shtitle">体系<em>建设</em></div>
-        <div class="Wgrid" id="sy-grid"></div>
+      <section class="split-section" id="system" data-section="system">
+        <div class="split-headline">
+          <p>System Building</p>
+          <h2>体系建设</h2>
+        </div>
+        <div class="split-work-grid" id="sy-grid"></div>
       </section>
 
-      <section id="dt" class="rev">
-        <div class="Ssh"><div class="Sstag">Data Dashboard</div><div class="Ssline"></div></div>
-        <div class="Shtitle">数据<em>看板</em></div>
-        <div class="Bigrow" id="dt-bigrow"></div>
-        <div class="Vtwo">
-          <div class="Vbox">
-            <div class="Vtag">对外合作推进度</div>
-            <div class="Blist" id="dt-cooperation-bars"></div>
-          </div>
-          <div class="Vbox">
-            <div class="Vtag" id="dt-defense-title">博士生答辩结果</div>
-            <div class="Dleg" id="dt-defense-legend"></div>
-          </div>
+      <section class="split-section" id="data" data-section="data">
+        <div class="split-headline">
+          <p>Data Dashboard</p>
+          <h2>数据看板</h2>
+        </div>
+        <div class="split-metrics" id="data-metrics"></div>
+        <div class="split-data-grid">
+          <article class="split-card">
+            <h3>对外合作推进度</h3>
+            <div id="data-cooperation"></div>
+          </article>
+          <article class="split-card">
+            <h3>博士生答辩结果</h3>
+            <div id="data-defense"></div>
+          </article>
         </div>
       </section>
 
-      <div class="Rfooter rev" id="right-footer"></div>
-    </div>
+      <section class="split-section" id="issue" data-section="issue">
+        <div class="split-headline">
+          <p>Distribution</p>
+          <h2>签发信息</h2>
+        </div>
+        <div class="split-issue-card" id="issue-footer"></div>
+      </section>
+    </main>
   </div>
-</div>
 
   <script id="template-data" type="application/json">__TEMPLATE_DATA__</script>
   <script id="template-script" type="application/json">__TEMPLATE_SCRIPT__</script>

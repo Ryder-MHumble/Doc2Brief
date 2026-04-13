@@ -7,515 +7,114 @@
   <style id="template-inline-style">__TEMPLATE_STYLE__</style>
 </head>
 <body data-template-id="template-04">
+  <div class="dash-shell">
+    <header class="dash-hero" id="hero">
+      <div>
+        <p class="dash-eyebrow">WEEKLY COMMAND CENTER</p>
+        <h1 class="dash-title" id="hero-title">周报</h1>
+        <p class="dash-sub" id="hero-sub">内部资料</p>
+      </div>
+      <div class="dash-clock">
+        <p id="hero-issued">ISSUED</p>
+        <p id="hero-period">PERIOD</p>
+      </div>
+    </header>
 
-<!-- HERO -->
-<div class="hero">
-  <div class="hero-left">
-    <div class="hero-eyebrow">
-      <div class="hero-pulse"></div>
-      WEEKLY INTELLIGENCE REPORT
+    <section class="dash-kpi" id="kpi-strip"></section>
+
+    <div class="dash-body">
+      <aside class="dash-side">
+        <div class="dash-side-block">
+          <p class="dash-side-title">导航</p>
+          <button type="button" data-target="overview">本周要览</button>
+          <button type="button" data-target="work">重点工作</button>
+          <button type="button" data-target="data">数据看板</button>
+          <button type="button" data-target="issue">签发信息</button>
+        </div>
+        <div class="dash-side-block" id="summary-card"></div>
+        <div class="dash-side-actions">
+          <button type="button" id="print-btn">打印</button>
+          <button type="button" id="export-btn">导出 HTML</button>
+        </div>
+      </aside>
+
+      <main class="dash-content" id="content-root">
+        <section class="dash-section" id="overview" data-section="overview">
+          <div class="dash-section-head">
+            <p>Overview</p>
+            <h2>本周要览</h2>
+          </div>
+          <div class="dash-timeline" id="overview-list"></div>
+        </section>
+
+        <section class="dash-section" id="work" data-section="work">
+          <div class="dash-section-head">
+            <p>Work Streams</p>
+            <h2>重点工作</h2>
+          </div>
+          <div class="dash-tabs" id="work-tabs"></div>
+          <div class="dash-work-grid" id="work-panel"></div>
+        </section>
+
+        <section class="dash-section" id="data" data-section="data">
+          <div class="dash-section-head">
+            <p>Data</p>
+            <h2>数据看板</h2>
+          </div>
+          <div class="dash-data-grid">
+            <article class="dash-data-card" id="data-summary"></article>
+            <article class="dash-data-card">
+              <h3>对外合作推进度</h3>
+              <div id="data-cooperation"></div>
+            </article>
+            <article class="dash-data-card">
+              <h3>博士生答辩结果</h3>
+              <div id="data-defense"></div>
+            </article>
+            <article class="dash-data-card">
+              <h3>关键指标</h3>
+              <div class="dash-metrics" id="data-metrics"></div>
+            </article>
+          </div>
+        </section>
+
+        <section class="dash-section" id="issue" data-section="issue">
+          <div class="dash-section-head">
+            <p>Distribution</p>
+            <h2>签发信息</h2>
+          </div>
+          <div class="dash-issue" id="issue-footer"></div>
+        </section>
+      </main>
     </div>
-    <div class="hero-title">教科人管理中心周报</div>
-    <div class="hero-sub">中关村两院教科人管理中心 · 2026年第一期 · 内部资料</div>
   </div>
-  <div class="hero-clock">
-    <div class="clock-date">2026.03.23 ISSUED</div>
-    <div class="clock-period">2026.03.16 — 03.22</div>
-  </div>
-</div>
-
-<!-- KPI ROW -->
-<div class="kpi-strip">
-  <div class="kpi-cell">
-    <div class="kpi-label">重大科研成果</div>
-    <div class="kpi-num" data-target="5">0</div>
-    <div class="kpi-desc">项·3月27日发布</div>
-  </div>
-  <div class="kpi-cell">
-    <div class="kpi-label">国家基金申报</div>
-    <div class="kpi-num" data-target="34">0</div>
-    <div class="kpi-desc">项·含参与5项</div>
-  </div>
-  <div class="kpi-cell">
-    <div class="kpi-label">深澜计划报名</div>
-    <div class="kpi-num" data-target="470">0</div>
-    <div class="kpi-desc">人·108所高校</div>
-  </div>
-  <div class="kpi-cell">
-    <div class="kpi-label">夏令营报名</div>
-    <div class="kpi-num" data-target="700">0</div>
-    <div class="kpi-desc">+人·持续增长</div>
-  </div>
-  <div class="kpi-cell">
-    <div class="kpi-label">对外合作机构</div>
-    <div class="kpi-num" data-target="9">0</div>
-    <div class="kpi-desc">所·在谈/签约</div>
-  </div>
-</div>
-
-<!-- MAIN -->
-<div class="page-grid">
-  <!-- SIDEBAR -->
-  <aside class="sidebar">
-    <div class="sidebar-section">
-      <div class="sidebar-label">导航</div>
-      <div class="sidebar-item active" onclick="scrollTo2('ov',event)">
-        <span class="sidebar-icon">◎</span>本周要览
-      </div>
-      <div class="sidebar-item" onclick="scrollTo2('sync',event)">
-        <span class="sidebar-icon">⚙</span>内部协同
-      </div>
-      <div class="sidebar-item" onclick="scrollTo2('collab',event)">
-        <span class="sidebar-icon">◈</span>对外合作
-      </div>
-      <div class="sidebar-item" onclick="scrollTo2('visit',event)">
-        <span class="sidebar-icon">⊕</span>交流互访
-      </div>
-      <div class="sidebar-item" onclick="scrollTo2('system',event)">
-        <span class="sidebar-icon">◻</span>体系建设
-      </div>
-      <div class="sidebar-divider"></div>
-      <div class="sidebar-item" onclick="scrollTo2('data',event)">
-        <span class="sidebar-icon">▨</span>数据看板
-      </div>
-      <div class="sidebar-item" onclick="scrollTo2('footer',event)">
-        <span class="sidebar-icon">◇</span>签发信息
-      </div>
-    </div>
-
-    <div style="padding:20px;margin-top:auto">
-      <div style="background:var(--c2);border:1px solid var(--border);border-radius:6px;padding:14px;">
-        <div style="font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px">本期概要</div>
-        <div style="display:flex;flex-direction:column;gap:6px">
-          <div style="display:flex;justify-content:space-between;font-size:11px">
-            <span style="color:var(--muted)">已完成事项</span>
-            <span style="color:var(--lime);font-family:'JetBrains Mono',monospace;font-weight:700">11</span>
-          </div>
-          <div style="display:flex;justify-content:space-between;font-size:11px">
-            <span style="color:var(--muted)">进行中事项</span>
-            <span style="color:var(--cyan);font-family:'JetBrains Mono',monospace;font-weight:700">12</span>
-          </div>
-          <div style="display:flex;justify-content:space-between;font-size:11px">
-            <span style="color:var(--muted)">待推进事项</span>
-            <span style="color:var(--amber);font-family:'JetBrains Mono',monospace;font-weight:700">3</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </aside>
-
-  <!-- CONTENT -->
-  <div class="content">
-
-    <!-- 本周要览 -->
-    <div class="section-block reveal" id="ov">
-      <div class="sec-hd">
-        <div class="sec-hd-line" style="background:var(--cyan)"></div>
-        <div class="sec-hd-title">本周要览</div>
-        <div class="sec-hd-badge">5 EVENTS</div>
-      </div>
-      <div class="timeline">
-        <div class="tl-item">
-          <div class="tl-left">
-            <div class="tl-dot" style="border-color:var(--cyan)"></div>
-            <div class="tl-tag" style="background:rgba(0,229,255,.1);color:var(--cyan)">成果</div>
-          </div>
-          <div class="tl-right">
-            <div class="tl-title">两院重大科研成果评选完成 · <span style="color:var(--cyan)">5项</span>将于3月27日发布</div>
-            <div class="tl-body">经过 <strong>4轮</strong>评审，评选出 PhysBrain 1.0、社会模拟器、MegaDFT、AutoSOTA、RLinf 五项重大成果，计划在<strong>中关村论坛</strong>正式发布。</div>
-          </div>
-        </div>
-        <div class="tl-item">
-          <div class="tl-left">
-            <div class="tl-dot" style="border-color:var(--lime)"></div>
-            <div class="tl-tag" style="background:rgba(178,255,89,.1);color:var(--lime)">申报</div>
-          </div>
-          <div class="tl-right">
-            <div class="tl-title">国家自然科学基金集中申报完成 · 共 <span style="color:var(--lime)">34项</span></div>
-            <div class="tl-body">2026年国家自然科学基金项目集中申报组织工作已完成，两院申报 <strong>34项</strong>，参与项目 <strong>5项</strong>。</div>
-          </div>
-        </div>
-        <div class="tl-item">
-          <div class="tl-left">
-            <div class="tl-dot" style="border-color:var(--amber)"></div>
-            <div class="tl-tag" style="background:rgba(255,215,64,.1);color:var(--amber)">国际</div>
-          </div>
-          <div class="tl-right">
-            <div class="tl-title">第四届中关村国际青年论坛 · <span style="color:var(--amber)">9国19人</span>参会</div>
-            <div class="tl-body">3月19~20日在两院召开，吸引来自英国、德国、法国、意大利、日本、中国香港等 <strong>9个国家和地区</strong>的 <strong>19名</strong>青年学者参加。</div>
-          </div>
-        </div>
-        <div class="tl-item">
-          <div class="tl-left">
-            <div class="tl-dot" style="border-color:#C084FC"></div>
-            <div class="tl-tag" style="background:rgba(192,132,252,.1);color:#C084FC">研讨</div>
-          </div>
-          <div class="tl-right">
-            <div class="tl-title">清华-两院 AI+数学研讨会 · <span style="color:#C084FC">80余人</span>参会</div>
-            <div class="tl-body">3月17日联合清华大学丘成桐数学科学中心、求真书院举办，吸引师生 <strong>80余人</strong>参会交流。</div>
-          </div>
-        </div>
-        <div class="tl-item">
-          <div class="tl-left">
-            <div class="tl-dot" style="border-color:var(--rose)"></div>
-            <div class="tl-tag" style="background:rgba(255,77,109,.1);color:var(--rose)">少年</div>
-          </div>
-          <div class="tl-right">
-            <div class="tl-title">少年学院学员龙虾大赛夺冠 · 斩获<span style="color:var(--rose)">"虾王"</span></div>
-            <div class="tl-body">学员姜睦然凭借OPC项目，获 <strong>生产力赛道第一</strong>和"虾王"称号，展现少年学院培育成效。</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 内部协同 -->
-    <div class="section-block reveal" id="sync">
-      <div class="sec-hd">
-        <div class="sec-hd-line" style="background:var(--cyan)"></div>
-        <div class="sec-hd-title">内部协同</div>
-        <div class="sec-hd-badge">8 ITEMS</div>
-      </div>
-      <div class="kanban">
-        <div class="kanban-col">
-          <div class="kanban-col-hd">
-            <div class="kanban-col-hd-dot" style="background:var(--lime)"></div>已完成
-          </div>
-          <div class="kanban-card">
-            <div class="kc-title">第一季度推进会</div>
-            <div class="kc-desc">完成 <strong>51个</strong>项目评审，评出 <strong>11个</strong>优秀项目和 <strong>81名</strong>优秀学生。</div>
-            <div class="kc-foot">
-              <div class="kc-pct-num" style="color:var(--lime)">100%</div>
-              <div class="kc-bar"><div class="kc-bar-fill" style="background:var(--lime);width:0" data-w="100%"></div></div>
-            </div>
-          </div>
-          <div class="kanban-card">
-            <div class="kc-title">"深澜"访学计划启动</div>
-            <div class="kc-desc"><strong>108所高校 470名</strong>学生报名，录取 <strong>53人</strong>，参与 <strong>25个</strong>项目。</div>
-            <div class="kc-foot">
-              <div class="kc-pct-num" style="color:var(--lime)">100%</div>
-              <div class="kc-bar"><div class="kc-bar-fill" style="background:var(--lime);width:0" data-w="100%"></div></div>
-            </div>
-          </div>
-          <div class="kanban-card">
-            <div class="kc-title">博士生补充答辩</div>
-            <div class="kc-desc">参加 <strong>17人</strong>，开题通过 <strong>11人</strong>，组织 <strong>4场</strong>答辩，涉及专家 <strong>27人</strong>。</div>
-            <div class="kc-foot">
-              <div class="kc-pct-num" style="color:var(--lime)">100%</div>
-              <div class="kc-bar"><div class="kc-bar-fill" style="background:var(--lime);width:0" data-w="100%"></div></div>
-            </div>
-          </div>
-        </div>
-        <div class="kanban-col">
-          <div class="kanban-col-hd">
-            <div class="kanban-col-hd-dot" style="background:var(--cyan)"></div>进行中
-          </div>
-          <div class="kanban-card">
-            <div class="kc-title">重大项目首轮讨论</div>
-            <div class="kc-desc">三学部完成首轮汇报，下一轮评审定于 <strong>4月初</strong>进行。</div>
-            <div class="kc-foot">
-              <div class="kc-pct-num" style="color:var(--cyan)">60%</div>
-              <div class="kc-bar"><div class="kc-bar-fill" style="background:var(--cyan);width:0" data-w="60%"></div></div>
-            </div>
-          </div>
-          <div class="kanban-card">
-            <div class="kc-title">2026夏令营启动</div>
-            <div class="kc-desc">完成 <strong>21名</strong>大使招募，报名超 <strong>700人</strong>，研究员招募 <strong>11名</strong>。</div>
-            <div class="kc-foot">
-              <div class="kc-pct-num" style="color:var(--cyan)">45%</div>
-              <div class="kc-bar"><div class="kc-bar-fill" style="background:var(--cyan);width:0" data-w="45%"></div></div>
-            </div>
-          </div>
-          <div class="kanban-card">
-            <div class="kc-title">清北导师池计划</div>
-            <div class="kc-desc">明确 <strong>联合培育项目</strong>和 <strong>自由探索项目</strong>两种邀请形式，分类推进。</div>
-            <div class="kc-foot">
-              <div class="kc-pct-num" style="color:var(--cyan)">50%</div>
-              <div class="kc-bar"><div class="kc-bar-fill" style="background:var(--cyan);width:0" data-w="50%"></div></div>
-            </div>
-          </div>
-          <div class="kanban-card">
-            <div class="kc-title">预备生管理</div>
-            <div class="kc-desc">收到 <strong>24位</strong>负责人需求，学生咨询 <strong>66人</strong>，经费机制已明确。</div>
-            <div class="kc-foot">
-              <div class="kc-pct-num" style="color:var(--cyan)">40%</div>
-              <div class="kc-bar"><div class="kc-bar-fill" style="background:var(--cyan);width:0" data-w="40%"></div></div>
-            </div>
-          </div>
-          <div class="kanban-card">
-            <div class="kc-title">少年学院多线推进</div>
-            <div class="kc-desc">国际营研讨启动；中期汇报筹备；春季选拔范围已报送教委。</div>
-            <div class="kc-foot">
-              <div class="kc-pct-num" style="color:var(--cyan)">55%</div>
-              <div class="kc-bar"><div class="kc-bar-fill" style="background:var(--cyan);width:0" data-w="55%"></div></div>
-            </div>
-          </div>
-        </div>
-        <div class="kanban-col">
-          <div class="kanban-col-hd">
-            <div class="kanban-col-hd-dot" style="background:var(--amber)"></div>待推进
-          </div>
-          <div style="background:var(--c2);border:1px dashed var(--border);border-radius:6px;padding:20px;text-align:center;">
-            <div style="font-size:11px;color:var(--muted)">内部协同暂无<br>待推进事项</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 对外合作 -->
-    <div class="section-block reveal" id="collab">
-      <div class="sec-hd">
-        <div class="sec-hd-line" style="background:var(--amber)"></div>
-        <div class="sec-hd-title">对外合作</div>
-        <div class="sec-hd-badge">6 PARTNERS</div>
-      </div>
-      <div class="kanban">
-        <div class="kanban-col">
-          <div class="kanban-col-hd"><div class="kanban-col-hd-dot" style="background:var(--lime)"></div>完成/通过</div>
-          <div class="kanban-card">
-            <div class="kc-title">中央民族大学战略合作</div>
-            <div class="kc-desc">院务会审理完成，以<strong>联合申报国家重大科研项目</strong>为首要任务。</div>
-            <div class="kc-foot"><div class="kc-pct-num" style="color:var(--lime)">80%</div><div class="kc-bar"><div class="kc-bar-fill" style="background:var(--lime);width:0" data-w="80%"></div></div></div>
-          </div>
-        </div>
-        <div class="kanban-col">
-          <div class="kanban-col-hd"><div class="kanban-col-hd-dot" style="background:var(--cyan)"></div>推进中</div>
-          <div class="kanban-card">
-            <div class="kc-title">清华大学求真书院</div>
-            <div class="kc-desc">丘成桐数学专项班联合招生，双方各 <strong>5名</strong>教师科研合作立项。</div>
-            <div class="kc-foot"><div class="kc-pct-num" style="color:var(--cyan)">55%</div><div class="kc-bar"><div class="kc-bar-fill" style="background:var(--cyan);width:0" data-w="55%"></div></div></div>
-          </div>
-          <div class="kanban-card">
-            <div class="kc-title">北邮定向招生班共建</div>
-            <div class="kc-desc">面向"元班"、"101班"，已达成初步合作意向，拟加入高招宣传。</div>
-            <div class="kc-foot"><div class="kc-pct-num" style="color:var(--cyan)">50%</div><div class="kc-bar"><div class="kc-bar-fill" style="background:var(--cyan);width:0" data-w="50%"></div></div></div>
-          </div>
-          <div class="kanban-card">
-            <div class="kc-title">北大工学院合作探索</div>
-            <div class="kc-desc">拟在<strong>技术转移转化</strong>及<strong>课程创新</strong>两方面推进合作。</div>
-            <div class="kc-foot"><div class="kc-pct-num" style="color:var(--cyan)">35%</div><div class="kc-bar"><div class="kc-bar-fill" style="background:var(--cyan);width:0" data-w="35%"></div></div></div>
-          </div>
-        </div>
-        <div class="kanban-col">
-          <div class="kanban-col-hd"><div class="kanban-col-hd-dot" style="background:var(--amber)"></div>待解决</div>
-          <div class="kanban-card">
-            <div class="kc-title">北航共建协议</div>
-            <div class="kc-desc">核心分歧：学生是否需同时满足校方毕业要求，计划 <strong>4月</strong>会签审议。</div>
-            <div class="kc-foot"><div class="kc-pct-num" style="color:var(--amber)">40%</div><div class="kc-bar"><div class="kc-bar-fill" style="background:var(--amber);width:0" data-w="40%"></div></div></div>
-          </div>
-          <div class="kanban-card">
-            <div class="kc-title">香港城市大学战略合作</div>
-            <div class="kc-desc">师资双聘条款因港校兼职规则未落地，暂行移除待后续签订补充协议。</div>
-            <div class="kc-foot"><div class="kc-pct-num" style="color:var(--amber)">25%</div><div class="kc-bar"><div class="kc-bar-fill" style="background:var(--amber);width:0" data-w="25%"></div></div></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 交流互访 -->
-    <div class="section-block reveal" id="visit">
-      <div class="sec-hd">
-        <div class="sec-hd-line" style="background:#C084FC"></div>
-        <div class="sec-hd-title">交流互访</div>
-        <div class="sec-hd-badge">5 EVENTS</div>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <div class="kanban-card" style="margin:0">
-          <div class="kc-title">中关村国际青年论坛</div>
-          <div class="kc-desc">特邀港大、北京脑科学所脑机接口学者分享，与两院教师深入对接科研合作意向。</div>
-          <div class="kc-foot"><div class="kc-pct-num" style="color:var(--lime)">完成</div><div class="kc-bar"><div class="kc-bar-fill" style="background:var(--lime);width:0" data-w="100%"></div></div></div>
-        </div>
-        <div class="kanban-card" style="margin:0">
-          <div class="kc-title">香港科技大学合作交流</div>
-          <div class="kc-desc">对接周晓方教授，博士联培、AI硕士输送、课程合作可行性均高，拟<strong>5月</strong>在京研讨。</div>
-          <div class="kc-foot"><div class="kc-pct-num" style="color:var(--cyan)">45%</div><div class="kc-bar"><div class="kc-bar-fill" style="background:var(--cyan);width:0" data-w="45%"></div></div></div>
-        </div>
-        <div class="kanban-card" style="margin:0">
-          <div class="kc-title">首都体育学院访问</div>
-          <div class="kc-desc">宫茜院长带队访问，多名首体师生已报名诺贝论坛，合作落实中。</div>
-          <div class="kc-foot"><div class="kc-pct-num" style="color:var(--lime)">完成</div><div class="kc-bar"><div class="kc-bar-fill" style="background:var(--lime);width:0" data-w="100%"></div></div></div>
-        </div>
-        <div class="kanban-card" style="margin:0">
-          <div class="kc-title">怀柔实验室虚拟实验班</div>
-          <div class="kc-desc">共建AI+能源方向虚拟实验班，通过高校联合培养+自主管理构建闭环。</div>
-          <div class="kc-foot"><div class="kc-pct-num" style="color:var(--amber)">20%</div><div class="kc-bar"><div class="kc-bar-fill" style="background:var(--amber);width:0" data-w="20%"></div></div></div>
-        </div>
-        <div class="kanban-card" style="margin:0;grid-column:span 2">
-          <div class="kc-title">少年学院对外交流</div>
-          <div class="kc-desc">两名学员参加"青力青为"青年Talk沙龙；受邀参加北京市中小学"数学节"开幕会，展示AI冬令营成果。</div>
-          <div class="kc-foot"><div class="kc-pct-num" style="color:var(--lime)">完成</div><div class="kc-bar"><div class="kc-bar-fill" style="background:var(--lime);width:0" data-w="100%"></div></div></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 体系建设 -->
-    <div class="section-block reveal" id="system">
-      <div class="sec-hd">
-        <div class="sec-hd-line" style="background:var(--rose)"></div>
-        <div class="sec-hd-title">体系建设</div>
-        <div class="sec-hd-badge">6 ITEMS</div>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <div class="kanban-card" style="margin:0">
-          <div class="kc-title">课程建设与质量保证</div>
-          <div class="kc-desc">成立 <strong>12位</strong>专家督导组，完成秋季课程评价分析，系统新增学分信息模块。</div>
-          <div class="kc-foot"><div class="kc-pct-num" style="color:var(--cyan)">60%</div><div class="kc-bar"><div class="kc-bar-fill" style="background:var(--cyan);width:0" data-w="60%"></div></div></div>
-        </div>
-        <div class="kanban-card" style="margin:0">
-          <div class="kc-title">学者知识图谱（第三轮）</div>
-          <div class="kc-desc">形成<strong>五维画像</strong>，筛选大模型领域海外学者 <strong>58名</strong>。</div>
-          <div class="kc-foot"><div class="kc-pct-num" style="color:var(--lime)">75%</div><div class="kc-bar"><div class="kc-bar-fill" style="background:var(--lime);width:0" data-w="75%"></div></div></div>
-        </div>
-        <div class="kanban-card" style="margin:0">
-          <div class="kc-title">《博士生实习管理办法》印发</div>
-          <div class="kc-desc">规范实习过程管理，保障实习质量与学生权益，已正式印发。</div>
-          <div class="kc-foot"><div class="kc-pct-num" style="color:var(--lime)">100%</div><div class="kc-bar"><div class="kc-bar-fill" style="background:var(--lime);width:0" data-w="100%"></div></div></div>
-        </div>
-        <div class="kanban-card" style="margin:0">
-          <div class="kc-title">国际AI科学家联盟</div>
-          <div class="kc-desc">以<strong>中国科协（正部级）</strong>为指导单位，先行上报北京市教委推进。</div>
-          <div class="kc-foot"><div class="kc-pct-num" style="color:var(--cyan)">30%</div><div class="kc-bar"><div class="kc-bar-fill" style="background:var(--cyan);width:0" data-w="30%"></div></div></div>
-        </div>
-        <div class="kanban-card" style="margin:0">
-          <div class="kc-title">招生智能体系统建设</div>
-          <div class="kc-desc">启动"招生-培养-成长追踪"一体化智能系统，实现人才画像与AI辅助分析。</div>
-          <div class="kc-foot"><div class="kc-pct-num" style="color:var(--amber)">15%</div><div class="kc-bar"><div class="kc-bar-fill" style="background:var(--amber);width:0" data-w="15%"></div></div></div>
-        </div>
-        <div class="kanban-card" style="margin:0">
-          <div class="kc-title">国际事务联动平台</div>
-          <div class="kc-desc">联动清华、北大国际部门推广北纬诺贝对话，拟<strong>5月</strong>联合人大筹办青年论坛。</div>
-          <div class="kc-foot"><div class="kc-pct-num" style="color:var(--cyan)">40%</div><div class="kc-bar"><div class="kc-bar-fill" style="background:var(--cyan);width:0" data-w="40%"></div></div></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 数据看板 -->
-    <div class="section-block reveal" id="data">
-      <div class="sec-hd">
-        <div class="sec-hd-line" style="background:var(--lime)"></div>
-        <div class="sec-hd-title">数据看板</div>
-        <div class="sec-hd-badge">KEY METRICS</div>
-      </div>
-      <div class="viz-grid">
-        <div class="viz-card">
-          <div class="viz-card-title" style="color:var(--cyan)">对外合作推进度</div>
-          <div class="mini-bar-list">
-            <div class="mini-bar-item">
-              <div class="mini-bar-label">中央民族大学</div>
-              <div class="mini-bar-track"><div class="mini-bar-fill" style="background:var(--lime);width:0" data-w="80%"></div></div>
-              <div class="mini-bar-val">80%</div>
-            </div>
-            <div class="mini-bar-item">
-              <div class="mini-bar-label">清华求真书院</div>
-              <div class="mini-bar-track"><div class="mini-bar-fill" style="background:var(--cyan);width:0" data-w="55%"></div></div>
-              <div class="mini-bar-val">55%</div>
-            </div>
-            <div class="mini-bar-item">
-              <div class="mini-bar-label">北邮定向班</div>
-              <div class="mini-bar-track"><div class="mini-bar-fill" style="background:var(--cyan);width:0" data-w="50%"></div></div>
-              <div class="mini-bar-val">50%</div>
-            </div>
-            <div class="mini-bar-item">
-              <div class="mini-bar-label">北航共建</div>
-              <div class="mini-bar-track"><div class="mini-bar-fill" style="background:var(--amber);width:0" data-w="40%"></div></div>
-              <div class="mini-bar-val">40%</div>
-            </div>
-            <div class="mini-bar-item">
-              <div class="mini-bar-label">北大工学院</div>
-              <div class="mini-bar-track"><div class="mini-bar-fill" style="background:var(--cyan);width:0" data-w="35%"></div></div>
-              <div class="mini-bar-val">35%</div>
-            </div>
-            <div class="mini-bar-item">
-              <div class="mini-bar-label">香港城市大学</div>
-              <div class="mini-bar-track"><div class="mini-bar-fill" style="background:var(--amber);width:0" data-w="25%"></div></div>
-              <div class="mini-bar-val">25%</div>
-            </div>
-          </div>
-        </div>
-        <div class="viz-card">
-          <div class="viz-card-title" style="color:var(--amber)">博士生答辩分布</div>
-          <div class="donut-wrap">
-            <svg width="100" height="100" viewBox="0 0 100 100">
-              <circle cx="50" cy="50" r="38" fill="none" stroke="#1E2535" stroke-width="14"/>
-              <circle cx="50" cy="50" r="38" fill="none" stroke="#00665A" stroke-width="14"
-                stroke-dasharray="159 239" stroke-dashoffset="0" transform="rotate(-90 50 50)"/>
-              <circle cx="50" cy="50" r="38" fill="none" stroke="#FF4D6D" stroke-width="14"
-                stroke-dasharray="72.4 325.6" stroke-dashoffset="-159" transform="rotate(-90 50 50)"/>
-              <circle cx="50" cy="50" r="38" fill="none" stroke="#FFD740" stroke-width="14"
-                stroke-dasharray="14.4 383.6" stroke-dashoffset="-231.4" transform="rotate(-90 50 50)"/>
-              <text x="50" y="46" text-anchor="middle" font-size="14" font-weight="700" fill="white" font-family="JetBrains Mono">17</text>
-              <text x="50" y="57" text-anchor="middle" font-size="7" fill="#64748B">总人数</text>
-            </svg>
-            <div class="donut-legend">
-              <div class="dl-row"><div class="dl-dot" style="background:#00665A"></div><div class="dl-name">开题通过</div><div class="dl-val" style="color:#00E676">11</div></div>
-              <div class="dl-row"><div class="dl-dot" style="background:var(--rose)"></div><div class="dl-name">未通过</div><div class="dl-val" style="color:var(--rose)">5</div></div>
-              <div class="dl-row"><div class="dl-dot" style="background:var(--amber)"></div><div class="dl-name">修改后通过</div><div class="dl-val" style="color:var(--amber)">1</div></div>
-              <div class="dl-row"><div class="dl-dot" style="background:#C084FC"></div><div class="dl-name">博资考通过</div><div class="dl-val" style="color:#C084FC">1</div></div>
-            </div>
-          </div>
-        </div>
-        <div class="viz-card">
-          <div class="viz-card-title" style="color:var(--rose)">本周关键数字</div>
-          <div class="num-wall">
-            <div class="num-cell"><div class="nc-val">5</div><div class="nc-label">重大<br>科研成果</div></div>
-            <div class="num-cell"><div class="nc-val">34</div><div class="nc-label">基金<br>申报项目</div></div>
-            <div class="num-cell"><div class="nc-val">19</div><div class="nc-label">国际<br>参会学者</div></div>
-            <div class="num-cell"><div class="nc-val">80+</div><div class="nc-label">研讨会<br>参会人数</div></div>
-            <div class="num-cell"><div class="nc-val">58</div><div class="nc-label">海外学者<br>图谱筛选</div></div>
-            <div class="num-cell"><div class="nc-val">53</div><div class="nc-label">深澜<br>录取人数</div></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-  </div><!-- end content -->
-</div><!-- end page-grid -->
-
-<!-- FOOTER -->
-<div class="footer-bar" id="footer">
-  <div>
-    <div class="footer-item-label">报送对象</div>
-    <div class="footer-item-val">中关村两院领导班子成员</div>
-  </div>
-  <div>
-    <div class="footer-item-label">发送范围</div>
-    <div class="footer-item-val">教科人管理中心各部门</div>
-  </div>
-  <div>
-    <div class="footer-item-label">责编 / 核发</div>
-    <div class="footer-item-val">责编：（待填写）· 核发：（待填写）</div>
-  </div>
-  <div>
-    <div class="footer-item-label">发布日期</div>
-    <div class="footer-item-val" style="font-family:'JetBrains Mono',monospace;color:var(--cyan)">2026 · 03 · 23</div>
-  </div>
-</div>
 
   <script id="template-data" type="application/json">__TEMPLATE_DATA__</script>
   <script id="template-script" type="application/json">__TEMPLATE_SCRIPT__</script>
   <script>
     (() => {
-      const styleNode = document.getElementById('template-inline-style');
-      const dataNode = document.getElementById('template-data');
-      const scriptNode = document.getElementById('template-script');
+      const styleNode = document.getElementById('template-inline-style')
+      const dataNode = document.getElementById('template-data')
+      const scriptNode = document.getElementById('template-script')
       const isLivePreview =
         styleNode?.textContent.includes('__TEMPLATE_STYLE__') ||
         dataNode?.textContent.includes('__TEMPLATE_DATA__') ||
-        scriptNode?.textContent.includes('__TEMPLATE_SCRIPT__');
+        scriptNode?.textContent.includes('__TEMPLATE_SCRIPT__')
 
       if (isLivePreview) {
-        const loader = document.createElement('script');
-        loader.src = '../_runtime/live-preview.js';
-        loader.dataset.templateId = document.body.dataset.templateId || '';
-        loader.dataset.styleHref = './style.css';
-        loader.dataset.scriptSrc = './app.js';
-        document.body.appendChild(loader);
-        return;
+        const loader = document.createElement('script')
+        loader.src = '../_runtime/live-preview.js'
+        loader.dataset.templateId = document.body.dataset.templateId || ''
+        loader.dataset.styleHref = './style.css'
+        loader.dataset.scriptSrc = './app.js'
+        document.body.appendChild(loader)
+        return
       }
 
-      const runtimeScript = document.createElement('script');
-      runtimeScript.textContent = scriptNode?.textContent || '';
-      document.body.appendChild(runtimeScript);
-    })();
+      const runtimeScript = document.createElement('script')
+      runtimeScript.textContent = scriptNode?.textContent || ''
+      document.body.appendChild(runtimeScript)
+    })()
   </script>
 </body>
 </html>

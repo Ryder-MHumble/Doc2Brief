@@ -27,11 +27,6 @@ export function buildTemplatePayload(templateMeta, document, generatedAt) {
     viewModel: {},
   }
 
-  if (templateMeta.id === 'template-01') {
-    payload.viewModel.minimal = buildMinimalViewModel(shared)
-    return payload
-  }
-
   if (templateMeta.id === 'template-02') {
     payload.viewModel.magazine = buildMagazineViewModel(shared)
     return payload
@@ -67,31 +62,7 @@ export function buildTemplatePayload(templateMeta, document, generatedAt) {
     return payload
   }
 
-  payload.viewModel.cyber = buildCyberViewModel(shared)
   return payload
-}
-
-function buildMinimalViewModel(shared) {
-  return {
-    hero: {
-      eyebrow: shared.metaLine.unitText ? `${shared.metaLine.unitText} · 内部周报` : '自动生成 · 内部周报',
-      title: shared.metaLine.title,
-      summary: shared.metaLine.summary,
-      period: shared.metaLine.periodText,
-      unit: shared.footer.issuedBy,
-      issuedAt: shared.metaLine.issuedText,
-      bgNumber: String(shared.metaLine.issueLabel.match(/\d+/)?.[0] || '1').padStart(2, '0'),
-    },
-    stats: shared.stats.slice(0, 5),
-    overview: shared.overview,
-    groups: shared.groups,
-    data: {
-      keyMetrics: shared.keyMetrics.slice(0, 9),
-      cooperation: shared.cooperationProgress.slice(0, 6),
-      system: shared.systemProgress.slice(0, 5),
-    },
-    footer: shared.footer,
-  }
 }
 
 function buildMagazineViewModel(shared) {
@@ -203,26 +174,6 @@ function buildJournalViewModel(shared) {
       defense: shared.defense,
       cooperation: shared.cooperationProgress.slice(0, 6),
       system: shared.systemProgress.slice(0, 6),
-    },
-    footer: shared.footer,
-  }
-}
-
-function buildCyberViewModel(shared) {
-  return {
-    hero: {
-      line: `SYS_INIT: LOADING_REPORT_MODULE_${shared.metaLine.issuedDateText.replace(/-/g, '.')} ... [OK]`,
-      subtitle: `${shared.footer.issuedBy} · ${shared.metaLine.issueLabel}`,
-      desc: `REPORT_PERIOD: ${shared.metaLine.periodText} | ISSUED: ${shared.metaLine.issuedText} | UNIT: ${shared.footer.issuedBy}`,
-    },
-    stats: shared.stats.slice(0, 5),
-    overview: shared.overview,
-    groups: shared.groups,
-    data: {
-      keyMetrics: shared.keyMetrics.slice(0, 6),
-      defense: shared.defense,
-      system: shared.systemProgress.slice(0, 5),
-      cooperation: shared.cooperationProgress.slice(0, 6),
     },
     footer: shared.footer,
   }

@@ -35,10 +35,12 @@ export function TemplateBridgePanel({ bridgeListRef, selectedTemplateId, templat
                     <span className="template-bridge-card__index">{String(index + 1).padStart(2, '0')}</span>
                   </div>
                   <strong>{item.templateMeta.title}</strong>
-                  <p>{item.description}</p>
-                  <div className="template-bridge-card__tags">
-                    <span>适合场景：{item.sceneBadge}</span>
-                    <span>风格：{item.styleBadge}</span>
+                  <div className="template-bridge-card__details">
+                    <p>{item.description}</p>
+                    <div className="template-bridge-card__tags">
+                      <span>适合场景：{item.sceneBadge}</span>
+                      <span>风格：{item.styleBadge}</span>
+                    </div>
                   </div>
                 </div>
               </button>
