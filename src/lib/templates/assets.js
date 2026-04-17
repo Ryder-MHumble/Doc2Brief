@@ -1,6 +1,14 @@
 const templateAssetCache = new Map()
 
 const templateAssetLoaders = {
+  'template-01': async () => {
+    const [html, css, js] = await Promise.all([
+      import('../../../template/01/index.html?raw'),
+      import('../../../template/01/style.css?raw'),
+      import('../../../template/01/app.js?raw'),
+    ])
+    return { html: html.default, css: css.default, js: js.default }
+  },
   'template-02': async () => {
     const [html, css, js] = await Promise.all([
       import('../../../template/02/index.html?raw'),
@@ -41,6 +49,14 @@ const templateAssetLoaders = {
     ])
     return { html: html.default, css: css.default, js: js.default }
   },
+  'template-07': async () => {
+    const [html, css, js] = await Promise.all([
+      import('../../../template/07/index.html?raw'),
+      import('../../../template/07/style.css?raw'),
+      import('../../../template/07/app.js?raw'),
+    ])
+    return { html: html.default, css: css.default, js: js.default }
+  },
   'template-08': async () => {
     const [html, css, js] = await Promise.all([
       import('../../../template/08/index.html?raw'),
@@ -54,14 +70,6 @@ const templateAssetLoaders = {
       import('../../../template/09/index.html?raw'),
       import('../../../template/09/style.css?raw'),
       import('../../../template/09/app.js?raw'),
-    ])
-    return { html: html.default, css: css.default, js: js.default }
-  },
-  'template-11': async () => {
-    const [html, css, js] = await Promise.all([
-      import('../../../template/11/index.html?raw'),
-      import('../../../template/11/style.css?raw'),
-      import('../../../template/11/app.js?raw'),
     ])
     return { html: html.default, css: css.default, js: js.default }
   },

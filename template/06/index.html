@@ -3,47 +3,90 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>file2web 模板预览</title>
+  <title>Doc2Brief 模板预览</title>
   <style id="template-inline-style">__TEMPLATE_STYLE__</style>
 </head>
 <body data-template-id="template-06">
-  <div class="paper-wrap">
-    <div class="journal-header">
-      <div class="jh-left">
-        <div class="journal-name">Research Progress Journal · Internal Bulletin</div>
-        <div class="journal-title">科研协同中心工作周报</div>
-        <div class="journal-sub">Weekly Research Progress Summary</div>
+  <div class="dash-shell">
+    <header class="dash-hero" id="hero">
+      <div>
+        <p class="dash-eyebrow">WEEKLY COMMAND CENTER</p>
+        <h1 class="dash-title" id="hero-title">周报</h1>
+        <p class="dash-sub" id="hero-sub">内部资料</p>
       </div>
-      <div class="jh-right">
-        <div class="issue-box">
-          <div class="issue-vol">Vol. 2026 · Issue</div>
-          <div class="issue-num">No. 01</div>
-          <div class="issue-date">April 14, 2026</div>
+      <div class="dash-clock">
+        <p id="hero-issued">ISSUED</p>
+        <p id="hero-period">PERIOD</p>
+      </div>
+    </header>
+
+    <section class="dash-kpi" id="kpi-strip"></section>
+
+    <div class="dash-body">
+      <aside class="dash-side">
+        <div class="dash-side-block">
+          <p class="dash-side-title">导航</p>
+          <button type="button" data-target="overview">本周要览</button>
+          <button type="button" data-target="work">重点工作</button>
+          <button type="button" data-target="data">数据看板</button>
+          <button type="button" data-target="issue">签发信息</button>
         </div>
-      </div>
+        <div class="dash-side-block" id="summary-card"></div>
+        <div class="dash-side-actions">
+          <button type="button" id="print-btn">打印</button>
+          <button type="button" id="export-btn">导出 HTML</button>
+        </div>
+      </aside>
+
+      <main class="dash-content" id="content-root">
+        <section class="dash-section" id="overview" data-section="overview">
+          <div class="dash-section-head">
+            <p>Overview</p>
+            <h2>本周要览</h2>
+          </div>
+          <div class="dash-timeline" id="overview-list"></div>
+        </section>
+
+        <section class="dash-section" id="work" data-section="work">
+          <div class="dash-section-head">
+            <p>Work Streams</p>
+            <h2>重点工作</h2>
+          </div>
+          <div class="dash-tabs" id="work-tabs"></div>
+          <div class="dash-work-grid" id="work-panel"></div>
+        </section>
+
+        <section class="dash-section" id="data" data-section="data">
+          <div class="dash-section-head">
+            <p>Data</p>
+            <h2>数据看板</h2>
+          </div>
+          <div class="dash-data-grid">
+            <article class="dash-data-card" id="data-summary"></article>
+            <article class="dash-data-card">
+              <h3>对外合作推进度</h3>
+              <div id="data-cooperation"></div>
+            </article>
+            <article class="dash-data-card">
+              <h3>项目评审结果</h3>
+              <div id="data-defense"></div>
+            </article>
+            <article class="dash-data-card">
+              <h3>关键指标</h3>
+              <div class="dash-metrics" id="data-metrics"></div>
+            </article>
+          </div>
+        </section>
+
+        <section class="dash-section" id="issue" data-section="issue">
+          <div class="dash-section-head">
+            <p>Distribution</p>
+            <h2>签发信息</h2>
+          </div>
+          <div class="dash-issue" id="issue-footer"></div>
+        </section>
+      </main>
     </div>
-
-    <div class="meta-strip">
-      <div class="meta-authors">报告期间：<span>2026年4月第2周</span> &nbsp;|&nbsp; 发布：<span>科研协同与成果转化办公室</span></div>
-      <div class="meta-tags">
-        <span class="meta-tag">执行推进</span>
-        <span class="meta-tag">协同联动</span>
-        <span class="meta-tag">风险闭环</span>
-      </div>
-    </div>
-
-    <div class="abstract col-reveal">
-      <div class="abstract-label">摘要 ABSTRACT</div>
-      <div class="abstract-body">
-        <div class="abstract-text">当前为中性 mock 占位内容，页面加载后将按模板数据自动渲染完整周报。</div>
-      </div>
-    </div>
-
-    <div class="kpi-inline col-reveal"></div>
-
-    <div class="body-cols"></div>
-
-    <div class="footnote-bar col-reveal"></div>
   </div>
 
   <script id="template-data" type="application/json">__TEMPLATE_DATA__</script>

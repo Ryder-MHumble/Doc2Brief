@@ -1,6 +1,6 @@
 ;(() => {
   const startedAt = performance.now()
-  const previewLite = Boolean(window.__FILE2WEB_PREVIEW_LITE__)
+  const previewLite = Boolean(window.__Doc2Brief_PREVIEW_LITE__)
 
   function logSystem(level, event, payload = {}) {
     const msg = `系统日志 | 模块=模板11-新野兽派战情版 | 事件=${event} | 内容=${JSON.stringify(payload)}`

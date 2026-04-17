@@ -39,6 +39,19 @@ export function TemplateThumbnail({ variant }) {
     )
   }
 
+  if (variant === 'editorial-paper') {
+    return (
+      <svg viewBox="0 0 88 64" className="template-thumb-svg" aria-hidden="true">
+        <rect x="8" y="8" width="72" height="48" fill="#efe6d5" stroke="#5b4636" strokeWidth="1.4" />
+        <rect x="8" y="8" width="72" height="10" fill="#223348" />
+        <path d="M14 24 H74 M14 30 H74 M14 36 H48 M54 24 H74 M54 30 H74 M54 36 H74" stroke="#6f5a48" strokeWidth="1.2" />
+        <rect x="14" y="42" width="16" height="8" fill="#8b1a1a" opacity="0.92" />
+        <rect x="34" y="42" width="18" height="8" fill="#c4a46b" opacity="0.92" />
+        <rect x="56" y="42" width="18" height="8" fill="#314a64" opacity="0.92" />
+      </svg>
+    )
+  }
+
   if (variant === 'data-insight') {
     return (
       <svg viewBox="0 0 88 64" className="template-thumb-svg" aria-hidden="true">
@@ -49,6 +62,20 @@ export function TemplateThumbnail({ variant }) {
           <circle cx="12" cy="12" r="11" fill="none" stroke="#273040" strokeWidth="5" />
           <path d="M12 1 A11 11 0 1 1 4 21" fill="none" stroke="#00D4FF" strokeWidth="5" strokeLinecap="round" />
         </g>
+      </svg>
+    )
+  }
+
+  if (variant === 'swiss-grid') {
+    return (
+      <svg viewBox="0 0 88 64" className="template-thumb-svg" aria-hidden="true">
+        <rect x="8" y="8" width="72" height="48" fill="#f3f1ec" stroke="#111" strokeWidth="1" />
+        <path d="M8 18 H80 M28 18 V56 M52 18 V56" stroke="#d5d1c7" strokeWidth="1" />
+        <rect x="8" y="8" width="72" height="8" fill="#cc1a1a" />
+        <text x="14" y="33" fill="#111" fontSize="14" fontWeight="700">
+          12
+        </text>
+        <path d="M38 27 H72 M38 34 H72 M38 41 H60" stroke="#111" strokeWidth="1.5" />
       </svg>
     )
   }

@@ -12,7 +12,7 @@ export function buildSharedData(document, generatedAt, templateMeta) {
     issuedDateText: issued.dateOnly,
     issuedMachineText: issued.isoLike,
     issueLabel: `第 ${String(issued.issueNumber).padStart(2, '0')} 期`,
-    unitText: document.department_focus || 'file2web 自动生成',
+    unitText: document.department_focus || 'Doc2Brief 自动生成',
     title: document.title,
     subtitle: document.subtitle,
     summary: document.summary,

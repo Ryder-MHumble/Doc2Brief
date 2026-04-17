@@ -1,0 +1,1573 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{REPORT_TITLE}} · 第{{ISSUE_NUM}}期 · {{DEPT_NAME}}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700;900&family=Noto+Sans+SC:wght@300;400;500;700&family=DM+Serif+Display:ital@0;1&family=Playfair+Display:ital,wght@0,700;1,400&display=swap" rel="stylesheet">
+<style>
+
+/* ================================================================
+   DESIGN TOKENS — 替换这里即可切换整体色调
+   ================================================================ */
+:root {
+  /* 品牌色 */
+  --brand-primary:     #8B1A1A;   /* 深红 */
+  --brand-primary-mid: #A0272A;
+  --brand-primary-pale:#F2EAEA;
+  --brand-secondary:   #1B2D42;   /* 藏青 */
+  --brand-secondary-2: #253D56;
+  --brand-accent:      #9A7B4F;   /* 灰金 */
+  --brand-accent-lt:   #C4A46B;
+  --brand-accent-pale: #F5EDD8;
+
+  /* 文字色阶 */
+  --text-primary:   #1C1C1C;
+  --text-secondary: #3D3D3D;
+  --text-tertiary:  #6A6A6A;
+  --text-muted:     #9A9A9A;
+
+  /* 纸张色 */
+  --paper-base:  #F4F0E8;
+  --paper-warm:  #EDE8DC;
+  --paper-deep:  #E4DECE;
+
+  /* 线条 */
+  --rule-light:  #D4CCB8;
+  --rule-mid:    #B8AA94;
+  --rule-dark:   #9A8C76;
+
+  /* 字体 */
+  --font-serif:   'Noto Serif SC', 'STSong', 'SimSun', serif;
+  --font-sans:    'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-display: 'DM Serif Display', 'Playfair Display', serif;
+
+  /* 间距节奏 */
+  --space-xs:  .35rem;
+  --space-sm:  .65rem;
+  --space-md:  1.1rem;
+  --space-lg:  1.8rem;
+  --space-xl:  2.8rem;
+
+  /* 列数（正文网格） */
+  --grid-cols: 12;
+}
+
+/* ================================================================
+   RESET & BASE
+   ================================================================ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 15px; scroll-behavior: smooth; }
+
+body {
+  background: #28261F;
+  font-family: var(--font-sans);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.75;
+}
+
+/* ================================================================
+   READING PROGRESS BAR
+   ================================================================ */
+#j-progress {
+  position: fixed; top: 0; left: 0; right: 0;
+  height: 2px; z-index: 9999; pointer-events: none;
+}
+#j-progress-bar {
+  height: 100%; width: 0%;
+  background: linear-gradient(90deg, var(--brand-primary), var(--brand-accent-lt));
+  transition: width .08s linear;
+}
+
+/* ================================================================
+   BACK TO TOP
+   ================================================================ */
+#j-btt {
+  position: fixed; bottom: 2rem; right: 2rem;
+  width: 2.2rem; height: 2.2rem;
+  background: var(--brand-secondary);
+  border: 1px solid var(--brand-accent-lt);
+  color: var(--brand-accent-lt);
+  font-size: .85rem; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none;
+  transition: opacity .3s, transform .3s, background .2s;
+  z-index: 500;
+  font-family: var(--font-sans);
+}
+#j-btt.show { opacity: 1; pointer-events: all; }
+#j-btt:hover { background: var(--brand-primary); transform: translateY(-3px); border-color: var(--brand-primary); }
+
+/* ================================================================
+   PAPER SHELL
+   ================================================================ */
+.j-paper {
+  background: var(--paper-base);
+  min-height: 100vh;
+  position: relative;
+}
+
+/* ================================================================
+   MASTHEAD
+   ================================================================ */
+.j-masthead {
+  background: var(--brand-secondary);
+  position: relative;
+  overflow: hidden;
+}
+
+/* 暗纹 */
+.j-masthead::before {
+  content: '';
+  position: absolute; inset: 0; pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255,255,255,.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.018) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+/* 顶部色带 */
+.mh-topband {
+  height: 4px;
+  background: linear-gradient(90deg,
+    var(--brand-primary) 0%,
+    var(--brand-accent-lt) 45%,
+    var(--brand-primary-mid) 100%);
+}
+
+/* 报头主区 */
+.mh-main {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  padding: 1.6rem 3rem 0;
+  gap: 0;
+  position: relative; z-index: 1;
+}
+
+.mh-left { display: flex; flex-direction: column; gap: .25rem; }
+
+/* 可替换字段：单位名 */
+.mh-org-name {
+  font-family: var(--font-sans);
+  font-size: .65rem;
+  font-weight: 300;
+  color: rgba(196,164,107,.65);
+  letter-spacing: .22em;
+  text-transform: uppercase;
+}
+
+/* 可替换字段：部门名 */
+.mh-dept-name {
+  font-family: var(--font-serif);
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #DDD5C0;
+  letter-spacing: .1em;
+}
+
+.mh-left-rule {
+  width: 2rem; height: 2px;
+  background: var(--brand-primary);
+  margin-top: .3rem;
+}
+
+/* 中间大标题 */
+.mh-center {
+  text-align: center;
+  padding: 0 2.8rem;
+  border-left: 1px solid rgba(196,164,107,.18);
+  border-right: 1px solid rgba(196,164,107,.18);
+}
+
+/* 可替换字段：vol 信息 */
+.mh-vol {
+  font-size: .6rem;
+  letter-spacing: .28em;
+  color: var(--brand-accent-lt);
+  opacity: .7;
+  margin-bottom: .45rem;
+  font-family: var(--font-sans);
+  font-weight: 300;
+}
+
+/* 可替换字段：报刊大标题 */
+.mh-title {
+  font-family: var(--font-serif);
+  font-size: 3rem;
+  font-weight: 900;
+  color: #EEE6D0;
+  letter-spacing: .55em;
+  text-indent: .55em;
+  line-height: 1;
+  text-shadow: 0 3px 14px rgba(0,0,0,.45);
+}
+
+.mh-title-deco {
+  display: flex; align-items: center; gap: .55rem;
+  margin-top: .5rem;
+}
+.mh-title-deco span { flex: 1; height: 1px; background: rgba(196,164,107,.28); }
+.mh-title-deco em {
+  font-style: normal;
+  font-size: .58rem;
+  color: rgba(196,164,107,.55);
+  letter-spacing: .2em;
+  white-space: nowrap;
+  font-family: var(--font-sans);
+}
+
+/* 右侧期号区 */
+.mh-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: .2rem;
+}
+
+.mh-issue-label {
+  font-size: .58rem;
+  color: rgba(196,164,107,.55);
+  letter-spacing: .22em;
+  font-family: var(--font-sans);
+}
+
+/* 可替换字段：期号 */
+.mh-issue-num {
+  font-family: var(--font-display);
+  font-size: 3rem;
+  color: var(--brand-accent-lt);
+  line-height: 1;
+  letter-spacing: -.02em;
+}
+
+/* 可替换字段：日期范围 */
+.mh-date-range {
+  font-family: var(--font-serif);
+  font-size: .8rem;
+  color: #C4C0B4;
+  letter-spacing: .05em;
+  margin-top: .15rem;
+}
+
+/* 可替换字段：周次 */
+.mh-week-label {
+  font-size: .58rem;
+  color: rgba(196,164,107,.45);
+  letter-spacing: .14em;
+}
+
+/* 报头底栏 */
+.mh-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: .9rem 3rem .75rem;
+  margin-top: 1rem;
+  border-top: 1px solid rgba(196,164,107,.12);
+  position: relative; z-index: 1;
+}
+
+/* 可替换字段：编委信息 */
+.mh-foot-info {
+  font-size: .6rem;
+  color: rgba(196,164,107,.5);
+  letter-spacing: .12em;
+  font-family: var(--font-sans);
+}
+
+/* 可替换字段：口号 */
+.mh-foot-motto {
+  font-family: var(--font-serif);
+  font-size: .7rem;
+  color: rgba(196,164,107,.7);
+  letter-spacing: .1em;
+  font-style: italic;
+}
+
+.mh-foot-badge {
+  font-size: .58rem;
+  color: rgba(255,255,255,.2);
+  border: 1px solid rgba(255,255,255,.1);
+  padding: .12rem .45rem;
+  letter-spacing: .1em;
+  font-family: var(--font-sans);
+}
+
+/* 底部分色带 */
+.mh-bottomband {
+  display: grid;
+  grid-template-columns: 4fr 1fr 3fr;
+  height: 3px;
+}
+.mh-bottomband b:nth-child(1) { background: var(--brand-primary); }
+.mh-bottomband b:nth-child(2) { background: var(--brand-accent); }
+.mh-bottomband b:nth-child(3) { background: var(--brand-secondary-2); }
+
+/* ================================================================
+   TOC NAV BAR
+   ================================================================ */
+.j-toc {
+  background: var(--paper-deep);
+  border-bottom: 2px solid var(--rule-mid);
+  display: flex;
+  align-items: stretch;
+  overflow-x: auto;
+  scrollbar-width: none;
+  position: sticky; top: 0; z-index: 100;
+}
+.j-toc::-webkit-scrollbar { display: none; }
+
+.toc-badge {
+  background: var(--brand-primary);
+  color: #fff;
+  font-size: .62rem;
+  font-weight: 700;
+  letter-spacing: .16em;
+  padding: 0 1.1rem;
+  display: flex; align-items: center;
+  white-space: nowrap;
+  flex-shrink: 0;
+  font-family: var(--font-sans);
+}
+
+.toc-links {
+  display: flex;
+  align-items: stretch;
+  padding: 0;
+}
+
+.toc-link {
+  display: flex; align-items: center;
+  text-decoration: none;
+  color: var(--text-secondary);
+  font-size: .67rem;
+  letter-spacing: .05em;
+  padding: 0 1rem;
+  white-space: nowrap;
+  border-right: 1px solid var(--rule-light);
+  font-family: var(--font-sans);
+  transition: color .2s, background .2s;
+  position: relative;
+  min-height: 2.2rem;
+}
+.toc-link::after {
+  content: '';
+  position: absolute; bottom: 0; left: 50%; right: 50%;
+  height: 2px; background: var(--brand-primary);
+  transition: left .22s ease, right .22s ease;
+}
+.toc-link:first-child { border-left: 1px solid var(--rule-light); }
+.toc-link:hover { color: var(--brand-primary); background: rgba(139,26,26,.04); }
+.toc-link:hover::after, .toc-link.is-active::after { left: 0; right: 0; }
+.toc-link.is-active { color: var(--brand-primary); font-weight: 700; }
+
+/* ================================================================
+   EDITOR'S NOTE
+   ================================================================ */
+.j-note {
+  background: var(--brand-secondary-2);
+  padding: 1.8rem 3rem;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2rem;
+  align-items: start;
+  border-bottom: 3px solid var(--brand-secondary);
+}
+
+.note-side {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .3rem;
+  flex-shrink: 0;
+}
+.note-side-line { width: 1px; height: 1.8rem; background: rgba(196,164,107,.35); }
+.note-side-cn {
+  writing-mode: vertical-rl;
+  font-family: var(--font-serif);
+  font-size: .75rem;
+  font-weight: 700;
+  color: var(--brand-accent-lt);
+  letter-spacing: .22em;
+  padding: .5rem 0;
+  border-top: 1px solid var(--brand-accent);
+  border-bottom: 1px solid var(--brand-accent);
+}
+
+.note-body { }
+
+.note-eyebrow {
+  font-size: .6rem;
+  letter-spacing: .2em;
+  color: rgba(196,164,107,.55);
+  text-transform: uppercase;
+  margin-bottom: .5rem;
+  display: flex; align-items: center; gap: .6rem;
+  font-family: var(--font-sans);
+}
+.note-eyebrow::after { content: ''; flex: 1; height: 1px; background: rgba(196,164,107,.18); }
+
+/* 可替换字段：导读正文 */
+.note-text {
+  font-family: var(--font-serif);
+  font-size: .9rem;
+  line-height: 2;
+  color: #D8D0BE;
+  text-indent: 2em;
+  text-align: justify;
+}
+
+/* ================================================================
+   MAIN GRID — 12列报纸网格
+   ================================================================ */
+.j-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  grid-auto-rows: auto;
+  border-top: 2px solid var(--rule-mid);
+}
+
+/* 通用单元格 */
+.jc {
+  border-right: 1px solid var(--rule-light);
+  border-bottom: 1px solid var(--rule-light);
+  padding: 1.3rem 1.25rem;
+  position: relative;
+}
+.jc:last-child { border-right: none; }
+
+/* 跨列 */
+.c2  { grid-column: span 2; }
+.c3  { grid-column: span 3; }
+.c4  { grid-column: span 4; }
+.c5  { grid-column: span 5; }
+.c6  { grid-column: span 6; }
+.c7  { grid-column: span 7; }
+.c8  { grid-column: span 8; }
+.c9  { grid-column: span 9; }
+.c10 { grid-column: span 10; }
+.c12 { grid-column: span 12; border-right: none; }
+
+/* ----------------------------------------------------------------
+   区块标题带（section band）— 通栏
+   ---------------------------------------------------------------- */
+.j-secband {
+  grid-column: span 12;
+  border-right: none;
+  border-bottom: 1px solid var(--rule-mid);
+  background: var(--brand-secondary);
+  padding: .65rem 1.6rem;
+  display: flex;
+  align-items: center;
+  gap: .85rem;
+}
+.jsb-bar   { width: 3px; height: 1.1rem; background: var(--brand-primary); flex-shrink: 0; }
+.jsb-num   { font-family: var(--font-display); font-size: .7rem; color: var(--brand-accent-lt); letter-spacing: .1em; }
+.jsb-cn    { font-family: var(--font-serif); font-size: 1rem; font-weight: 700; color: #DDD5C0; letter-spacing: .1em; }
+.jsb-en    { font-size: .58rem; color: rgba(196,164,107,.45); letter-spacing: .18em; text-transform: uppercase; font-family: var(--font-sans); }
+.jsb-rule  { flex: 1; height: 1px; background: rgba(196,164,107,.18); }
+
+/* ----------------------------------------------------------------
+   单元格内部组件
+   ---------------------------------------------------------------- */
+
+/* 单元格小标题 */
+.ch {
+  display: flex; align-items: center; gap: .4rem;
+  font-family: var(--font-serif);
+  font-size: .75rem; font-weight: 700;
+  color: var(--brand-secondary-2);
+  letter-spacing: .1em;
+  padding-bottom: .45rem;
+  margin-bottom: .85rem;
+  border-bottom: 1.5px solid var(--brand-secondary-2);
+}
+.ch-dot {
+  width: .38rem; height: .38rem;
+  background: var(--brand-primary);
+  transform: rotate(45deg);
+  flex-shrink: 0;
+}
+
+/* 条目 */
+.it {
+  margin-bottom: 1rem;
+  padding-left: .85rem;
+  border-left: 2px solid transparent;
+  transition: border-color .2s, background .2s;
+  cursor: default;
+}
+.it:hover { border-left-color: var(--brand-primary); background: rgba(139,26,26,.03); }
+.it:last-child { margin-bottom: 0; }
+
+.it-title {
+  font-family: var(--font-serif);
+  font-size: .83rem; font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.5;
+  display: flex; align-items: baseline; gap: .28rem;
+}
+.it-mark { color: var(--brand-primary); font-size: .62rem; flex-shrink: 0; line-height: 1.9; }
+
+.it-body {
+  font-size: .79rem; line-height: 1.85;
+  color: var(--text-secondary);
+  margin-top: .28rem;
+  text-align: justify;
+}
+
+/* 可替换字段：负责人 */
+.it-meta {
+  display: inline-block;
+  font-size: .66rem; color: var(--text-tertiary);
+  margin-top: .3rem;
+  padding: .08rem .38rem;
+  border: 1px solid var(--rule-light);
+  background: var(--paper-warm);
+  letter-spacing: .03em;
+}
+
+/* ----------------------------------------------------------------
+   统计数字格
+   ---------------------------------------------------------------- */
+.jc-stat {
+  background: var(--brand-secondary);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 0;
+  padding: 1.4rem .9rem;
+}
+.stat-group { width: 100%; text-align: center; padding: .55rem 0; }
+.stat-group + .stat-group {
+  border-top: 1px solid rgba(196,164,107,.15);
+}
+.stat-n { font-family: var(--font-display); font-size: 2.6rem; color: var(--brand-accent-lt); line-height: 1; }
+.stat-u { font-size: .6rem; color: rgba(196,164,107,.6); font-family: var(--font-sans); margin-top: .1rem; letter-spacing: .08em; }
+.stat-l { font-family: var(--font-serif); font-size: .68rem; color: rgba(196,164,107,.5); margin-top: .15rem; letter-spacing: .08em; }
+
+/* ----------------------------------------------------------------
+   引言格 (Pullquote)
+   ---------------------------------------------------------------- */
+.jc-pull {
+  display: flex; flex-direction: column; justify-content: center;
+  background: var(--paper-warm);
+  border-top: 3px solid var(--brand-primary);
+}
+.pull-eye {
+  font-size: .58rem; color: var(--brand-primary);
+  letter-spacing: .2em; font-weight: 700;
+  text-transform: uppercase; font-family: var(--font-sans);
+  margin-bottom: .45rem;
+}
+.pull-quote {
+  font-family: var(--font-serif);
+  font-size: 1.1rem; font-weight: 700;
+  color: var(--brand-secondary);
+  line-height: 1.5; letter-spacing: .04em;
+}
+.pull-rule { width: 1.8rem; height: 2px; background: var(--brand-accent); margin: .6rem 0; }
+.pull-sub {
+  font-size: .7rem; color: var(--text-tertiary);
+  line-height: 1.75; font-family: var(--font-sans);
+}
+
+/* ----------------------------------------------------------------
+   色彩变体格
+   ---------------------------------------------------------------- */
+/* 红色强调 */
+.jc-red { background: var(--brand-primary); }
+.jc-red .ch { color: rgba(255,255,255,.9); border-bottom-color: rgba(255,255,255,.3); }
+.jc-red .ch-dot { background: rgba(255,255,220,.7); }
+.jc-red .it-title { color: #fff; }
+.jc-red .it-mark { color: rgba(255,255,200,.8); }
+.jc-red .it-body { color: rgba(255,255,255,.8); }
+.jc-red .it-meta { background: rgba(0,0,0,.2); border-color: rgba(255,255,255,.18); color: rgba(255,255,255,.6); }
+.jc-red .it:hover { border-left-color: rgba(255,255,255,.5); background: rgba(255,255,255,.05); }
+
+/* 藏青强调 */
+.jc-navy { background: var(--brand-secondary-2); }
+.jc-navy .ch { color: var(--brand-accent-lt); border-bottom-color: rgba(196,164,107,.3); }
+.jc-navy .ch-dot { background: var(--brand-accent-lt); }
+.jc-navy .it-title { color: #DDD5C0; }
+.jc-navy .it-mark { color: var(--brand-accent-lt); }
+.jc-navy .it-body { color: rgba(221,213,192,.75); }
+.jc-navy .it-meta { background: rgba(0,0,0,.2); border-color: rgba(196,164,107,.2); color: rgba(196,164,107,.55); }
+.jc-navy .it:hover { border-left-color: var(--brand-accent-lt); background: rgba(255,255,255,.04); }
+
+/* 金色强调 */
+.jc-gold {
+  background: var(--brand-accent-pale);
+  border-left: 3px solid var(--brand-accent);
+}
+
+/* ----------------------------------------------------------------
+   特殊情况横幅
+   ---------------------------------------------------------------- */
+.j-special {
+  grid-column: span 12;
+  border-right: none;
+  background: var(--brand-accent-pale);
+  border-left: 4px solid var(--brand-accent);
+  padding: 1rem 1.8rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 1.4rem;
+  border-bottom: 1px solid var(--rule-light);
+}
+.special-label {
+  font-size: .62rem; font-weight: 700;
+  color: var(--brand-accent);
+  letter-spacing: .16em;
+  white-space: nowrap;
+  padding-top: .12rem;
+  border-right: 1px solid rgba(154,123,79,.3);
+  padding-right: 1.2rem;
+  flex-shrink: 0;
+  font-family: var(--font-sans);
+}
+.special-body { flex: 1; }
+.special-title {
+  font-family: var(--font-serif);
+  font-size: .82rem; font-weight: 700;
+  color: var(--brand-secondary);
+  margin-bottom: .3rem;
+}
+.special-text { font-size: .77rem; line-height: 1.85; color: var(--text-secondary); }
+.special-tags { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .4rem; }
+.special-tag {
+  font-size: .6rem;
+  padding: .06rem .38rem;
+  border: 1px solid rgba(154,123,79,.4);
+  color: var(--brand-accent);
+  background: rgba(154,123,79,.06);
+  letter-spacing: .04em;
+}
+
+/* ================================================================
+   下周计划模块
+   ================================================================ */
+.j-plan-wrap {
+  grid-column: span 12;
+  border-right: none;
+  border-bottom: none;
+  background: var(--paper-warm);
+  padding: 0;
+}
+
+/* 计划项网格：4列 */
+.plan-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border-top: 1px solid var(--rule-light);
+}
+
+.plan-card {
+  padding: 1.1rem 1.2rem;
+  border-right: 1px solid var(--rule-light);
+  border-bottom: 1px solid var(--rule-light);
+  transition: background .2s;
+}
+.plan-card:hover { background: rgba(139,26,26,.03); }
+.plan-card:nth-child(4n) { border-right: none; }
+
+.pc-tags { display: flex; align-items: center; gap: .4rem; margin-bottom: .45rem; flex-wrap: wrap; }
+
+/* 可替换字段：计划分类标签 */
+.pc-tag {
+  font-size: .58rem; font-weight: 700;
+  letter-spacing: .1em; color: #fff;
+  background: var(--brand-secondary-2);
+  padding: .1rem .4rem;
+  font-family: var(--font-sans);
+}
+
+/* 可替换字段：截止日期 */
+.pc-deadline {
+  font-size: .58rem;
+  color: var(--brand-primary);
+  letter-spacing: .05em;
+  border: 1px solid rgba(139,26,26,.28);
+  padding: .06rem .32rem;
+  background: rgba(139,26,26,.04);
+}
+
+/* 可替换字段：计划标题 */
+.pc-title {
+  font-family: var(--font-serif);
+  font-size: .84rem; font-weight: 700;
+  color: var(--brand-secondary);
+  margin-bottom: .35rem;
+  line-height: 1.45;
+}
+
+/* 可替换字段：计划描述 */
+.pc-body {
+  font-size: .75rem; line-height: 1.8;
+  color: var(--text-secondary);
+  text-align: justify;
+}
+
+/* 可替换字段：计划负责人 */
+.pc-owner {
+  display: block;
+  font-size: .63rem; color: var(--text-tertiary);
+  margin-top: .4rem;
+  padding-top: .35rem;
+  border-top: 1px dashed var(--rule-light);
+}
+
+/* ================================================================
+   FOOTER
+   ================================================================ */
+.j-footer { background: var(--brand-secondary); }
+
+.ft-band {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 2fr 1fr;
+  height: 3px;
+}
+.ft-band b:nth-child(1) { background: var(--brand-primary); }
+.ft-band b:nth-child(2) { background: var(--brand-accent); }
+.ft-band b:nth-child(3) { background: var(--brand-secondary-2); }
+.ft-band b:nth-child(4) { background: var(--brand-primary-mid); }
+.ft-band b:nth-child(5) { background: var(--brand-accent-lt); }
+
+.ft-body {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  padding: 1rem 3rem;
+  gap: 1rem;
+  border-top: 1px solid rgba(196,164,107,.1);
+}
+
+/* 可替换字段：页脚单位名 */
+.ft-l {
+  font-family: var(--font-serif);
+  font-size: .75rem; color: var(--brand-accent-lt);
+  letter-spacing: .1em;
+}
+.ft-c {
+  text-align: center;
+  font-size: .6rem;
+  color: rgba(196,164,107,.38);
+  letter-spacing: .12em;
+  line-height: 1.85;
+  font-family: var(--font-sans);
+}
+
+/* 可替换字段：期号+日期 */
+.ft-r {
+  text-align: right;
+  font-size: .63rem;
+  color: rgba(196,164,107,.5);
+  letter-spacing: .07em;
+  line-height: 1.85;
+}
+
+/* ================================================================
+   SCROLL ANIMATIONS
+   ================================================================ */
+@keyframes j-fadeUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.j-reveal { opacity: 0; }
+.j-reveal.j-in { animation: j-fadeUp .5s ease forwards; }
+.j-d1 { animation-delay: .06s; }
+.j-d2 { animation-delay: .12s; }
+.j-d3 { animation-delay: .18s; }
+.j-d4 { animation-delay: .24s; }
+
+/* ================================================================
+   RESPONSIVE
+   ================================================================ */
+@media (max-width: 1024px) {
+  .mh-main  { padding: 1.4rem 2rem 0; }
+  .mh-foot  { padding: .8rem 2rem; }
+  .j-note   { padding: 1.6rem 2rem; }
+  .ft-body  { padding: 1rem 2rem; }
+}
+
+@media (max-width: 860px) {
+  /* 报头改为单列 */
+  .mh-main { grid-template-columns: 1fr; text-align: center; padding: 1.2rem 1.5rem 0; gap: .7rem; }
+  .mh-center { border: none; padding: .5rem 0; }
+  .mh-right { align-items: center; }
+  .mh-left { align-items: center; }
+  .mh-left-rule { margin: .3rem auto 0; }
+  .mh-foot { flex-direction: column; gap: .3rem; padding: .75rem 1.5rem; text-align: center; }
+
+  /* 目录 */
+  .toc-badge { display: none; }
+
+  /* 导读 */
+  .j-note { grid-template-columns: 1fr; padding: 1.4rem 1.5rem; gap: .9rem; }
+  .note-side { flex-direction: row; align-items: center; gap: .5rem; }
+  .note-side-line { width: 1.5rem; height: 1px; }
+  .note-side-cn { writing-mode: horizontal-tb; border: none; border-left: 1px solid var(--brand-accent); border-right: 1px solid var(--brand-accent); padding: 0 .5rem; letter-spacing: .12em; }
+
+  /* 网格变4列 */
+  .j-grid { grid-template-columns: repeat(4, 1fr); }
+  .c2 { grid-column: span 2; }
+  .c3 { grid-column: span 4; border-right: none; }
+  .c4 { grid-column: span 4; border-right: none; }
+  .c5 { grid-column: span 4; border-right: none; }
+  .c6 { grid-column: span 4; border-right: none; }
+  .c7 { grid-column: span 4; border-right: none; }
+  .c8 { grid-column: span 4; border-right: none; }
+  .c12, .j-secband, .j-special, .j-plan-wrap { grid-column: span 4; border-right: none; }
+
+  /* 计划改2列 */
+  .plan-grid { grid-template-columns: repeat(2, 1fr); }
+  .plan-card:nth-child(4n)  { border-right: 1px solid var(--rule-light); }
+  .plan-card:nth-child(2n)  { border-right: none; }
+
+  .ft-body { grid-template-columns: 1fr; text-align: center; padding: 1rem 1.5rem; }
+  .ft-r { text-align: center; }
+}
+
+@media (max-width: 540px) {
+  .mh-title { font-size: 2.2rem; }
+  .j-grid { grid-template-columns: repeat(2, 1fr); }
+  .c2, .c3, .c4, .c5, .c6, .c7, .c8, .c12 { grid-column: span 2; border-right: none; }
+  .j-secband, .j-special, .j-plan-wrap { grid-column: span 2; }
+  .plan-grid { grid-template-columns: 1fr; }
+  .plan-card { border-right: none !important; }
+  #j-btt { bottom: 1rem; right: 1rem; }
+}
+
+/* ================================================================
+   PRINT
+   ================================================================ */
+@media print {
+  body { background: white; }
+  .j-paper { background: white; }
+  #j-progress, #j-btt, .j-toc { display: none; }
+  .j-masthead, .j-secband, .jc-stat, .jc-red, .jc-navy,
+  .j-note, .j-footer, .j-special { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .j-reveal { opacity: 1 !important; animation: none !important; }
+  .jc, .plan-card { page-break-inside: avoid; }
+}
+</style>
+</head>
+<body>
+
+<!-- 进度条 -->
+<div id="j-progress"><div id="j-progress-bar"></div></div>
+<!-- 返回顶部 -->
+<button id="j-btt" title="返回顶部">↑</button>
+
+<div class="j-paper">
+
+<!-- ════════════════════════════════════════════
+     MASTHEAD  ·  替换 {{}} 内容即可
+════════════════════════════════════════════ -->
+<header class="j-masthead">
+  <div class="mh-topband"></div>
+  <div class="mh-main">
+
+    <div class="mh-left">
+      <!-- {{ORG_NAME}} 上级单位名称 -->
+      <div class="mh-org-name">Beijing Zhongguancun Academy</div>
+      <!-- {{DEPT_NAME}} 发布部门名称 -->
+      <div class="mh-dept-name">学生工作部</div>
+      <div class="mh-left-rule"></div>
+    </div>
+
+    <div class="mh-center">
+      <!-- {{VOL_INFO}} 卷期信息 -->
+      <div class="mh-vol">Vol.2025 · No.11 · Weekly</div>
+      <!-- {{REPORT_TITLE}} 刊物标题 -->
+      <div class="mh-title">工作周报</div>
+      <div class="mh-title-deco">
+        <span></span>
+        <!-- {{REPORT_TITLE_EN}} 英文标题 -->
+        <em>Student Affairs Weekly Work Report</em>
+        <span></span>
+      </div>
+    </div>
+
+    <div class="mh-right">
+      <div class="mh-issue-label">ISSUE</div>
+      <!-- {{ISSUE_NUM}} 期号 -->
+      <div class="mh-issue-num">21</div>
+      <!-- {{DATE_RANGE}} 日期范围 -->
+      <div class="mh-date-range">2025.3.16 — 3.20</div>
+      <!-- {{WEEK_LABEL}} 周次 -->
+      <div class="mh-week-label">二〇二五年 · 第十一周</div>
+    </div>
+
+  </div>
+  <div class="mh-foot">
+    <!-- {{EDITORIAL_INFO}} 编委信息 -->
+    <span class="mh-foot-info">主办：学工部综合组 &nbsp;|&nbsp; 责编：综合组 &nbsp;|&nbsp; 审核：部长</span>
+    <!-- {{MOTTO}} 刊物口号 -->
+    <span class="mh-foot-motto">立德树人 · 服务学生 · 协同创新</span>
+    <span class="mh-foot-badge">内部资料 · 请勿外传</span>
+  </div>
+  <div class="mh-bottomband"><b></b><b></b><b></b></div>
+</header>
+
+<!-- ════════════════════════════════════════════
+     TOC  目录导航（自动高亮当前区块）
+════════════════════════════════════════════ -->
+<nav class="j-toc" id="j-toc">
+  <div class="toc-badge">本期目录</div>
+  <div class="toc-links">
+    <!-- {{TOC_ITEMS}} 目录项，与下方 id 对应 -->
+    <a class="toc-link" href="#s-note">本期导读</a>
+    <a class="toc-link" href="#s-mgmt">学生管理</a>
+    <a class="toc-link" href="#s-act">学生活动</a>
+    <a class="toc-link" href="#s-coord">日常协调联动</a>
+    <a class="toc-link" href="#s-sys">制度建设</a>
+    <a class="toc-link" href="#s-special">特殊情况</a>
+    <a class="toc-link" href="#s-plan">下周工作计划</a>
+  </div>
+</nav>
+
+<!-- ════════════════════════════════════════════
+     EDITOR'S NOTE  本期导读
+════════════════════════════════════════════ -->
+<section class="j-note j-reveal" id="s-note">
+  <div class="note-side">
+    <div class="note-side-line"></div>
+    <div class="note-side-cn">本期导读</div>
+    <div class="note-side-line"></div>
+  </div>
+  <div class="note-body">
+    <div class="note-eyebrow">
+      <!-- {{NOTE_EYEBROW}} 导读眉题 -->
+      Editor's Note · Issue 21 Summary
+    </div>
+    <!-- {{NOTE_TEXT}} 导读正文，150-300字段落 -->
+    <p class="note-text">本周工作围绕学生管理、学生活动及日常协调联动等方面扎实推进各项工作。学生管理方面，持续开展谈心谈话，掌握学生思想动态与科研进展，并跟进特殊学生请假事宜；院务会汇报完成在院学生整体情况数据整理，推进《学生请销假管理办法》修订过会，领军人才画像专班成立函同步编写完成。学生活动方面，有序推进融媒体平台运营、"最美角落"活动方案设计及"院长有约"第一期活动筹备与执行，组织开展"院意亿企"字节跳动走访参观，同步完成31所共建高校学生年报邮件发送及"深澜访学"新生入学培训。日常协调联动方面，与北航学工部召开联动会，协同后勤部、综办等部门推进运动会、文化墙建设等重点事项；制度建设方面，职业发展中心建设方案、领军人才繁星班方案、辅导员工作手册、博士研究生奖助管理办法等多项草案本周密集推进，框架初稿已基本完成。下周将重点推进文化墙设计方案回收、融媒体中心工作手册制定及PR设计团队建设等工作。</p>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════
+     MAIN GRID  正文主体
+════════════════════════════════════════════ -->
+<main class="j-grid">
+
+<!-- ──────────────────────────────────────────
+     一、学生管理
+────────────────────────────────────────── -->
+<div class="j-secband j-reveal" id="s-mgmt">
+  <div class="jsb-bar"></div>
+  <!-- {{SEC_NUM}} 区块序号 -->
+  <span class="jsb-num">壹</span>
+  <!-- {{SEC_TITLE_CN}} 区块中文标题 -->
+  <span class="jsb-cn">学生管理</span>
+  <!-- {{SEC_TITLE_EN}} 区块英文标题 -->
+  <span class="jsb-en">Student Management</span>
+  <div class="jsb-rule"></div>
+</div>
+
+<!-- 数据格：统计数字 -->
+<div class="jc c2 jc-stat j-reveal j-d1">
+  <!-- {{STAT_ITEMS}} 统计数字组，可增减 stat-group -->
+  <div class="stat-group">
+    <div class="stat-n">10</div>
+    <div class="stat-u">人次</div>
+    <div class="stat-l">本周深度约谈</div>
+  </div>
+  <div class="stat-group">
+    <div class="stat-n" style="font-size:2rem;">5</div>
+    <div class="stat-u">条线</div>
+    <div class="stat-l">谈话工作覆盖年级</div>
+  </div>
+  <div class="stat-group">
+    <div class="stat-n" style="font-size:2rem;">1</div>
+    <div class="stat-u">项</div>
+    <div class="stat-l">院务会专项汇报</div>
+  </div>
+</div>
+
+<!-- 谈心谈话 · 左侧 -->
+<div class="jc c5 j-reveal j-d2">
+  <div class="ch"><div class="ch-dot"></div>谈心谈话工作</div>
+
+  <!-- {{ITEM}} 事项条目，可复制此块增减 -->
+  <div class="it">
+    <div class="it-title"><span class="it-mark">■</span>尚未进组学生重点摸排</div>
+    <p class="it-body">针对尚未进入项目的学生，通过线上方式沟通了解整体状态，线下重点约谈3名学生，深入掌握其近期在院状态与科研进展情况，建立初步档案，为后续定向帮扶提供依据。</p>
+    <span class="it-meta">负责人：田心原</span>
+  </div>
+
+  <div class="it">
+    <div class="it-title"><span class="it-mark">■</span>常态化思想动态摸排</div>
+    <p class="it-body">常态化开展学生思想动态摸排，通过谈心谈话了解学生学习与生活诉求，引导学生调整节奏，回归科研与学习正轨，形成常态化工作机制。</p>
+    <span class="it-meta">负责人：李彤</span>
+  </div>
+
+  <div class="it">
+    <div class="it-title"><span class="it-mark">■</span>2027级一对一毕业规划谈话</div>
+    <p class="it-body">开展2027级学生一对一谈心谈话，重点对接毕业规划，推动学生与导师提前沟通毕业计划；全面摸排科研成果达标情况、导师培养反馈、就业意向及在院日常表现，建立谈话台账，为后续毕业帮扶与就业指导提供依据。</p>
+    <span class="it-meta">负责人：何萌</span>
+  </div>
+</div>
+
+<!-- 谈心谈话 · 右侧 + 专项 -->
+<div class="jc c5 j-reveal j-d3">
+  <div class="ch"><div class="ch-dot"></div>谈话工作（续）与专项</div>
+
+  <div class="it">
+    <div class="it-title"><span class="it-mark">■</span>2026级访学生在院情况梳理</div>
+    <p class="it-body">了解2026级预备生在校科研项目进展，梳理访学生在院情况；协调解决生活津贴发放、AI阅读空间人脸识别等实际问题，建立个人台账，鼓励其积极参与学院各项学生活动。</p>
+    <span class="it-meta">负责人：邢宇</span>
+  </div>
+
+  <div class="it">
+    <div class="it-title"><span class="it-mark">■</span>大规模深度约谈与就业动员</div>
+    <p class="it-body">约谈李一鋗、张镕麒等10名同学，针对就业方向进行精准辅导；动员多名学生定向参加"院意亿企"字节跳动走访活动，引导学生走出宿舍、拓宽职场视野，积累校企对接经验。</p>
+    <span class="it-meta">负责人：王婧琦</span>
+  </div>
+
+  <div class="it">
+    <div class="it-title"><span class="it-mark">■</span>领军人才画像专班推进</div>
+    <p class="it-body">完成领军人才画像专班成立函编写，文件已进入送审流程；持续推进《数据清单》收集工作，为后续领军人才评选与培养奠定数据基础。</p>
+    <span class="it-meta">负责人：王婧琦</span>
+  </div>
+</div>
+
+<!-- 院务会汇报 · 红色强调格 -->
+<div class="jc c12 jc-red j-reveal j-d1">
+  <div class="ch"><div class="ch-dot"></div>院务会专项汇报与制度推进</div>
+  <div class="it">
+    <div class="it-title"><span class="it-mark">■</span>院务会数据汇报完成 &amp; 《学生请销假管理办法》修订过会</div>
+    <p class="it-body">完成院务会专项汇报及前期筹备工作，围绕在院学生整体情况、日常出勤情况完成数据整理与分析，形成精准汇报材料，为学院学生管理决策提供数据支撑；推进《北京中关村学院学生请销假管理办法》修订议题过会，同步对接技术部门完成前期技术适配对接，排查系统风险，规避办法落地后的系统矛盾，保障后续规范执行。</p>
+    <span class="it-meta">负责人：何萌</span>
+  </div>
+</div>
+
+<!-- ──────────────────────────────────────────
+     二、学生活动
+────────────────────────────────────────── -->
+<div class="j-secband j-reveal" id="s-act">
+  <div class="jsb-bar"></div>
+  <span class="jsb-num">贰</span>
+  <span class="jsb-cn">学生活动</span>
+  <span class="jsb-en">Student Activities</span>
+  <div class="jsb-rule"></div>
+</div>
+
+<!-- 融媒体 -->
+<div class="jc c3 j-reveal j-d1">
+  <div class="ch"><div class="ch-dot"></div>融媒体平台运营</div>
+
+  <div class="it">
+    <div class="it-title"><span class="it-mark">■</span>公益心理健康推文发布</div>
+    <p class="it-body">通过学工部官方融媒体平台发布1篇公益心理健康资源导航推文，内容涵盖在校学生常见心理困扰的应对方式与求助渠道，服务学生心理健康意识提升。</p>
+    <span class="it-meta">负责人：田心原</span>
+  </div>
+
+  <div class="it">
+    <div class="it-title"><span class="it-mark">■</span>"院长致同学们的一封信"H5页面</div>
+    <p class="it-body">制作"开学第一课"H5互动页面，融合图文与交互设计，面向全体在院学生推送，作为新学期开学主题传播的核心载体，提升学生对学院文化的认同感与归属感。</p>
+    <span class="it-meta">负责人：田心原</span>
+  </div>
+
+  <div class="it">
+    <div class="it-title"><span class="it-mark">■</span>"院长有约"视觉物料制作</div>
+    <p class="it-body">制作排期海报与活动内容海报；协助完成"院长有约""院意亿企""深澜访学计划"等活动现场拍摄，留存影像资料用于后续宣传报道。</p>
+    <span class="it-meta">负责人：田心原</span>
+  </div>
+</div>
+
+<!-- Pullquote 引言格 -->
+<div class="jc c2 jc-pull j-reveal j-d2">
+  <!-- {{PULLQUOTE}} 可替换为本期任意亮点句子 -->
+  <div class="pull-eye">本周焦点</div>
+  <div class="pull-quote">"院长有约"<br/>第一期圆满举办</div>
+  <div class="pull-rule"></div>
+  <div class="pull-sub">秦涛院长与学生深度交流，汇总诉求清单并同步相关职能部门，建立常态化院长对话机制。</div>
+</div>
+
+<!-- 品牌活动 -->
+<div class="jc c4 j-reveal j-d3">
+  <div class="ch"><div class="ch-dot"></div>品牌活动</div>
+
+  <div class="it">
+    <div class="it-title"><span class="it-mark">■</span>"院长有约"第一期活动执行</div>
+    <p class="it-body">承办"院长有约"第一期（嘉宾：秦涛院长），带领研会学生负责全程策划、组织与现场执行；活动后分类汇总学生各类问题与诉求，形成清单同步反馈相关职能部门，推动问题落实解决。</p>
+    <span class="it-meta">负责人：何萌</span>
+  </div>
+
+  <div class="it">
+    <div class="it-title"><span class="it-mark">■</span>"最美角落"活动方案设计</div>
+    <p class="it-body">完成活动方案设计，明确活动规则、参与方式与评选机制；与后勤部门开展专项沟通，就场地支持、物资配合等协作事宜达成初步共识，为活动顺利推进铺垫基础。</p>
+    <span class="it-meta">负责人：田心原</span>
+  </div>
+
+  <div class="it">
+    <div class="it-title"><span class="it-mark">■</span>学生团体保险宣讲会</div>
+    <p class="it-body">采用线上+线下结合形式组织开展保险宣讲会，面向全体在院学生明确保障范围、理赔流程及注意事项，现场答疑解惑，筑牢学生在院保障基础。</p>
+    <span class="it-meta">负责人：何萌</span>
+  </div>
+</div>
+
+<!-- 统计数字格 -->
+<div class="jc c3 jc-stat j-reveal j-d1">
+  <div class="stat-group">
+    <div class="stat-n">31</div>
+    <div class="stat-u">所共建高校</div>
+    <div class="stat-l">学生年报同步</div>
+  </div>
+  <div class="stat-group">
+    <div class="stat-n" style="font-size:2rem;">8</div>
+    <div class="stat-u">个精品项目</div>
+    <div class="stat-l">护航计划优化后</div>
+  </div>
+  <div class="stat-group">
+    <div class="stat-n" style="font-size:2rem;">1</div>
+    <div class="stat-u">篇推文</div>
+    <div class="stat-l">心理健康资源导航</div>
+  </div>
+</div>
+
+<!-- 校企联动 + 协同培养 -->
+<div class="jc c5 j-reveal j-d2">
+  <div class="ch"><div class="ch-dot"></div>校企联动 &amp; 协同培养</div>
+
+  <div class="it">
+    <div class="it-title"><span class="it-mark">■</span>"院意亿企"字节跳动走访参观</div>
+    <p class="it-body">组织开展走访参观活动，带领学生走进企业实地参访，近距离了解企业文化、业务方向与人才需求，拓宽学生职业视野，促进校企双向了解与对接。</p>
+    <span class="it-meta">负责人：李彤、王婧琦、田心原</span>
+  </div>
+
+  <div class="it">
+    <div class="it-title"><span class="it-mark">■</span>研会组织改革与"护航计划"优化</div>
+    <p class="it-body">主持召开研究生会办公室、文体部例会；推进"护航计划"优化，将原有30个活动精简为8个精品项目，预计3月31日起协同各部门陆续开展。</p>
+    <span class="it-meta">负责人：王婧琦</span>
+  </div>
+
+  <div class="it">
+    <div class="it-title"><span class="it-mark">■</span>31所共建高校学生年报邮件同步</div>
+    <p class="it-body">完成全部共建高校与培养相关部门的邮件发送工作，同步学生年度报告，夯实学院与共建高校的联合沟通机制，促进培养信息常态化共享与协同。</p>
+    <span class="it-meta">负责人：何萌</span>
+  </div>
+
+  <div class="it">
+    <div class="it-title"><span class="it-mark">■</span>"深澜访学"新生入学培训</div>
+    <p class="it-body">联合培养部共同开展新生入学培训，向学生介绍学工部职责、工作机制及学生社团活动情况，鼓励同学们积极参与、融入校园生活，加速新生融入与归属感建立。</p>
+    <span class="it-meta">负责人：邢宇</span>
+  </div>
+</div>
+
+<!-- ──────────────────────────────────────────
+     三、日常协调联动
+────────────────────────────────────────── -->
+<div class="j-secband j-reveal" id="s-coord">
+  <div class="jsb-bar"></div>
+  <span class="jsb-num">叁</span>
+  <span class="jsb-cn">日常协调联动</span>
+  <span class="jsb-en">Administrative Coordination</span>
+  <div class="jsb-rule"></div>
+</div>
+
+<!-- 行政协同 左 -->
+<div class="jc c4 j-reveal j-d1">
+  <div class="ch"><div class="ch-dot"></div>行政协同</div>
+
+  <div class="it">
+    <div class="it-title"><span class="it-mark">■</span>协同后勤部推进多项学生活动</div>
+    <p class="it-body">召开联席沟通会，围绕"活力健身年""最美角落大赛"、学生活动场地调配及校园安全系列活动等工作展开协商，明确双方分工与时间节点，保障各项活动顺利落地。</p>
+    <span class="it-meta">负责人：李彤、王婧琦、田心原、邢宇</span>
+  </div>
+
+  <div class="it">
+    <div class="it-title"><span class="it-mark">■</span>协同培养部、公关部推进宣传</div>
+    <p class="it-body">召开三方沟通会，聚焦学院重大活动宣传工作，明确对共建高校的针对性宣传举措，细化宣传流程、落实工作责任，提升宣传实效性，形成联合对外传播合力。</p>
+    <span class="it-meta">负责人：李彤、王婧琦、田心原、邢宇</span>
+  </div>
+
+  <div class="it">
+    <div class="it-title"><span class="it-mark">■</span>协同公关部核定院刊终版内容</div>
+    <p class="it-body">协调院刊中表彰大会、学生相关信息核对工作，与公关部联合审定院刊终版内容，确保信息准确无误，为院刊按期出版提供保障。</p>
+    <span class="it-meta">负责人：田心原</span>
+  </div>
+
+  <div class="it">
+    <div class="it-title"><span class="it-mark">■</span>协同合作发展部推进职业发展建设</div>
+    <p class="it-body">围绕学生职业发展中心筹建、领军人才繁星班打造等工作展开深入研讨，梳理建设思路、明确核心目标，细化推进方案，为后续工作开展奠定制度与组织基础。</p>
+    <span class="it-meta">负责人：李彤、王婧琦</span>
+  </div>
+</div>
+
+<!-- 行政协同 右 + 对外联动 -->
+<div class="jc c4 j-reveal j-d2">
+  <div class="ch"><div class="ch-dot"></div>对外联动 &amp; 专项推进</div>
+
+  <div class="it">
+    <div class="it-title"><span class="it-mark">■</span>与北航学工部召开校际联动会</div>
+    <p class="it-body">协同教科人中心与北京航空航天大学学工部召开联动会，围绕学生培养、日常管理、特殊情况处置等核心事宜深入协商，明确协作方向，细化联动举措，推动校际学生工作协同推进。</p>
+    <span class="it-meta">负责人：李彤、田心原</span>
+  </div>
+
+  <div class="it">
+    <div class="it-title"><span class="it-mark">■</span>运动会供应商述标会</div>
+    <p class="it-body">参与三家供应商述标会，协同综合办公室细化活动需求内容，对供应商方案进行比较评估；跟进后续供应商对接工作，确保运动会活动服务保障到位。</p>
+    <span class="it-meta">负责人：田心原</span>
+  </div>
+
+  <div class="it">
+    <div class="it-title"><span class="it-mark">■</span>文化墙设计方案对接推进</div>
+    <p class="it-body">对接公关部沟通文化墙设计事宜，与设计公司召开专项会议，讨论建设进度与设计修改方向，重新梳理确定上墙内容，确保文化墙内容体现学院文化内涵与党建精神。</p>
+    <span class="it-meta">负责人：田心原、邢宇</span>
+  </div>
+
+  <div class="it">
+    <div class="it-title"><span class="it-mark">■</span>与学术交流部研讨出国流程管理</div>
+    <p class="it-body">与学术交流与合作部初步研讨学生出国流程管理，梳理现有流程痛点；拟定后续联合财务部、智能创新中心进一步细化流程规范，同步跟进技术支持对接，优化流程效率。</p>
+    <span class="it-meta">负责人：何萌</span>
+  </div>
+</div>
+
+<!-- 思政课题 · 藏青强调格 -->
+<div class="jc c4 jc-navy j-reveal j-d3">
+  <div class="ch"><div class="ch-dot"></div>思政课题 &amp; 专项工作</div>
+
+  <div class="it">
+    <div class="it-title"><span class="it-mark">■</span>思政课题申报完成</div>
+    <p class="it-body">完成思政课题内容修改、人员信息收集及课题申报工作，按要求提交相关材料，完成本轮申报节点任务，为后续课题立项与研究推进做好充分准备。</p>
+    <span class="it-meta">负责人：王婧琦</span>
+  </div>
+
+  <div class="it" style="margin-top:1rem;">
+    <div class="it-title"><span class="it-mark">■</span>本周协同部门综览</div>
+    <p class="it-body">本周共协同后勤部、培养部、公关关系部、合作发展部、学术交流与合作部、综合办公室、北京航空航天大学学工部等<strong style="color:var(--brand-accent-lt);">7个部门/单位</strong>开展联动协作，较上周增加2个协作单位，部门协同效能持续提升。</p>
+  </div>
+</div>
+
+<!-- ──────────────────────────────────────────
+     四、制度建设
+────────────────────────────────────────── -->
+<div class="j-secband j-reveal" id="s-sys">
+  <div class="jsb-bar"></div>
+  <span class="jsb-num">肆</span>
+  <span class="jsb-cn">制度建设</span>
+  <span class="jsb-en">System &amp; Policy Development</span>
+  <div class="jsb-rule"></div>
+</div>
+
+<!-- 制度文件 左 -->
+<div class="jc c6 j-reveal j-d1">
+  <div class="ch"><div class="ch-dot"></div>建设方案与工作规范</div>
+
+  <div class="it">
+    <div class="it-title"><span class="it-mark">■</span>《学生职业发展中心建设方案（草案）》</div>
+    <p class="it-body">完成草案编制，明确中心建设目标、组织架构、核心职能及推进计划，为中心筹建提供制度支撑，后续将提交院务会审议。</p>
+    <span class="it-meta">负责人：李彤、王婧琦</span>
+  </div>
+
+  <div class="it">
+    <div class="it-title"><span class="it-mark">■</span>《领军人才繁星班建设实施方案（草案）》</div>
+    <p class="it-body">完成草案编制，细化繁星班选拔标准、培养模式、管理机制及保障措施，助力领军人才培养工作规范化开展，同步提交院务会审议。</p>
+    <span class="it-meta">负责人：李彤</span>
+  </div>
+
+  <div class="it">
+    <div class="it-title"><span class="it-mark">■</span>《辅导员工作手册》编制完成</div>
+    <p class="it-body">完成《北京中关村学院学生工作部辅导员工作手册》编制，梳理辅导员岗位职责、工作规范、业务流程及考核标准，进一步规范工作开展，提升工作效率与质量。</p>
+    <span class="it-meta">负责人：李彤</span>
+  </div>
+</div>
+
+<!-- 制度文件 右 -->
+<div class="jc c6 j-reveal j-d2">
+  <div class="ch"><div class="ch-dot"></div>奖助制度 &amp; 社团改革</div>
+
+  <div class="it">
+    <div class="it-title"><span class="it-mark">■</span>《博士研究生奖助管理办法》启动编写</div>
+    <p class="it-body">启动办法编写工作，明确编写框架与关键条款方向，为后续开展奖励工作打好制度基础；预计下周完成初稿，确保奖助工作规范化开展。</p>
+    <span class="it-meta">负责人：何萌</span>
+  </div>
+
+  <div class="it">
+    <div class="it-title"><span class="it-mark">■</span>《字节跳动AI领军博士生新生奖学金管理办法（初稿）》</div>
+    <p class="it-body">完成初稿编制，明确评选条件、流程及资助细则；协同合作发展部推进资助落地，对接落实细节，加快校企合作奖学金执行进度，保障首批奖学金按时发放。</p>
+    <span class="it-meta">负责人：何萌</span>
+  </div>
+
+  <div class="it">
+    <div class="it-title"><span class="it-mark">■</span>社团制度改革文件优化</div>
+    <p class="it-body">对社团制度改革相关文件进行系统性优化修订，聚焦社团管理规范性与活动质量提升，结合研会改革进程同步推进，为后续精品活动开展提供制度保障。</p>
+    <span class="it-meta">负责人：王婧琦、邢宇</span>
+  </div>
+</div>
+
+<!-- ──────────────────────────────────────────
+     五、学生特殊情况
+────────────────────────────────────────── -->
+<div class="j-secband j-reveal" id="s-special" style="background:var(--brand-accent-pale); border-top:1px solid var(--rule-light);">
+  <div class="jsb-bar" style="background:var(--brand-accent);"></div>
+  <span class="jsb-num" style="color:var(--brand-accent);">伍</span>
+  <span class="jsb-cn" style="color:var(--brand-secondary);">学生特殊情况</span>
+  <span class="jsb-en" style="color:var(--text-tertiary);">Special Cases</span>
+  <div class="jsb-rule" style="background:rgba(154,123,79,.22);"></div>
+</div>
+
+<!-- {{SPECIAL_ITEMS}} 特殊情况条目，可增减 j-special 块 -->
+<div class="j-special j-reveal">
+  <div class="special-label">▶ 请假备案</div>
+  <div class="special-body">
+    <!-- {{SPECIAL_TITLE}} 情况标题 -->
+    <div class="special-title">黄相衡同学请假申请及跟进安排</div>
+    <!-- {{SPECIAL_TEXT}} 情况描述 -->
+    <p class="special-text">黄相衡同学申请于3月23日至4月3日请假，返回户籍所在地办理姓名变更手续，相关情况已与北航辅导员沟通确认，双方将共同跟进学生请假期间动态与改名进展，确保相关手续依法依规完成，学生人身安全与合法权益得到保障。请假期间将保持每日联络，重要节点须提交进度汇报。</p>
+    <div class="special-tags">
+      <!-- {{SPECIAL_TAGS}} 可替换或增减 -->
+      <span class="special-tag">请假区间：2025.3.23 — 2025.4.3</span>
+      <span class="special-tag">负责人：田心原</span>
+      <span class="special-tag">已知会北航辅导员</span>
+      <span class="special-tag">持续跟进中</span>
+    </div>
+  </div>
+</div>
+
+<!-- ──────────────────────────────────────────
+     六、下周工作计划
+────────────────────────────────────────── -->
+<div class="j-secband j-reveal" id="s-plan" style="background:#1A2B3E;">
+  <div class="jsb-bar" style="background:var(--brand-accent);"></div>
+  <span class="jsb-num">陆</span>
+  <span class="jsb-cn">下周工作计划</span>
+  <span class="jsb-en">Next Week's Action Plan</span>
+  <div class="jsb-rule"></div>
+</div>
+
+<div class="j-plan-wrap j-reveal">
+  <div class="plan-grid">
+
+    <!-- {{PLAN_ITEM}} 计划条目，可复制增减 plan-card -->
+    <div class="plan-card j-reveal j-d1">
+      <div class="pc-tags">
+        <span class="pc-tag">文化墙建设</span>
+        <span class="pc-deadline">截止 3.25</span>
+      </div>
+      <div class="pc-title">文化墙设计方案回收与风格调整</div>
+      <p class="pc-body">计划于3月23日前回收一版设计方案，3月25日前完成设计风格调整，后续进行细节优化，推进文化墙建设按节点落地，确保内容与视觉呈现符合学院党建文化定位。</p>
+      <span class="pc-owner">负责人：田心原、邢宇</span>
+    </div>
+
+    <div class="plan-card j-reveal j-d2">
+      <div class="pc-tags">
+        <span class="pc-tag">融媒体建设</span>
+        <span class="pc-deadline">截止 3.27</span>
+      </div>
+      <div class="pc-title">制定融媒体中心工作手册</div>
+      <p class="pc-body">与学生核心成员共同讨论并制作融媒体中心工作手册，明确各岗位职责、内容生产规范、发布审核流程及绩效考核机制，为中心规范化运营提供制度依据。</p>
+      <span class="pc-owner">负责人：田心原、邢宇</span>
+    </div>
+
+    <div class="plan-card j-reveal j-d3">
+      <div class="pc-tags">
+        <span class="pc-tag">PR设计团队</span>
+        <span class="pc-deadline">截止 4.3</span>
+      </div>
+      <div class="pc-title">组建融媒体中心PR设计团队</div>
+      <p class="pc-body">召开专项会议，讨论融媒体中心Logo与IP形象建设，以及融媒体工作中学生发展精神的融合表达方式，形成视觉体系初稿，完成团队建设方案与视觉规范文档。</p>
+      <span class="pc-owner">负责人：田心原</span>
+    </div>
+
+    <div class="plan-card j-reveal j-d4">
+      <div class="pc-tags">
+        <span class="pc-tag">制度建设</span>
+        <span class="pc-deadline">截止 3.24</span>
+      </div>
+      <div class="pc-title">两项方案呈院务会审议</div>
+      <p class="pc-body">推进《学生职业发展中心建设方案》《领军人才繁星班建设实施方案》完善工作，按要求呈请院务会审议，计划于3月24日前完成材料报送，确保按节点推进。</p>
+      <span class="pc-owner">负责人：李彤</span>
+    </div>
+
+    <div class="plan-card j-reveal j-d1">
+      <div class="pc-tags">
+        <span class="pc-tag">制度落地</span>
+        <span class="pc-deadline">截止 3.27</span>
+      </div>
+      <div class="pc-title">请销假管理办法系统适配</div>
+      <p class="pc-body">跟进院务会决议落实，重点推进《学生请销假管理办法》后续系统调试工作，完成技术对接与流程验证，确保办法正式执行前系统无风险隐患，保障制度顺利落地。</p>
+      <span class="pc-owner">负责人：何萌</span>
+    </div>
+
+    <div class="plan-card j-reveal j-d2">
+      <div class="pc-tags">
+        <span class="pc-tag">奖助制度</span>
+        <span class="pc-deadline">截止 3.27</span>
+      </div>
+      <div class="pc-title">博士研究生奖助管理办法初稿</div>
+      <p class="pc-body">持续推进《博士研究生奖助管理办法》初稿编写，预计形成完整草案，明确奖助类别、评选流程、资助标准与发放机制，为后续奖助工作规范化开展提供制度依据。</p>
+      <span class="pc-owner">负责人：何萌</span>
+    </div>
+
+    <div class="plan-card j-reveal j-d3">
+      <div class="pc-tags">
+        <span class="pc-tag">毕业支持</span>
+        <span class="pc-deadline">截止 3.27</span>
+      </div>
+      <div class="pc-title">2027届毕业帮扶与台账更新</div>
+      <p class="pc-body">持续跟进2027届学生毕业沟通工作，落实导师反馈与学业帮扶措施，完成一轮台账更新与重点学生跟进，为后续帮扶工作精准施策提供基础数据支撑。</p>
+      <span class="pc-owner">负责人：何萌</span>
+    </div>
+
+    <div class="plan-card j-reveal j-d4">
+      <div class="pc-tags">
+        <span class="pc-tag">校企合作</span>
+        <span class="pc-deadline">截止 3.27</span>
+      </div>
+      <div class="pc-title">字节跳动新生奖学金落地推进</div>
+      <p class="pc-body">协同合作发展部推进字节跳动新生奖学金资助落地事宜，完成资助细则确认与执行方案定稿，加快校企合作奖学金执行进度，保障首批奖学金按时发放。</p>
+      <span class="pc-owner">负责人：何萌</span>
+    </div>
+
+    <div class="plan-card j-reveal j-d1">
+      <div class="pc-tags">
+        <span class="pc-tag">专项工作</span>
+        <span class="pc-deadline">截止 3.23</span>
+      </div>
+      <div class="pc-title">领军人才画像数据汇总</div>
+      <p class="pc-body">完成领军人才画像专班成立函编写，持续推进《数据清单》收集，完成数据汇总，形成基础画像档案，为专班正式启动提供数据支撑，保障专班工作按计划推进。</p>
+      <span class="pc-owner">负责人：王婧琦</span>
+    </div>
+
+    <div class="plan-card j-reveal j-d2">
+      <div class="pc-tags">
+        <span class="pc-tag">对外联络</span>
+        <span class="pc-deadline">截止 3.28</span>
+      </div>
+      <div class="pc-title">立场诺贝论坛 &amp; 中关村论坛统筹</div>
+      <p class="pc-body">组织北京各高校学生参与立场诺贝论坛及志愿者报名，同步统筹学生参加中关村论坛报名及出行安排，保障学生高质量参与重大学术活动，提升学院学生学术影响力。</p>
+      <span class="pc-owner">负责人：王婧琦</span>
+    </div>
+
+    <div class="plan-card j-reveal j-d3">
+      <div class="pc-tags">
+        <span class="pc-tag">学术活动</span>
+        <span class="pc-deadline">截止 4.26</span>
+      </div>
+      <div class="pc-title">中国东亚文明边疆历史小型研讨会</div>
+      <p class="pc-body">联动电子科技大学实地学社，组织"深澜访学"班黄千诚同学以线上线下结合形式，举办"中国边疆史——中原以外的东亚文明形态嬗变"主题小型研讨会，拓宽学生学术视野。</p>
+      <span class="pc-owner">负责人：邢宇</span>
+    </div>
+
+    <div class="plan-card j-reveal j-d4">
+      <div class="pc-tags">
+        <span class="pc-tag">学生活动</span>
+        <span class="pc-deadline">截止 4.26</span>
+      </div>
+      <div class="pc-title">"深澜访学"班迎新破冰活动</div>
+      <p class="pc-body">组织"深澜访学"班迎新交流活动，准备茶歇零食与开学礼物（书包、院服），营造轻松氛围，促进同学交流，增强学生归属感与学院文化认同，加速新生融入校园生活。</p>
+      <span class="pc-owner">负责人：邢宇</span>
+    </div>
+
+  </div>
+</div>
+
+</main>
+<!-- ════════════════════════════════════════════
+     FOOTER
+════════════════════════════════════════════ -->
+<footer class="j-footer">
+  <div class="ft-band"><b></b><b></b><b></b><b></b><b></b></div>
+  <div class="ft-body">
+    <!-- {{FOOTER_DEPT}} 页脚单位 -->
+    <div class="ft-l">北京中关村学院 · 学生工作部</div>
+    <div class="ft-c">
+      本刊为内部资料，仅供工作参考，请妥善保管，未经许可不得对外传阅<br>
+      Internal Use Only · Student Affairs Division · Beijing Zhongguancun Academy
+    </div>
+    <!-- {{FOOTER_ISSUE}} 页脚期号 -->
+    <div class="ft-r">
+      第 21 期 &nbsp;|&nbsp; 2025年第十一周<br>
+      出版日期：2025.3.21
+    </div>
+  </div>
+</footer>
+
+</div><!-- .j-paper -->
+
+<script>
+/* ================================================================
+   阅读进度条
+   ================================================================ */
+const pBar = document.getElementById('j-progress-bar');
+const btt  = document.getElementById('j-btt');
+window.addEventListener('scroll', () => {
+  const sh = document.documentElement.scrollHeight - window.innerHeight;
+  pBar.style.width = (sh > 0 ? window.scrollY / sh * 100 : 0) + '%';
+  btt.classList.toggle('show', window.scrollY > 500);
+}, { passive: true });
+
+/* ================================================================
+   滚动进场动画
+   ================================================================ */
+const revealIO = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.classList.add('j-in');
+      revealIO.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.04, rootMargin: '0px 0px -24px 0px' });
+
+document.querySelectorAll('.j-reveal').forEach(el => revealIO.observe(el));
+
+/* ================================================================
+   TOC 当前区块高亮
+   ================================================================ */
+const tocLinks = document.querySelectorAll('.toc-link');
+const sections = document.querySelectorAll('[id^="s-"]');
+
+const tocIO = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      tocLinks.forEach(l => l.classList.remove('is-active'));
+      const a = document.querySelector(`.toc-link[href="#${e.target.id}"]`);
+      if (a) a.classList.add('is-active');
+    }
+  });
+}, { threshold: 0.25, rootMargin: '-10% 0px -65% 0px' });
+
+sections.forEach(s => tocIO.observe(s));
+
+/* ================================================================
+   条目键盘可访问性
+   ================================================================ */
+document.querySelectorAll('.it, .plan-card').forEach(el => {
+  el.setAttribute('tabindex', '0');
+  el.addEventListener('focus', () => {
+    if (el.classList.contains('it')) {
+      el.style.borderLeftColor = 'var(--brand-primary)';
+      el.style.background = 'rgba(139,26,26,.03)';
+    }
+  });
+  el.addEventListener('blur', () => {
+    el.style.borderLeftColor = '';
+    el.style.background = '';
+  });
+});
+
+/* ================================================================
+   TOC 平滑跳转补偿（sticky toc 高度）
+   ================================================================ */
+document.querySelectorAll('.toc-link').forEach(link => {
+  link.addEventListener('click', e => {
+    e.preventDefault();
+    const target = document.querySelector(link.getAttribute('href'));
+    if (!target) return;
+    const tocH = document.getElementById('j-toc').offsetHeight;
+    const y = target.getBoundingClientRect().top + window.scrollY - tocH - 8;
+    window.scrollTo({ top: y, behavior: 'smooth' });
+  });
+});
+</script>
+</body>
+</html>

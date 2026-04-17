@@ -3,90 +3,94 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>file2web 模板预览</title>
+  <title>Doc2Brief 模板预览</title>
   <style id="template-inline-style">__TEMPLATE_STYLE__</style>
 </head>
 <body data-template-id="template-04">
-  <div class="dash-shell">
-    <header class="dash-hero" id="hero">
-      <div>
-        <p class="dash-eyebrow">WEEKLY COMMAND CENTER</p>
-        <h1 class="dash-title" id="hero-title">周报</h1>
-        <p class="dash-sub" id="hero-sub">内部资料</p>
+  <div class="mag-shell">
+    <header class="cover" id="cover">
+      <div class="cover-frame"></div>
+      <div class="cover-masthead">
+        <p class="cover-pretitle" id="cover-pretitle">内部周刊</p>
+        <p class="cover-issue" id="cover-issue">Vol.01</p>
+        <h1 class="cover-brand">WEEKLY MAGAZINE</h1>
+        <p class="cover-title" id="cover-title">本周重点摘要</p>
       </div>
-      <div class="dash-clock">
-        <p id="hero-issued">ISSUED</p>
-        <p id="hero-period">PERIOD</p>
+      <div class="cover-grid">
+        <aside class="cover-column cover-column-left">
+          <h2 class="cover-column-title">本期数据</h2>
+          <div id="cover-stats"></div>
+        </aside>
+        <section class="cover-column cover-column-main">
+          <h2 class="cover-headline" id="cover-headline">重点标题</h2>
+          <div class="cover-decks" id="cover-decks"></div>
+          <p class="cover-meta" id="cover-meta">报告周期</p>
+        </section>
+        <aside class="cover-column cover-column-right">
+          <h2 class="cover-column-title">栏目目录</h2>
+          <ol class="cover-toc" id="cover-toc"></ol>
+        </aside>
       </div>
     </header>
 
-    <section class="dash-kpi" id="kpi-strip"></section>
-
-    <div class="dash-body">
-      <aside class="dash-side">
-        <div class="dash-side-block">
-          <p class="dash-side-title">导航</p>
-          <button type="button" data-target="overview">本周要览</button>
-          <button type="button" data-target="work">重点工作</button>
-          <button type="button" data-target="data">数据看板</button>
-          <button type="button" data-target="issue">签发信息</button>
-        </div>
-        <div class="dash-side-block" id="summary-card"></div>
-        <div class="dash-side-actions">
-          <button type="button" id="print-btn">打印</button>
-          <button type="button" id="export-btn">导出 HTML</button>
-        </div>
-      </aside>
-
-      <main class="dash-content" id="content-root">
-        <section class="dash-section" id="overview" data-section="overview">
-          <div class="dash-section-head">
-            <p>Overview</p>
-            <h2>本周要览</h2>
-          </div>
-          <div class="dash-timeline" id="overview-list"></div>
-        </section>
-
-        <section class="dash-section" id="work" data-section="work">
-          <div class="dash-section-head">
-            <p>Work Streams</p>
-            <h2>重点工作</h2>
-          </div>
-          <div class="dash-tabs" id="work-tabs"></div>
-          <div class="dash-work-grid" id="work-panel"></div>
-        </section>
-
-        <section class="dash-section" id="data" data-section="data">
-          <div class="dash-section-head">
-            <p>Data</p>
-            <h2>数据看板</h2>
-          </div>
-          <div class="dash-data-grid">
-            <article class="dash-data-card" id="data-summary"></article>
-            <article class="dash-data-card">
-              <h3>对外合作推进度</h3>
-              <div id="data-cooperation"></div>
-            </article>
-            <article class="dash-data-card">
-              <h3>项目评审结果</h3>
-              <div id="data-defense"></div>
-            </article>
-            <article class="dash-data-card">
-              <h3>关键指标</h3>
-              <div class="dash-metrics" id="data-metrics"></div>
-            </article>
-          </div>
-        </section>
-
-        <section class="dash-section" id="issue" data-section="issue">
-          <div class="dash-section-head">
-            <p>Distribution</p>
-            <h2>签发信息</h2>
-          </div>
-          <div class="dash-issue" id="issue-footer"></div>
-        </section>
-      </main>
+    <div class="toolbar">
+      <div class="toolbar-brand" id="toolbar-brand">周报</div>
+      <nav class="toolbar-nav">
+        <a href="#overview" data-nav-link="overview">本周要览</a>
+        <a href="#work" data-nav-link="work">重点工作</a>
+        <a href="#data" data-nav-link="data">数据看板</a>
+        <a href="#issue" data-nav-link="issue">签发信息</a>
+      </nav>
+      <div class="toolbar-actions">
+        <button type="button" id="print-btn">打印</button>
+        <button type="button" id="export-btn">导出 HTML</button>
+      </div>
     </div>
+
+    <main class="main-content">
+      <section class="section" id="overview" data-section="overview">
+        <div class="section-head">
+          <p class="section-en">Weekly Highlights</p>
+          <h2>本周要览</h2>
+        </div>
+        <div class="overview-grid" id="overview-list"></div>
+      </section>
+
+      <section class="section" id="work" data-section="work">
+        <div class="section-head">
+          <p class="section-en">Key Progress</p>
+          <h2>重点工作</h2>
+        </div>
+        <div class="work-tabs" id="work-tabs"></div>
+        <div class="work-grid" id="work-panel"></div>
+      </section>
+
+      <section class="section" id="data" data-section="data">
+        <div class="section-head">
+          <p class="section-en">Data Dashboard</p>
+          <h2>数据看板</h2>
+        </div>
+        <div class="metric-wall" id="data-metrics"></div>
+        <div class="chart-grid">
+          <article class="chart-card">
+            <h3>项目评审结果</h3>
+            <div id="data-defense"></div>
+          </article>
+          <article class="chart-card">
+            <h3>对外合作推进进度</h3>
+            <div id="data-cooperation"></div>
+          </article>
+        </div>
+      </section>
+
+      <section class="section" id="issue" data-section="issue">
+        <div class="section-head">
+          <p class="section-en">Distribution</p>
+          <h2>签发信息</h2>
+        </div>
+        <div class="issue-card" id="issue-footer"></div>
+      </section>
+    </main>
   </div>
 
   <script id="template-data" type="application/json">__TEMPLATE_DATA__</script>

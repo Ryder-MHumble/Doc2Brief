@@ -3,79 +3,82 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>file2web 模板预览</title>
+  <title>Doc2Brief 模板预览</title>
   <style id="template-inline-style">__TEMPLATE_STYLE__</style>
 </head>
 <body data-template-id="template-03">
-  <div class="ink-shell">
-    <header class="ink-cover" id="cover">
-      <div class="ink-cover-inner">
-        <p class="ink-cover-en" id="cover-en">Weekly Report</p>
-        <h1 class="ink-cover-title" id="cover-title">周报</h1>
-        <p class="ink-cover-sub" id="cover-sub">第一期</p>
-        <div class="ink-cover-meta" id="cover-meta"></div>
-        <div class="ink-cover-stats" id="cover-stats"></div>
+  <div id="j-progress"><div id="j-progress-bar"></div></div>
+  <button id="j-btt" title="返回顶部">↑</button>
+
+  <div class="j-paper">
+    <header class="j-masthead">
+      <div class="mh-topband"></div>
+      <div class="mh-main">
+        <div class="mh-left">
+          <div class="mh-org-name" id="np-org-name">Doc2Brief Weekly Bulletin</div>
+          <div class="mh-dept-name" id="np-dept-name">自动生成周报</div>
+          <div class="mh-left-rule"></div>
+        </div>
+
+        <div class="mh-center">
+          <div class="mh-vol" id="np-vol-info">Vol.2026 · No.01 · Weekly</div>
+          <div class="mh-title" id="np-title">工作周报</div>
+          <div class="mh-title-deco">
+            <span></span>
+            <em id="np-title-en">Weekly Work Report</em>
+            <span></span>
+          </div>
+        </div>
+
+        <div class="mh-right">
+          <div class="mh-issue-label">ISSUE</div>
+          <div class="mh-issue-num" id="np-issue-number">01</div>
+          <div class="mh-date-range" id="np-date-range">本周周期</div>
+          <div class="mh-week-label" id="np-week-label">第 01 期</div>
+        </div>
       </div>
+
+      <div class="mh-foot">
+        <span class="mh-foot-info" id="np-editorial-info">主办：自动生成周报</span>
+        <span class="mh-foot-motto" id="np-motto">事实、进展、风险、计划</span>
+        <span class="mh-foot-badge" id="np-badge">内部资料 · 请勿外传</span>
+      </div>
+      <div class="mh-bottomband"><b></b><b></b><b></b></div>
     </header>
 
-    <div class="ink-nav">
-      <div class="ink-nav-brand" id="nav-brand">周报</div>
-      <nav class="ink-nav-links">
-        <a href="#overview" data-nav-link="overview">本周要览</a>
-        <a href="#work" data-nav-link="work">重点工作</a>
-        <a href="#data" data-nav-link="data">数据看板</a>
-        <a href="#issue" data-nav-link="issue">签发信息</a>
-      </nav>
-      <div class="ink-nav-actions">
-        <button type="button" id="print-btn">打印</button>
-        <button type="button" id="export-btn">导出 HTML</button>
+    <nav class="j-toc" id="j-toc">
+      <div class="toc-badge">本期目录</div>
+      <div class="toc-links" id="np-toc-links"></div>
+    </nav>
+
+    <section class="j-note j-reveal" id="s-note">
+      <div class="note-side">
+        <div class="note-side-line"></div>
+        <div class="note-side-cn">本期导读</div>
+        <div class="note-side-line"></div>
       </div>
-    </div>
+      <div class="note-body">
+        <div class="note-eyebrow" id="np-note-eyebrow">Editor's Note</div>
+        <p class="note-text" id="np-note-text">暂无导读内容。</p>
+      </div>
+    </section>
 
-    <main class="ink-main">
-      <section class="ink-section" id="overview" data-section="overview">
-        <div class="ink-section-head">
-          <p class="ink-section-en">Scroll Highlights</p>
-          <h2>本周要览</h2>
-        </div>
-        <div class="ink-overview-list" id="overview-list"></div>
-      </section>
+    <main class="j-grid" id="np-main-grid"></main>
 
-      <section class="ink-section" id="work" data-section="work">
-        <div class="ink-section-head">
-          <p class="ink-section-en">Key Work Progress</p>
-          <h2>重点工作</h2>
+    <footer class="j-footer">
+      <div class="ft-band"><b></b><b></b><b></b><b></b><b></b></div>
+      <div class="ft-body">
+        <div class="ft-l" id="np-footer-dept">自动生成周报</div>
+        <div class="ft-c">
+          <span id="np-footer-cn">本刊为内部资料，仅供工作参考，请妥善保管，未经许可不得对外传阅</span><br />
+          <span id="np-footer-en">Internal Use Only · Weekly Report Template</span>
         </div>
-        <div class="ink-work-tabs" id="work-tabs"></div>
-        <div class="ink-work-grid" id="work-panel"></div>
-      </section>
-
-      <section class="ink-section" id="data" data-section="data">
-        <div class="ink-section-head">
-          <p class="ink-section-en">Data Dashboard</p>
-          <h2>数据看板</h2>
+        <div class="ft-r">
+          <span id="np-footer-issue">第 01 期</span><br />
+          <span id="np-footer-date">出版日期：2026-04-17</span>
         </div>
-        <div class="ink-metric-wall" id="data-metrics"></div>
-        <div class="ink-data-grid">
-          <article class="ink-data-card">
-            <h3>项目评审结果</h3>
-            <div id="data-defense"></div>
-          </article>
-          <article class="ink-data-card">
-            <h3>推进进度</h3>
-            <div id="data-progress"></div>
-          </article>
-        </div>
-      </section>
-
-      <section class="ink-section" id="issue" data-section="issue">
-        <div class="ink-section-head">
-          <p class="ink-section-en">Distribution</p>
-          <h2>签发信息</h2>
-        </div>
-        <div class="ink-issue" id="issue-footer"></div>
-      </section>
-    </main>
+      </div>
+    </footer>
   </div>
 
   <script id="template-data" type="application/json">__TEMPLATE_DATA__</script>

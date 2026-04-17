@@ -1,5 +1,6 @@
 (() => {
-  const MODULE_NAME = 'template-news-runtime'
+  const MODULE_NAME = 'template-ink-runtime'
+  const previewLite = Boolean(window.__Doc2Brief_PREVIEW_LITE__)
 
   const escapeHtml = (value) =>
     String(value ?? '')
@@ -11,161 +12,378 @@
 
   const readPayload = () => {
     const node = document.getElementById('template-data')
-    if (!node) throw new Error('缺少 template-data 节点')
+    if (!node) {
+      throw new Error('缺少 template-data 节点')
+    }
     return JSON.parse(node.textContent || '{}')
   }
 
   const logBusinessJson = (stage, payload) => {
-    console.info('[业务JSON]', JSON.stringify({ module: MODULE_NAME, stage, timestamp: new Date().toISOString(), payload }, null, 2))
+    console.info(
+      '[业务JSON]',
+      JSON.stringify(
+        {
+          module: MODULE_NAME,
+          stage,
+          timestamp: new Date().toISOString(),
+          payload,
+        },
+        null,
+        2,
+      ),
+    )
   }
 
   const logSystem = (level, event, payload = {}) => {
     const logger = level === 'error' ? console.error : console.info
-    logger('[系统日志]', JSON.stringify({ module: MODULE_NAME, level, event, timestamp: new Date().toISOString(), payload }, null, 2))
+    logger(
+      '[系统日志]',
+      JSON.stringify(
+        {
+          module: MODULE_NAME,
+          level,
+          event,
+          timestamp: new Date().toISOString(),
+          payload,
+        },
+        null,
+        2,
+      ),
+    )
   }
 
-  const toneMeta = (item) => {
-    if (item.tone === 'done') return { color: 'var(--sage)', label: '已完成' }
-    if (item.tone === 'warning') return { color: 'var(--orange)', label: '待推进' }
-    return { color: 'var(--blue)', label: '进行中' }
+  const toArray = (value, limit = Infinity) => {
+    if (!Array.isArray(value)) return []
+    return value.slice(0, limit)
   }
 
-  const renderStory = (item) => {
-    const meta = toneMeta(item)
-    return `
-      <div class="story-item">
-        <div class="si-tag" style="color:${meta.color}"><div style="width:5px;height:5px;border-radius:50%;background:${meta.color}"></div>${escapeHtml(item.status || meta.label)}</div>
-        <div class="si-title">${escapeHtml(item.title)}</div>
-        <div class="si-body">${escapeHtml(item.body)}</div>
-        <div class="si-prog"><div class="si-prog-track"><div class="si-prog-fill" style="background:${meta.color};width:0" data-w="${escapeHtml(String(item.progress))}%"></div></div><div class="si-prog-val">${escapeHtml(String(item.progress))}%</div></div>
-      </div>
-    `
+  const splitValueUnit = (value, fallbackUnit = '') => {
+    const raw = String(value ?? '').trim()
+    if (!raw) return { value: '--', unit: fallbackUnit }
+    const match = raw.match(/^([+-]?\d+(?:\.\d+)?)(.*)$/)
+    if (!match) return { value: raw, unit: fallbackUnit }
+    return {
+      value: match[1],
+      unit: (match[2] || '').trim() || fallbackUnit,
+    }
   }
 
-  const renderDataProgress = (items, colorize) =>
-    items
-      .map((item) => {
-        const color = colorize(item)
-        return `<div class="dpl-item"><div class="dpl-label">${escapeHtml(item.title)}</div><div class="dpl-track"><div class="dpl-fill" style="background:${color};width:0" data-w="${escapeHtml(String(item.progress))}%"></div></div><div class="dpl-val">${escapeHtml(String(item.progress))}%</div></div>`
-      })
-      .join('')
+  const toneColor = (tone) => {
+    if (tone === 'done') return 'var(--jade)'
+    if (tone === 'warning') return 'var(--gold)'
+    return 'var(--indigo)'
+  }
+
+  const toPercent = (value, total) => {
+    if (!total || total <= 0) return 0
+    return Number(((Number(value || 0) / total) * 100).toFixed(1))
+  }
+
+  const renderProgress = (root = document) => {
+    root.querySelectorAll('[data-w]').forEach((node) => {
+      const target = node.getAttribute('data-w')
+      if (target) {
+        node.style.width = target
+      }
+    })
+  }
+
+  const groupConfig = [
+    { key: 'internal', label: '内部协同' },
+    { key: 'cooperation', label: '对外合作' },
+    { key: 'visit', label: '交流互访' },
+    { key: 'system', label: '体系建设' },
+  ]
 
   try {
     const startedAt = performance.now()
-    const previewLite = Boolean(window.__FILE2WEB_PREVIEW_LITE__)
-    logSystem('info', '模板启动')
+    logSystem('info', '模块启动', { previewLite })
 
     const payload = readPayload()
-    const vm = payload.viewModel?.news || {}
-    const masthead = vm.masthead || {}
-    const ticker = Array.isArray(vm.ticker) ? vm.ticker.slice(0, 6) : []
-    const hero = vm.hero || {}
+    const vm = payload.viewModel?.ink || {}
+    const cover = vm.cover || {}
+    const overview = toArray(vm.overview, 6)
     const groups = vm.groups || {}
     const data = vm.data || {}
     const footer = vm.footer || {}
+    const stats = toArray(cover.stats, 5)
 
-    const brandName = document.querySelector('.mh-name')
-    const dateNode = document.querySelector('.mh-date')
-    const issueNode = document.querySelector('.mh-issue')
-    if (brandName) brandName.textContent = masthead.brand || footer.issuedBy || '自动生成周报'
-    if (dateNode) dateNode.textContent = masthead.date || footer.dateOnly || ''
-    if (issueNode) issueNode.textContent = masthead.issueLabel || '第 01 期'
+    const defaultTitle = payload.meta?.title || '周报'
+    const defaultSub = payload.meta?.subtitle || '本周汇总'
 
-    const tickerNode = document.querySelector('.ticker-items')
-    if (tickerNode) {
-      const cells = [...ticker, ...ticker]
-      tickerNode.innerHTML = cells
-        .map((item, index) => `${index > 0 ? '<div class="ticker-dot"></div>' : ''}<div class="ticker-item">${escapeHtml(item.label || '指标')} <span class="ticker-val">${escapeHtml(item.value || '--')}${item.unit ? escapeHtml(item.unit) : ''}</span></div>`)
+    document.title = cover.title || defaultTitle
+
+    const coverEn = document.getElementById('cover-en')
+    const coverTitle = document.getElementById('cover-title')
+    const coverSub = document.getElementById('cover-sub')
+    const coverMeta = document.getElementById('cover-meta')
+    const coverStats = document.getElementById('cover-stats')
+    const navBrand = document.getElementById('nav-brand')
+
+    if (coverEn) coverEn.textContent = cover.enTitle || `${footer.issuedBy || '自动生成周报'} · Weekly Report`
+    if (coverTitle) coverTitle.textContent = cover.title || defaultTitle
+    if (coverSub) coverSub.textContent = cover.subTitle || '第一期'
+    if (coverMeta) {
+      coverMeta.textContent = `${cover.period || defaultSub} ｜ 发布日期：${cover.issuedAt || footer.date || ''} ｜ 发布单位：${cover.unit || footer.issuedBy || '自动生成周报'}`
+    }
+    if (navBrand) navBrand.textContent = cover.title || defaultTitle
+
+    if (coverStats) {
+      const source = stats.length > 0 ? stats : toArray(data.keyMetrics, 5)
+      coverStats.innerHTML = source
+        .map((item) => {
+          const parsed = splitValueUnit(item.value, item.unit)
+          return `
+            <article class="ink-cover-stat">
+              <div class="ink-cover-stat-value">${escapeHtml(parsed.value)}${
+                parsed.unit ? `<span class="ink-cover-stat-unit">${escapeHtml(parsed.unit)}</span>` : ''
+              }</div>
+              <div class="ink-cover-stat-label">${escapeHtml(item.label || '关键指标')}</div>
+            </article>
+          `
+        })
         .join('')
     }
 
-    const eyebrow = document.querySelector('.sh-eyebrow')
-    const headline = document.querySelector('.sh-headline')
-    const deck = document.querySelector('.sh-deck')
-    if (eyebrow) eyebrow.textContent = hero.eyebrow || '本周要览'
-    if (headline) headline.innerHTML = escapeHtml(hero.headline || payload.meta?.title || '未命名周报').replace(/\s+/g, '<br>')
-    if (deck) deck.textContent = hero.deck || payload.meta?.summary || '暂无摘要信息。'
-
-    const heroStats = document.querySelector('.sh-kpi-col')
-    if (heroStats) {
-      heroStats.innerHTML = (hero.stats || [])
+    const overviewList = document.getElementById('overview-list')
+    if (overviewList) {
+      const source = overview.length > 0 ? overview : toArray(payload.keyPoints, 5).map((item, index) => ({
+        number: String(index + 1).padStart(2, '0'),
+        tag: '要点',
+        title: item,
+        body: payload.meta?.summary || '暂无摘要',
+      }))
+      overviewList.innerHTML = source
         .map(
           (item, index) => `
-            <div class="sh-kpi-item">
-              <div class="ski-label">${escapeHtml(item.label || '指标')}</div>
-              <div class="ski-row"><div class="ski-num" style="color:${['var(--gold)','var(--sage)','var(--blue)','var(--orange)'][index % 4]}">${escapeHtml(item.value || '--')}</div><div class="ski-unit">${escapeHtml(item.unit || '')}</div></div>
-              <div class="ski-desc">${escapeHtml(item.detail || '')}</div>
+            <article class="ink-overview-item">
+              <div class="ink-overview-no">${escapeHtml(item.number || String(index + 1).padStart(2, '0'))}</div>
+              <div class="ink-overview-content">
+                <span class="ink-overview-tag">${escapeHtml(item.tag || '要点')}</span>
+                <h3 class="ink-overview-title">${escapeHtml(item.title || '待补充标题')}</h3>
+                <p class="ink-overview-body">${escapeHtml(item.body || '暂无补充说明。')}</p>
+              </div>
+            </article>
+          `,
+        )
+        .join('')
+    }
+
+    const workTabs = document.getElementById('work-tabs')
+    const workPanel = document.getElementById('work-panel')
+    let activeGroup = groupConfig.find((item) => toArray(groups[item.key]).length > 0)?.key || 'internal'
+
+    const renderWorkPanel = (groupKey) => {
+      if (!workPanel) return
+      const items = toArray(groups[groupKey], 8)
+      if (items.length === 0) {
+        workPanel.innerHTML = '<article class="ink-work-card"><p class="ink-work-body">当前分组暂无可展示内容。</p></article>'
+        return
+      }
+
+      workPanel.innerHTML = items
+        .map((item) => {
+          const color = toneColor(item.tone)
+          return `
+            <article class="ink-work-card" style="border-left-color:${color}">
+              <div class="ink-work-head">
+                <h3 class="ink-work-title">${escapeHtml(item.title || '待补充事项')}</h3>
+                <span class="ink-work-status" style="color:${color}">${escapeHtml(item.status || '进行中')}</span>
+              </div>
+              <p class="ink-work-body">${escapeHtml(item.body || '暂无补充说明。')}</p>
+              <div class="ink-work-progress">
+                <div class="ink-work-track"><div class="ink-work-fill" data-w="${escapeHtml(String(item.progress || 0))}%" style="background:${color}"></div></div>
+                <span class="ink-work-pct">${escapeHtml(String(item.progress || 0))}%</span>
+              </div>
+            </article>
+          `
+        })
+        .join('')
+
+      renderProgress(workPanel)
+    }
+
+    if (workTabs) {
+      workTabs.innerHTML = groupConfig
+        .map((item) => `<button type="button" data-group="${item.key}" class="${item.key === activeGroup ? 'active' : ''}">${item.label}</button>`)
+        .join('')
+
+      workTabs.querySelectorAll('button[data-group]').forEach((button) => {
+        button.addEventListener('click', () => {
+          const nextGroup = button.getAttribute('data-group')
+          if (!nextGroup) return
+          activeGroup = nextGroup
+          workTabs.querySelectorAll('button').forEach((node) => node.classList.remove('active'))
+          button.classList.add('active')
+          renderWorkPanel(activeGroup)
+        })
+      })
+    }
+
+    renderWorkPanel(activeGroup)
+
+    const metricsNode = document.getElementById('data-metrics')
+    if (metricsNode) {
+      const metrics = toArray(data.keyMetrics, 6)
+      const source = metrics.length > 0 ? metrics : stats
+      metricsNode.innerHTML = source
+        .slice(0, 6)
+        .map((item) => {
+          const parsed = splitValueUnit(item.value, item.unit)
+          return `
+            <article class="ink-metric-card">
+              <div class="ink-metric-value">${escapeHtml(parsed.value)}${
+                parsed.unit ? `<span class="ink-metric-unit">${escapeHtml(parsed.unit)}</span>` : ''
+              }</div>
+              <div class="ink-metric-label">${escapeHtml(item.label || '关键指标')}</div>
+            </article>
+          `
+        })
+        .join('')
+    }
+
+    const defenseNode = document.getElementById('data-defense')
+    if (defenseNode) {
+      const defense = data.defense || {}
+      const rows = [
+        { label: '通过评审', value: Number(defense.pass || 0), color: 'var(--jade)' },
+        { label: '待复审', value: Number(defense.fail || 0), color: 'var(--red)' },
+        { label: '需专项评估', value: Number(defense.revised || 0), color: 'var(--gold)' },
+        { label: '挂起项目', value: Number(defense.exam || 0), color: 'var(--indigo)' },
+      ]
+      const total = Math.max(Number(defense.total || 0), rows.reduce((sum, item) => sum + item.value, 0), 1)
+      defenseNode.innerHTML = rows
+        .map(
+          (row) => `
+            <div class="ink-row">
+              <span class="ink-row-label">${row.label}</span>
+              <div class="ink-row-track"><div class="ink-row-fill" data-w="${toPercent(row.value, total)}%" style="background:${row.color}"></div></div>
+              <span class="ink-row-val">${row.value}人</span>
             </div>
           `,
         )
         .join('')
     }
 
-    const bodyLayout = document.querySelector('.body-layout')
-    if (bodyLayout) {
-      bodyLayout.innerHTML = `
-        <div class="bl-col">
-          <div class="col-head"><div class="ch-label"><div class="ch-dot" style="background:var(--gold)"></div>内部协同</div><div class="ch-count">${escapeHtml(String((groups.internal || []).length))} ITEMS</div></div>
-          ${(groups.internal || []).map(renderStory).join('')}
-          <div style="padding:0 28px"><div style="border-top:1px solid var(--border);padding:16px 0"><div class="ch-label" style="margin-bottom:12px"><div class="ch-dot" style="background:var(--lavender)"></div>交流互访</div>${(groups.visit || []).slice(0,3).map((item) => `<div class="story-item" style="padding:12px 0;border-bottom:1px solid var(--border)"><div class="si-title" style="font-size:13px">${escapeHtml(item.title)}</div><div class="si-body" style="font-size:11.5px">${escapeHtml(item.body)}</div></div>`).join('')}</div></div>
-        </div>
-        <div class="bl-col">
-          <div class="col-head"><div class="ch-label"><div class="ch-dot" style="background:var(--coral)"></div>对外合作 · 体系建设</div><div class="ch-count">${escapeHtml(String((groups.cooperation || []).length + (groups.system || []).length))} ITEMS</div></div>
-          ${(groups.cooperation || []).map(renderStory).join('')}
-          <div style="padding:0 28px"><div style="border-top:1px solid var(--border);padding-top:16px;margin-top:4px"><div class="ch-label" style="margin-bottom:12px"><div class="ch-dot" style="background:var(--gold)"></div>体系建设</div></div></div>
-          ${(groups.system || []).map(renderStory).join('')}
-        </div>
-        <div class="bl-col">
-          <div class="col-head"><div class="ch-label"><div class="ch-dot" style="background:var(--lavender)"></div>数据看板</div></div>
-          <div class="dp-section"><div class="dp-title">关键数字</div><div class="dp-nums">${(data.keyMetrics || []).map((item, index) => `<div class="dp-num-cell"><div class="dn-val" style="color:${['var(--gold)','var(--sage)','var(--blue)','var(--orange)','var(--lavender)','var(--coral)'][index % 6]}">${escapeHtml(item.value || '--')}</div><div class="dn-label">${escapeHtml(item.label || '指标')}</div></div>`).join('')}</div></div>
-          <div class="dp-section"><div class="dp-title">项目评审结果</div><div class="dp-donut-wrap"><div class="dp-legend" style="width:100%"><div class="dp-l-item"><div class="dp-l-dot" style="background:var(--sage)"></div><div class="dp-l-name">评审总数</div><div class="dp-l-val">${escapeHtml(String(data.defense?.total || 0))}</div></div><div class="dp-l-item"><div class="dp-l-dot" style="background:var(--blue)"></div><div class="dp-l-name">通过评审</div><div class="dp-l-val">${escapeHtml(String(data.defense?.pass || 0))}</div></div><div class="dp-l-item"><div class="dp-l-dot" style="background:var(--coral)"></div><div class="dp-l-name">待复审</div><div class="dp-l-val">${escapeHtml(String(data.defense?.fail || 0))}</div></div><div class="dp-l-item"><div class="dp-l-dot" style="background:var(--gold)"></div><div class="dp-l-name">需专项评估</div><div class="dp-l-val">${escapeHtml(String(data.defense?.revised || 0))}</div></div></div></div></div>
-          <div class="dp-section"><div class="dp-title">合作推进度</div><div class="dp-prog-list">${renderDataProgress(data.cooperation || [], (item) => toneMeta(item).color)}</div></div>
-          <div class="dp-section"><div class="dp-title">本周外部协同亮点</div><div style="background:var(--surface2);border-radius:8px;padding:14px;border:1px solid var(--border)"><div style="font-size:28px;font-weight:800;color:var(--gold);font-family:'Syne',sans-serif;letter-spacing:-1px;line-height:1;margin-bottom:4px">${escapeHtml(String((data.international || []).length))}<span style="font-size:14px;color:var(--muted);font-weight:400">条亮点</span></div><div style="font-size:11px;color:var(--muted);margin-bottom:10px">来自巡检、客户走访与合作沟通</div>${(data.international || []).slice(0,4).map((item) => `<div style="font-size:10px;color:var(--muted);margin-bottom:6px">${escapeHtml(item.title)}</div>`).join('')}</div></div>
-        </div>
+    const progressNode = document.getElementById('data-progress')
+    if (progressNode) {
+      const cooperation = toArray(data.cooperation, 4).map((item) => ({ ...item, prefix: '合作' }))
+      const system = toArray(data.system, 4).map((item) => ({ ...item, prefix: '体系' }))
+      const rows = [...cooperation, ...system]
+      if (rows.length === 0) {
+        progressNode.innerHTML = '<div class="ink-row"><span class="ink-row-label">暂无数据</span><div class="ink-row-track"></div><span class="ink-row-val">--</span></div>'
+      } else {
+        progressNode.innerHTML = rows
+          .map(
+            (row) => `
+              <div class="ink-row">
+                <span class="ink-row-label">${escapeHtml(row.prefix)}·${escapeHtml(row.title || '事项')}</span>
+                <div class="ink-row-track"><div class="ink-row-fill" data-w="${escapeHtml(String(row.progress || 0))}%" style="background:${toneColor(row.tone)}"></div></div>
+                <span class="ink-row-val">${escapeHtml(String(row.progress || 0))}%</span>
+              </div>
+            `,
+          )
+          .join('')
+      }
+    }
+
+    const issueNode = document.getElementById('issue-footer')
+    if (issueNode) {
+      issueNode.innerHTML = `
+        <article class="ink-issue-item">
+          <h4>报送对象</h4>
+          <p>${escapeHtml(footer.recipient || '相关负责人')}</p>
+        </article>
+        <article class="ink-issue-item">
+          <h4>发送范围</h4>
+          <p>${escapeHtml(footer.distribution || '相关部门')}</p>
+        </article>
+        <article class="ink-issue-item">
+          <h4>责编 / 核发</h4>
+          <p>责编：${escapeHtml(footer.editor || '（待填写）')}<br>核发：${escapeHtml(footer.reviewer || '（待填写）')}</p>
+        </article>
+        <article class="ink-issue-item">
+          <h4>发布日期</h4>
+          <p>${escapeHtml(footer.date || footer.dateOnly || '')}</p>
+        </article>
       `
     }
 
-    const bottomStrip = document.querySelector('.bottom-strip')
-    if (bottomStrip) {
-      bottomStrip.innerHTML = `
-        <div class="bs-cell"><div class="bsc-label">报送对象</div><div class="bsc-val">${escapeHtml(footer.recipient || '相关负责人')}</div></div>
-        <div class="bs-cell"><div class="bsc-label">发送范围</div><div class="bsc-val">${escapeHtml(footer.distribution || '相关部门')}</div></div>
-        <div class="bs-cell"><div class="bsc-label">责编 / 核发</div><div class="bsc-val">责编：${escapeHtml(footer.editor || '（待填写）')} · 核发：${escapeHtml(footer.reviewer || '（待填写）')}</div></div>
-        <div class="bs-cell"><div class="bs-stamp">${escapeHtml(footer.dateOnly || '')}<br>${escapeHtml(masthead.issueLabel || '第 01 期')}</div></div>
-      `
+    const navLinks = Array.from(document.querySelectorAll('[data-nav-link]'))
+    const setActiveNav = (id) => {
+      navLinks.forEach((item) => item.classList.toggle('active', item.dataset.navLink === id))
+    }
+
+    navLinks.forEach((link) => {
+      link.addEventListener('click', (event) => {
+        event.preventDefault()
+        const targetId = link.getAttribute('href')?.replace('#', '')
+        if (!targetId) return
+        const target = document.getElementById(targetId)
+        if (!target) return
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      })
+    })
+
+    setActiveNav('overview')
+
+    if ('IntersectionObserver' in window) {
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              setActiveNav(entry.target.id)
+            }
+          })
+        },
+        { rootMargin: '-30% 0px -55% 0px' },
+      )
+
+      ;['overview', 'work', 'data', 'issue'].forEach((id) => {
+        const node = document.getElementById(id)
+        if (node) observer.observe(node)
+      })
+    }
+
+    if (previewLite) {
+      renderProgress(document)
+    } else if ('requestAnimationFrame' in window) {
+      window.requestAnimationFrame(() => {
+        window.setTimeout(() => renderProgress(document), 120)
+      })
+    } else {
+      renderProgress(document)
+    }
+
+    const printButton = document.getElementById('print-btn')
+    if (printButton) {
+      printButton.addEventListener('click', () => window.print())
+    }
+
+    window.exportHTML = () => {
+      const blob = new Blob(['<!DOCTYPE html>\n' + document.documentElement.outerHTML], { type: 'text/html;charset=utf-8' })
+      const link = document.createElement('a')
+      link.href = URL.createObjectURL(blob)
+      link.download = '周报_国风卷轴版.html'
+      link.click()
+      window.setTimeout(() => URL.revokeObjectURL(link.href), 3000)
+    }
+
+    const exportButton = document.getElementById('export-btn')
+    if (exportButton) {
+      exportButton.addEventListener('click', () => window.exportHTML())
     }
 
     logBusinessJson('render_payload', {
-      ticker: ticker.length,
-      internal: (groups.internal || []).length,
-      cooperation: (groups.cooperation || []).length,
-      visit: (groups.visit || []).length,
-      system: (groups.system || []).length,
-      previewLite,
+      stats: stats.length,
+      overview: overview.length,
+      internal: toArray(groups.internal).length,
+      cooperation: toArray(groups.cooperation).length,
+      visit: toArray(groups.visit).length,
+      system: toArray(groups.system).length,
     })
-    logSystem('info', '模板完成', { elapsedMs: Number((performance.now() - startedAt).toFixed(2)) })
+    logSystem('info', '模块完成', { elapsedMs: Number((performance.now() - startedAt).toFixed(2)) })
   } catch (error) {
-    logSystem('error', '模板渲染失败', { message: error instanceof Error ? error.message : String(error) })
+    logSystem('error', '模块渲染失败', { message: error instanceof Error ? error.message : String(error) })
   }
 })()
-
-const previewLite = Boolean(window.__FILE2WEB_PREVIEW_LITE__)
-
-if (previewLite) {
-  document.querySelectorAll('.story-item,.fade-up,.data-card').forEach((el) => el.classList.add('vis'))
-  document.querySelectorAll('[data-w]').forEach((el) => {
-    el.style.width = el.dataset.w || '0'
-  })
-} else {
-  const io=new IntersectionObserver(entries=>{
-    entries.forEach(e=>{
-      if(!e.isIntersecting)return;
-      e.target.classList.add('vis');
-      e.target.querySelectorAll('[data-w]').forEach(el=>{
-        setTimeout(()=>el.style.width=el.dataset.w,300);
-      });
-      io.unobserve(e.target);
-    });
-  },{threshold:.04});
-  document.querySelectorAll('.story-item,.fade-up,.data-card').forEach(el=>io.observe(el));
-}

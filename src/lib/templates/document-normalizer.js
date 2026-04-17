@@ -4,7 +4,7 @@ export function normalizeDocument(document) {
   return {
     ...document,
     title: document.title?.trim() || '未命名文档',
-    subtitle: document.subtitle?.trim() || 'file2web 自动生成报告',
+    subtitle: document.subtitle?.trim() || 'Doc2Brief 自动生成报告',
     summary: document.summary?.trim() || '暂无摘要信息。',
     highlights: document.highlights ?? [],
     metrics: document.metrics ?? [],

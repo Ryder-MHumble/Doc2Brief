@@ -60,7 +60,7 @@ function buildRuntimeScript(templateScript, runtimeMode) {
   }
 
   const previewBootstrap = `
-window.__FILE2WEB_PREVIEW_LITE__ = true;
+window.__Doc2Brief_PREVIEW_LITE__ = true;
 (function () {
   const nativeSetInterval = window.setInterval.bind(window);
   window.setInterval = function (handler, timeout, ...rest) {

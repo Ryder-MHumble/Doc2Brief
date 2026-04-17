@@ -1,6 +1,6 @@
 (() => {
-  const MODULE_NAME = 'template-dashboard-runtime'
-  const previewLite = Boolean(window.__FILE2WEB_PREVIEW_LITE__)
+  const MODULE_NAME = 'template-magazine-runtime'
+  const previewLite = Boolean(window.__Doc2Brief_PREVIEW_LITE__)
 
   const escapeHtml = (value) =>
     String(value ?? '')
@@ -68,105 +68,139 @@
     }
   }
 
+  const getIssueNo = (label) => {
+    const match = String(label || '').match(/(\d+)/)
+    return String(match?.[1] || '1').padStart(2, '0')
+  }
+
   const toneColor = (tone) => {
-    if (tone === 'done') return 'var(--lime)'
-    if (tone === 'warning') return 'var(--amber)'
-    return 'var(--cyan)'
+    if (tone === 'done') return 'var(--ok)'
+    if (tone === 'warning') return 'var(--warn)'
+    return 'var(--progress)'
   }
 
-  const countSummaryFromGroups = (groups) => {
-    const items = Object.values(groups || {}).flatMap((value) => (Array.isArray(value) ? value : []))
-    return {
-      done: items.filter((item) => item.tone === 'done').length,
-      progress: items.filter((item) => item.tone === 'progress').length,
-      pending: items.filter((item) => item.tone === 'warning').length,
-    }
+  const toPercent = (value, total) => {
+    if (!total || total <= 0) return 0
+    return Number(((Number(value || 0) / total) * 100).toFixed(1))
   }
 
-  const renderProgress = (root = document) => {
+  const renderProgressBars = (root = document) => {
     root.querySelectorAll('[data-w]').forEach((node) => {
       const target = node.getAttribute('data-w')
-      if (target) node.style.width = target
+      if (!target) return
+      node.style.width = target
     })
   }
 
-  const groupConfig = [
+  const sectionGroups = [
     { key: 'internal', label: '内部协同' },
     { key: 'cooperation', label: '对外合作' },
     { key: 'visit', label: '交流互访' },
     { key: 'system', label: '体系建设' },
   ]
 
+  const chineseNumbers = ['一', '二', '三', '四', '五', '六', '七', '八', '九', '十']
+
   try {
     const startedAt = performance.now()
     logSystem('info', '模块启动', { previewLite })
 
     const payload = readPayload()
-    const vm = payload.viewModel?.dashboardPlus || {}
-    const hero = vm.hero || {}
-    const stats = toArray(vm.stats, 5)
+    const vm = payload.viewModel?.magazine || {}
+    const cover = vm.cover || {}
+    const stats = toArray(vm.stats, 6)
+    const toc = toArray(vm.toc, 8)
     const overview = toArray(vm.overview, 6)
     const groups = vm.groups || {}
     const data = vm.data || {}
     const footer = vm.footer || {}
-    const summaryCounts = vm.summaryCounts || countSummaryFromGroups(groups)
+    const issueNo = getIssueNo(cover.issueLabel)
 
-    const heroTitle = document.getElementById('hero-title')
-    const heroSub = document.getElementById('hero-sub')
-    const heroIssued = document.getElementById('hero-issued')
-    const heroPeriod = document.getElementById('hero-period')
+    const decks = toArray(cover.decks || payload.keyPoints || [], 3).filter((item) => String(item || '').trim())
 
-    if (heroTitle) heroTitle.textContent = hero.title || payload.meta?.title || '周报'
-    if (heroSub) heroSub.textContent = hero.subtitle || payload.meta?.subtitle || '内部资料'
-    if (heroIssued) heroIssued.textContent = hero.issuedAt || footer.dateOnly || 'ISSUED'
-    if (heroPeriod) heroPeriod.textContent = hero.period || payload.meta?.subtitle || 'PERIOD'
+    const defaultTitle = payload.meta?.title || '周报'
+    const defaultSubtitle = payload.meta?.subtitle || '本周汇总'
 
-    const kpiStrip = document.getElementById('kpi-strip')
-    if (kpiStrip) {
-      kpiStrip.innerHTML = (stats.length > 0 ? stats : toArray(data.keyMetrics, 5))
-        .slice(0, 5)
+    document.title = cover.headline || defaultTitle
+
+    const coverPretitle = document.getElementById('cover-pretitle')
+    const coverIssue = document.getElementById('cover-issue')
+    const coverTitle = document.getElementById('cover-title')
+    const coverHeadline = document.getElementById('cover-headline')
+    const coverDecks = document.getElementById('cover-decks')
+    const coverMeta = document.getElementById('cover-meta')
+    const coverStats = document.getElementById('cover-stats')
+    const coverToc = document.getElementById('cover-toc')
+    const toolbarBrand = document.getElementById('toolbar-brand')
+
+    if (coverPretitle) {
+      coverPretitle.textContent = `${footer.issuedBy || '自动生成周报'} · Internal Affairs Magazine`
+    }
+    if (coverIssue) {
+      coverIssue.textContent = cover.issueLabel || `Vol.${issueNo}`
+    }
+    if (coverTitle) {
+      coverTitle.textContent = defaultTitle
+    }
+    if (coverHeadline) {
+      coverHeadline.textContent = cover.headline || defaultTitle
+    }
+    if (coverDecks) {
+      const content = decks.length > 0 ? decks : [payload.meta?.summary || '暂无摘要']
+      coverDecks.innerHTML = content.map((item) => `<p>${escapeHtml(item)}</p>`).join('')
+    }
+    if (coverMeta) {
+      coverMeta.textContent = `${cover.period || defaultSubtitle} ｜ ${cover.unit || footer.issuedBy || '自动生成周报'}`
+    }
+    if (coverStats) {
+      const statItems = (stats.length > 0 ? stats : toArray(data.keyMetrics, 4)).slice(0, 4)
+      coverStats.innerHTML = statItems
         .map((item) => {
           const parsed = splitValueUnit(item.value, item.unit)
           return `
-            <article class="dash-kpi-item">
-              <p class="dash-kpi-label">${escapeHtml(item.label || '关键指标')}</p>
-              <div class="dash-kpi-value">${escapeHtml(parsed.value)}${parsed.unit ? `<span style="font-size:13px;color:var(--muted)">${escapeHtml(parsed.unit)}</span>` : ''}</div>
-              <p class="dash-kpi-detail">${escapeHtml(item.detail || item.sub || '')}</p>
+            <article class="cover-stat">
+              <div class="cover-stat-label">${escapeHtml(item.label || '关键指标')}</div>
+              <div class="cover-stat-value">${escapeHtml(parsed.value)}${
+                parsed.unit ? `<span class="cover-stat-unit">${escapeHtml(parsed.unit)}</span>` : ''
+              }</div>
+              <div class="cover-stat-detail">${escapeHtml(item.detail || item.sub || '')}</div>
             </article>
           `
         })
         .join('')
     }
-
-    const summaryCard = document.getElementById('summary-card')
-    if (summaryCard) {
-      summaryCard.innerHTML = `
-        <p class="dash-side-title">执行状态</p>
-        <div class="dash-summary-grid">
-          <article class="dash-summary-cell"><h4>已完成</h4><p style="color:var(--lime)">${escapeHtml(String(summaryCounts.done || 0))}</p></article>
-          <article class="dash-summary-cell"><h4>进行中</h4><p style="color:var(--cyan)">${escapeHtml(String(summaryCounts.progress || 0))}</p></article>
-          <article class="dash-summary-cell"><h4>待推进</h4><p style="color:var(--amber)">${escapeHtml(String(summaryCounts.pending || 0))}</p></article>
-        </div>
-      `
+    if (coverToc) {
+      const tocItems = toc.length > 0 ? toc : ['本周要览', '重点工作', '数据看板', '签发信息']
+      coverToc.innerHTML = tocItems
+        .map(
+          (item, index) =>
+            `<li><span class="cover-toc-no">${chineseNumbers[index] || String(index + 1)}</span><span>${escapeHtml(item)}</span></li>`,
+        )
+        .join('')
+    }
+    if (toolbarBrand) {
+      toolbarBrand.textContent = `周报 · 第 ${issueNo} 期`
     }
 
     const overviewList = document.getElementById('overview-list')
     if (overviewList) {
-      const source = overview.length > 0 ? overview : toArray(payload.keyPoints, 5).map((item) => ({
+      const source = overview.length > 0 ? overview : toArray(payload.keyPoints, 4).map((item, index) => ({
+        number: String(index + 1).padStart(2, '0'),
         tag: '要点',
         title: item,
-        body: payload.meta?.summary || '暂无摘要',
+        body: payload.meta?.summary || '',
       }))
 
       overviewList.innerHTML = source
         .map(
-          (item) => `
-            <article class="dash-item">
-              <div class="dash-item-tag">${escapeHtml(item.tag || '重点')}</div>
-              <div class="dash-item-main">
-                <h3 class="dash-item-title">${escapeHtml(item.title || '待补充标题')}</h3>
-                <p class="dash-item-body">${escapeHtml(item.body || '暂无补充说明。')}</p>
+          (item, index) => `
+            <article class="overview-card">
+              <div class="overview-meta">
+                <span class="overview-no">${escapeHtml(item.number || String(index + 1).padStart(2, '0'))}</span>
+                <span class="overview-tag">${escapeHtml(item.tag || '重点')}</span>
               </div>
+              <h3>${escapeHtml(item.title || '待补充标题')}</h3>
+              <p>${escapeHtml(item.body || '暂无补充说明。')}</p>
             </article>
           `,
         )
@@ -175,13 +209,13 @@
 
     const workTabs = document.getElementById('work-tabs')
     const workPanel = document.getElementById('work-panel')
-    let activeGroup = groupConfig.find((item) => toArray(groups[item.key]).length > 0)?.key || 'internal'
+    let activeGroup = sectionGroups.find((item) => toArray(groups[item.key]).length > 0)?.key || 'internal'
 
     const renderWorkPanel = (groupKey) => {
       if (!workPanel) return
       const items = toArray(groups[groupKey], 8)
       if (items.length === 0) {
-        workPanel.innerHTML = '<article class="dash-work-card"><p class="dash-work-body">当前分组暂无可展示内容。</p></article>'
+        workPanel.innerHTML = '<article class="work-card"><p class="work-body">当前分组暂无可展示内容。</p></article>'
         return
       }
 
@@ -189,27 +223,30 @@
         .map((item) => {
           const color = toneColor(item.tone)
           return `
-            <article class="dash-work-card">
-              <div class="dash-work-head">
-                <h3 class="dash-work-title">${escapeHtml(item.title || '待补充事项')}</h3>
-                <span class="dash-work-status" style="color:${color}">${escapeHtml(item.status || '进行中')}</span>
+            <article class="work-card">
+              <div class="work-head">
+                <h3 class="work-title">${escapeHtml(item.title || '待补充事项')}</h3>
+                <span class="work-status" style="color:${color}">${escapeHtml(item.status || '进行中')}</span>
               </div>
-              <p class="dash-work-body">${escapeHtml(item.body || '暂无补充说明。')}</p>
-              <div class="dash-work-progress">
-                <div class="dash-work-track"><div class="dash-work-fill" data-w="${escapeHtml(String(item.progress || 0))}%" style="background:${color}"></div></div>
-                <span class="dash-work-pct">${escapeHtml(String(item.progress || 0))}%</span>
+              <p class="work-body">${escapeHtml(item.body || '暂无补充说明。')}</p>
+              <div class="work-progress">
+                <div class="work-track"><div class="work-fill" data-w="${escapeHtml(String(item.progress || 0))}%" style="background:${color}"></div></div>
+                <span class="work-pct">${escapeHtml(String(item.progress || 0))}%</span>
               </div>
             </article>
           `
         })
         .join('')
 
-      renderProgress(workPanel)
+      renderProgressBars(workPanel)
     }
 
     if (workTabs) {
-      workTabs.innerHTML = groupConfig
-        .map((item) => `<button type="button" data-group="${item.key}" class="${item.key === activeGroup ? 'active' : ''}">${item.label}</button>`)
+      workTabs.innerHTML = sectionGroups
+        .map(
+          (group) =>
+            `<button type="button" data-group="${group.key}" class="${group.key === activeGroup ? 'active' : ''}">${group.label}</button>`,
+        )
         .join('')
 
       workTabs.querySelectorAll('button[data-group]').forEach((button) => {
@@ -217,7 +254,7 @@
           const nextGroup = button.getAttribute('data-group')
           if (!nextGroup) return
           activeGroup = nextGroup
-          workTabs.querySelectorAll('button').forEach((node) => node.classList.remove('active'))
+          workTabs.querySelectorAll('button').forEach((item) => item.classList.remove('active'))
           button.classList.add('active')
           renderWorkPanel(activeGroup)
         })
@@ -226,31 +263,62 @@
 
     renderWorkPanel(activeGroup)
 
-    const dataSummary = document.getElementById('data-summary')
-    if (dataSummary) {
-      dataSummary.innerHTML = `
-        <h3>执行概览</h3>
-        <div class="dash-summary-grid">
-          <article class="dash-summary-cell"><h4>已完成</h4><p style="color:var(--lime)">${escapeHtml(String(summaryCounts.done || 0))}</p></article>
-          <article class="dash-summary-cell"><h4>进行中</h4><p style="color:var(--cyan)">${escapeHtml(String(summaryCounts.progress || 0))}</p></article>
-          <article class="dash-summary-cell"><h4>待推进</h4><p style="color:var(--amber)">${escapeHtml(String(summaryCounts.pending || 0))}</p></article>
-        </div>
-      `
+    const dataMetrics = document.getElementById('data-metrics')
+    if (dataMetrics) {
+      const metrics = toArray(data.keyMetrics, 5)
+      const source = metrics.length > 0 ? metrics : stats
+      dataMetrics.innerHTML = source
+        .slice(0, 5)
+        .map((item) => {
+          const parsed = splitValueUnit(item.value, item.unit)
+          return `
+            <article class="metric-card">
+              <div class="metric-value">${escapeHtml(parsed.value)}${
+                parsed.unit ? `<span class="metric-unit">${escapeHtml(parsed.unit)}</span>` : ''
+              }</div>
+              <div class="metric-label">${escapeHtml(item.label || '关键指标')}</div>
+            </article>
+          `
+        })
+        .join('')
+    }
+
+    const defenseNode = document.getElementById('data-defense')
+    if (defenseNode) {
+      const defense = data.defense || {}
+      const defenseRows = [
+        { label: '通过评审', value: Number(defense.pass || 0), color: 'var(--ok)' },
+        { label: '待复审', value: Number(defense.fail || 0), color: 'var(--accent)' },
+        { label: '需专项评估', value: Number(defense.revised || 0), color: 'var(--accent-gold)' },
+        { label: '挂起项目', value: Number(defense.exam || 0), color: 'var(--progress)' },
+      ]
+      const total = Math.max(Number(defense.total || 0), defenseRows.reduce((sum, item) => sum + item.value, 0), 1)
+      defenseNode.innerHTML = defenseRows
+        .map(
+          (row) => `
+            <div class="chart-row">
+              <span class="chart-label">${row.label}</span>
+              <div class="chart-track"><div class="chart-fill" data-w="${toPercent(row.value, total)}%" style="background:${row.color}"></div></div>
+              <span class="chart-val">${row.value}人</span>
+            </div>
+          `,
+        )
+        .join('')
     }
 
     const cooperationNode = document.getElementById('data-cooperation')
     if (cooperationNode) {
       const cooperation = toArray(data.cooperation, 6)
       if (cooperation.length === 0) {
-        cooperationNode.innerHTML = '<div class="dash-row"><span class="dash-row-label">暂无数据</span><div class="dash-row-track"></div><span class="dash-row-val">--</span></div>'
+        cooperationNode.innerHTML = '<div class="chart-row"><span class="chart-label">暂无数据</span><div class="chart-track"></div><span class="chart-val">--</span></div>'
       } else {
         cooperationNode.innerHTML = cooperation
           .map(
             (item) => `
-              <div class="dash-row">
-                <span class="dash-row-label">${escapeHtml(item.title || '合作项')}</span>
-                <div class="dash-row-track"><div class="dash-row-fill" data-w="${escapeHtml(String(item.progress || 0))}%" style="background:${toneColor(item.tone)}"></div></div>
-                <span class="dash-row-val">${escapeHtml(String(item.progress || 0))}%</span>
+              <div class="chart-row">
+                <span class="chart-label">${escapeHtml(item.title || '合作项')}</span>
+                <div class="chart-track"><div class="chart-fill" data-w="${escapeHtml(String(item.progress || 0))}%" style="background:${toneColor(item.tone)}"></div></div>
+                <span class="chart-val">${escapeHtml(String(item.progress || 0))}%</span>
               </div>
             `,
           )
@@ -258,114 +326,76 @@
       }
     }
 
-    const defenseNode = document.getElementById('data-defense')
-    if (defenseNode) {
-      const defense = data.defense || {}
-      const rows = [
-        { label: '通过评审', value: Number(defense.pass || 0), color: 'var(--lime)' },
-        { label: '待复审', value: Number(defense.fail || 0), color: 'var(--rose)' },
-        { label: '需专项评估', value: Number(defense.revised || 0), color: 'var(--amber)' },
-        { label: '挂起项目', value: Number(defense.exam || 0), color: 'var(--cyan)' },
-      ]
-      const total = Math.max(Number(defense.total || 0), rows.reduce((sum, item) => sum + item.value, 0), 1)
-      defenseNode.innerHTML = rows
-        .map(
-          (row) => `
-            <div class="dash-row">
-              <span class="dash-row-label">${row.label}</span>
-              <div class="dash-row-track"><div class="dash-row-fill" data-w="${Number(((row.value / total) * 100).toFixed(1))}%" style="background:${row.color}"></div></div>
-              <span class="dash-row-val">${row.value}人</span>
-            </div>
-          `,
-        )
-        .join('')
-    }
-
-    const metricsNode = document.getElementById('data-metrics')
-    if (metricsNode) {
-      const metrics = toArray(data.keyMetrics, 6)
-      const source = metrics.length > 0 ? metrics : stats
-      metricsNode.innerHTML = source
-        .slice(0, 6)
-        .map((item) => {
-          const parsed = splitValueUnit(item.value, item.unit)
-          return `
-            <article class="dash-metric">
-              <div class="dash-metric-value">${escapeHtml(parsed.value)}${
-                parsed.unit ? `<span class="dash-metric-unit">${escapeHtml(parsed.unit)}</span>` : ''
-              }</div>
-              <div class="dash-metric-label">${escapeHtml(item.label || '指标')}</div>
-            </article>
-          `
-        })
-        .join('')
-    }
-
-    const issueNode = document.getElementById('issue-footer')
-    if (issueNode) {
-      issueNode.innerHTML = `
-        <article class="dash-issue-item">
+    const issueFooter = document.getElementById('issue-footer')
+    if (issueFooter) {
+      issueFooter.innerHTML = `
+        <article class="issue-item">
           <h4>报送对象</h4>
           <p>${escapeHtml(footer.recipient || '相关负责人')}</p>
         </article>
-        <article class="dash-issue-item">
+        <article class="issue-item">
           <h4>发送范围</h4>
           <p>${escapeHtml(footer.distribution || '相关部门')}</p>
         </article>
-        <article class="dash-issue-item">
+        <article class="issue-item">
           <h4>责编 / 核发</h4>
           <p>责编：${escapeHtml(footer.editor || '（待填写）')}<br>核发：${escapeHtml(footer.reviewer || '（待填写）')}</p>
         </article>
-        <article class="dash-issue-item">
+        <article class="issue-item">
           <h4>发布日期</h4>
           <p>${escapeHtml(footer.date || footer.dateOnly || '')}</p>
         </article>
       `
     }
 
-    const sideButtons = Array.from(document.querySelectorAll('.dash-side button[data-target]'))
-    const setActiveSide = (id) => {
-      sideButtons.forEach((button) => {
-        button.classList.toggle('active', button.dataset.target === id)
-      })
-    }
-
-    sideButtons.forEach((button) => {
-      button.addEventListener('click', () => {
-        const targetId = button.dataset.target
+    const navLinks = Array.from(document.querySelectorAll('[data-nav-link]'))
+    navLinks.forEach((link) => {
+      link.addEventListener('click', (event) => {
+        event.preventDefault()
+        const targetId = link.getAttribute('href')?.replace('#', '')
         if (!targetId) return
-        const node = document.getElementById(targetId)
-        if (!node) return
-        node.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        const target = document.getElementById(targetId)
+        if (!target) return
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' })
       })
     })
 
-    setActiveSide('overview')
+    const sectionIds = ['overview', 'work', 'data', 'issue']
+    const setActiveNav = (id) => {
+      navLinks.forEach((item) => item.classList.toggle('active', item.dataset.navLink === id))
+    }
+    setActiveNav('overview')
 
     if ('IntersectionObserver' in window) {
-      const observer = new IntersectionObserver(
+      const navObserver = new IntersectionObserver(
         (entries) => {
           entries.forEach((entry) => {
-            if (entry.isIntersecting) setActiveSide(entry.target.id)
+            if (entry.isIntersecting) {
+              setActiveNav(entry.target.id)
+            }
           })
         },
         { rootMargin: '-30% 0px -55% 0px' },
       )
 
-      ;['overview', 'work', 'data', 'issue'].forEach((id) => {
+      sectionIds.forEach((id) => {
         const node = document.getElementById(id)
-        if (node) observer.observe(node)
+        if (node) navObserver.observe(node)
       })
     }
 
+    const runAnimate = () => {
+      renderProgressBars(document)
+    }
+
     if (previewLite) {
-      renderProgress(document)
+      runAnimate()
     } else if ('requestAnimationFrame' in window) {
       window.requestAnimationFrame(() => {
-        window.setTimeout(() => renderProgress(document), 120)
+        window.setTimeout(runAnimate, 120)
       })
     } else {
-      renderProgress(document)
+      runAnimate()
     }
 
     const printButton = document.getElementById('print-btn')
@@ -377,7 +407,7 @@
       const blob = new Blob(['<!DOCTYPE html>\n' + document.documentElement.outerHTML], { type: 'text/html;charset=utf-8' })
       const link = document.createElement('a')
       link.href = URL.createObjectURL(blob)
-      link.download = '周报_控制台版.html'
+      link.download = '周报_杂志封面版.html'
       link.click()
       window.setTimeout(() => URL.revokeObjectURL(link.href), 3000)
     }
@@ -394,7 +424,6 @@
       cooperation: toArray(groups.cooperation).length,
       visit: toArray(groups.visit).length,
       system: toArray(groups.system).length,
-      summaryCounts,
     })
     logSystem('info', '模块完成', { elapsedMs: Number((performance.now() - startedAt).toFixed(2)) })
   } catch (error) {

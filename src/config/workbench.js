@@ -2,17 +2,18 @@ import { templateCatalog } from '../lib/templates/catalog'
 
 const templateMap = new Map(templateCatalog.map((item) => [item.id, item]))
 const previewVariantMap = {
-  'template-02': 'magazine-cover',
-  'template-03': 'ink-scroll',
-  'template-04': 'dark-tech',
-  'template-05': 'business-pro',
-  'template-06': 'data-insight',
-  'template-08': 'business-pro',
-  'template-09': 'swiss-grid',
-  'template-11': 'neo-brutal-poster',
+  'template-01': 'neo-brutal-poster',
+  'template-02': 'swiss-grid',
+  'template-03': 'editorial-paper',
+  'template-04': 'magazine-cover',
+  'template-05': 'ink-scroll',
+  'template-06': 'dark-tech',
+  'template-07': 'business-pro',
+  'template-08': 'data-insight',
+  'template-09': 'project-pulse',
 }
 
-const templateDisplayOrder = ['template-11', 'template-09', 'template-02', 'template-03', 'template-04', 'template-05', 'template-06', 'template-08']
+const templateDisplayOrder = templateCatalog.map((item) => item.id)
 const templateDisplayRank = new Map(templateDisplayOrder.map((id, index) => [id, index]))
 
 export const generationModeCatalog = [
