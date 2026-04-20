@@ -4,9 +4,14 @@ function normalizePromptProfile(promptProfile) {
   return promptProfile === 'v2' ? 'v2' : 'v1'
 }
 
+function isSourceFirstDepartment(departmentId) {
+  return departmentId === 'party-ideology-supervision-center'
+}
+
 export function buildStructuredMessages(params) {
   const { rawText, sensitiveMode, styleMeta, templateMeta, context, promptProfile } = params
   const profile = normalizePromptProfile(promptProfile)
+  const sourceFirstMode = isSourceFirstDepartment(context.department)
   const styleProfile = getStyleProfile(styleMeta.id)
   const departmentProfile = getDepartmentProfile(context.department)
   const audienceProfile = getAudienceProfile(context.audience)
@@ -26,7 +31,7 @@ export function buildStructuredMessages(params) {
     '"sections":[{"title":"","description":"","items":[{"title":"","body":"","tag":""}]}]}'
 
   const systemLines = [
-    '你是 file2web 的“周报结构化抽取总编”，负责把原文提炼成稳定、可追溯的 JSON 报告数据。',
+    '你是 Doc2Brief 的“周报结构化抽取总编”，负责把原文提炼成稳定、可追溯的 JSON 报告数据。',
     '',
     '【输出协议】',
     '- 必须只输出一个 JSON 对象，不得输出 Markdown、解释、代码块或前后说明。',
@@ -39,8 +44,12 @@ export function buildStructuredMessages(params) {
     '3. 结构稳定：highlights 固定 3 条；metrics 建议 3-6 条；sections 建议 5-8 组。',
     '4. 可执行性：progress_items/risk_items/next_actions 尽量补齐 owner 或 dependency。',
     '5. 可追溯性：summary、highlights、decision_requests 必须能在原文中找到依据。',
-    '6. 紧凑输出：summary 控制在 90-180 字；每个 items.body 建议 30-90 字。',
-    '7. 禁止把整段原文逐字复制到单个字段，必须做信息压缩与归纳。',
+    sourceFirstMode
+      ? '6. 原文优先：summary 控制在 120-260 字；每个 items.body 建议 40-180 字，可保留原句顺序与关键表述。'
+      : '6. 紧凑输出：summary 控制在 90-180 字；每个 items.body 建议 30-90 字。',
+    sourceFirstMode
+      ? '7. 允许在字段内保留短段原文，避免过度改写；仅做必要结构化，不做激进压缩。'
+      : '7. 禁止把整段原文逐字复制到单个字段，必须做信息压缩与归纳。',
     '',
     '【组织上下文自动适配】',
     `- 部门：${departmentProfile.name}`,
@@ -63,6 +72,14 @@ export function buildStructuredMessages(params) {
     `- 模块蓝图：${templateMeta.moduleBlueprint.join(' -> ')}`,
     context.customRequirement ? `- 额外业务要求：${context.customRequirement}` : '- 额外业务要求：无。',
     '',
+    ...(sourceFirstMode
+      ? [
+          '【部门偏好（自动）】',
+          '- 当前部门偏好“原文呈现优先”：尽量保持原文句式、段落顺序与措辞，不做过度提炼。',
+          '- 输出可以更“纪实记录风格”，重点是完整、可追溯、少改写。',
+          '',
+        ]
+      : []),
     '【质量门槛】',
     '- department_focus 和 audience_focus 各输出 1 句，明确“本部门最该关注什么”“当前受众最关心什么”。',
     '- 若原文信息不足，保持字段为空或写“待补充”，不得猜测。',
@@ -93,6 +110,7 @@ export function buildStructuredMessages(params) {
 export function buildStructuredRetryMessages(params) {
   const { rawText, styleMeta, templateMeta, context, brokenOutput, promptProfile } = params
   const profile = normalizePromptProfile(promptProfile)
+  const sourceFirstMode = isSourceFirstDepartment(context.department)
   const styleProfile = getStyleProfile(styleMeta.id)
   const departmentProfile = getDepartmentProfile(context.department)
   const audienceProfile = getAudienceProfile(context.audience)
@@ -113,8 +131,12 @@ export function buildStructuredRetryMessages(params) {
     '必须只输出一个合法 JSON 对象，不要任何解释、代码块、注释。',
     `JSON 结构（字段名不可改）：${schema}`,
     '硬性要求：',
-    '1. summary 90-160 字；highlights 固定 3 条；sections 4-6 组。',
-    '2. 每个 items.body 30-80 字，禁止整段复制原文。',
+    sourceFirstMode
+      ? '1. summary 120-260 字；highlights 固定 3 条；sections 4-8 组。'
+      : '1. summary 90-160 字；highlights 固定 3 条；sections 4-6 组。',
+    sourceFirstMode
+      ? '2. 每个 items.body 40-180 字，可保留原句或短段，不做过度压缩。'
+      : '2. 每个 items.body 30-80 字，禁止整段复制原文。',
     '3. 信息必须来自原文，不得编造。',
     `4. 部门：${departmentProfile.name}；重点：${departmentProfile.priorities.join('、')}`,
     `5. 受众：${audienceProfile.name}；关注：${audienceProfile.decisionFocus}`,
@@ -141,6 +163,7 @@ export function buildStructuredRetryMessages(params) {
 export function buildStructuredRepairMessages(params) {
   const { rawText, styleMeta, templateMeta, context, brokenOutput, promptProfile } = params
   const profile = normalizePromptProfile(promptProfile)
+  const sourceFirstMode = isSourceFirstDepartment(context.department)
   const styleProfile = getStyleProfile(styleMeta.id)
   const departmentProfile = getDepartmentProfile(context.department)
   const audienceProfile = getAudienceProfile(context.audience)
@@ -162,14 +185,20 @@ export function buildStructuredRepairMessages(params) {
     `字段结构固定如下（字段名不可改）：${schema}`,
     '修复规则：',
     '1. 优先保留损坏输出里已有信息，不得随意改写事实。',
-    '2. 无法确认的信息填空字符串、空数组或“待补充”。',
+    sourceFirstMode
+      ? '2. 原文优先，允许保留原句和短段；无法确认的信息填空字符串、空数组或“待补充”。'
+      : '2. 无法确认的信息填空字符串、空数组或“待补充”。',
     '3. 确保括号、引号、逗号完整，最终可被 JSON.parse 一次成功。',
     `4. 部门：${departmentProfile.name}；受众：${audienceProfile.name}`,
     `5. 风格：${styleProfile.name}；模板侧重：${templateMeta.focus}`,
   ]
 
   if (profile === 'v2') {
-    systemLines.push('6. sections 建议 4-6 组，禁止把整段原文复制到单字段。')
+    systemLines.push(
+      sourceFirstMode
+        ? '6. sections 建议 4-8 组，可保留原文关键段落，不做激进压缩。'
+        : '6. sections 建议 4-6 组，禁止把整段原文复制到单字段。',
+    )
     systemLines.push('7. decision_requests 与 resource_requests 优先输出可执行语句。')
   }
 
@@ -192,6 +221,7 @@ export function buildStructuredRepairMessages(params) {
 export function buildStructuredPolishMessages(params) {
   const { rawText, styleMeta, templateMeta, context, promptProfile, structuredDraft } = params
   const profile = normalizePromptProfile(promptProfile)
+  const sourceFirstMode = isSourceFirstDepartment(context.department)
   const styleProfile = getStyleProfile(styleMeta.id)
   const departmentProfile = getDepartmentProfile(context.department)
   const audienceProfile = getAudienceProfile(context.audience)
@@ -212,11 +242,18 @@ export function buildStructuredPolishMessages(params) {
     '',
     '润色与补全规则：',
     '1. 事实不可编造：数字、时间、结论必须来自原文或草稿可追溯信息。',
-    '2. 允许表达升级：在不改变事实前提下，优化措辞、压缩冗余、增强管理层可读性。',
+    sourceFirstMode
+      ? '2. 原文优先：避免主动改写句式，仅做必要结构整理与格式统一。'
+      : '2. 允许表达升级：在不改变事实前提下，优化措辞、压缩冗余、增强管理层可读性。',
     '3. 缺失字段要补齐：无法确认的责任人/时间/依赖统一写“待补充”，不要留空。',
-    '4. summary 建议 110-200 字；highlights 固定 3 条；metrics 建议 3-6 条。',
-    '5. sections 建议 5-8 组，每组 items 建议 2-6 条，每条 body 建议 35-100 字。',
+    sourceFirstMode
+      ? '4. summary 建议 130-280 字；highlights 固定 3 条；metrics 建议 3-6 条。'
+      : '4. summary 建议 110-200 字；highlights 固定 3 条；metrics 建议 3-6 条。',
+    sourceFirstMode
+      ? '5. sections 建议 5-9 组，每组 items 建议 2-8 条，每条 body 建议 40-180 字。'
+      : '5. sections 建议 5-8 组，每组 items 建议 2-6 条，每条 body 建议 35-100 字。',
     '6. decision_requests/resource_requests 要可执行，优先“动作 + 时间 + 对象”句式。',
+    sourceFirstMode ? '- 对“党建思政与监督”部门，输出风格偏纪实，不追求过度摘要。' : '',
     '',
     `部门：${departmentProfile.name}；重点：${departmentProfile.priorities.join('、')}`,
     `受众：${audienceProfile.name}；关注：${audienceProfile.decisionFocus}`,
@@ -246,6 +283,7 @@ export function buildStructuredPolishMessages(params) {
 export function buildHtmlMessages(params) {
   const { rawText, sensitiveMode, styleMeta, templateMeta, context, promptProfile } = params
   const profile = normalizePromptProfile(promptProfile)
+  const sourceFirstMode = isSourceFirstDepartment(context.department)
   const styleProfile = getStyleProfile(styleMeta.id)
   const departmentProfile = getDepartmentProfile(context.department)
   const audienceProfile = getAudienceProfile(context.audience)
@@ -280,8 +318,12 @@ export function buildHtmlMessages(params) {
     '- 移动端可读（max-width: 900px），包含 @media print。',
     '- 可选内联 SVG 做轻量可视化，但不能依赖 <script> 才能阅读核心内容。',
     '- 整体风格稳重专业，避免“营销海报感”与过度装饰。',
-    '- 严禁逐段复制原文；每个模块提炼 3-6 条要点，单条建议 25-80 字。',
-    '- 页面正文需信息压缩，避免超长堆砌（建议正文总量 1200-2200 中文字符）。',
+    sourceFirstMode
+      ? '- 当前部门偏好“原文优先”：允许保留原文句式与短段，不做过度提炼。'
+      : '- 严禁逐段复制原文；每个模块提炼 3-6 条要点，单条建议 25-80 字。',
+    sourceFirstMode
+      ? '- 页面风格以纪实展示为主，正文可更完整（建议正文总量 1800-3800 中文字符）。'
+      : '- 页面正文需信息压缩，避免超长堆砌（建议正文总量 1200-2200 中文字符）。',
     '',
     '【组织上下文】',
     `- 部门：${departmentProfile.name}`,
@@ -338,6 +380,7 @@ export function buildHtmlMessages(params) {
 export function buildHtmlRepairMessages(params) {
   const { rawText, brokenOutput, qualityReason, styleMeta, templateMeta, context, promptProfile } = params
   const profile = normalizePromptProfile(promptProfile)
+  const sourceFirstMode = isSourceFirstDepartment(context.department)
   const styleProfile = getStyleProfile(styleMeta.id)
   const departmentProfile = getDepartmentProfile(context.department)
   const audienceProfile = getAudienceProfile(context.audience)
@@ -352,8 +395,8 @@ export function buildHtmlRepairMessages(params) {
     '- 必须包含以下模块：摘要结论、关键指标、重点进展、风险与应对、下周计划、决策请求。',
     '- 指标区至少 3 个卡片；页面需可响应式并包含 @media print。',
     '- 禁止输出 Markdown、解释、注释说明。',
-    '- 避免逐段粘贴原文，统一做信息压缩与归纳。',
-    '- 页面正文建议控制在 1200-2200 中文字符。',
+    sourceFirstMode ? '- 当前部门允许保留原文句式和短段，避免过度压缩。' : '- 避免逐段粘贴原文，统一做信息压缩与归纳。',
+    sourceFirstMode ? '- 页面正文建议控制在 1800-3800 中文字符。' : '- 页面正文建议控制在 1200-2200 中文字符。',
     '',
     '【上下文】',
     `- 部门：${departmentProfile.name}`,

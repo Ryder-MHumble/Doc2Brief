@@ -40,7 +40,7 @@ export function PreferenceSection({
 
       <div className="compact-select-grid">
         <ModernSelect label="风格" options={styles} value={stylePreference} onValueChange={onStyleChange} />
-        <ModernSelect label="部门" options={departments} value={department} onValueChange={onDepartmentChange} />
+        <ModernSelect label="部门" options={departments} value={department} onValueChange={onDepartmentChange} menuMode="wide" />
         <ModernSelect label="受众" options={audiences} value={audience} onValueChange={onAudienceChange} />
       </div>
 

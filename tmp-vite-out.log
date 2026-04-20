@@ -1,5 +1,5 @@
 
-> file2web-frontend@0.1.0 dev
+> Doc2Brief-frontend@0.1.0 dev
 > vite --host 127.0.0.1 --port 4173
 
 Port 4173 is in use, trying another one...

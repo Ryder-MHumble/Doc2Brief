@@ -725,6 +725,8 @@ select {
 
 .control-section--compact {
   padding: 11px 12px;
+  position: relative;
+  z-index: 12;
 }
 
 .section-header {
@@ -3089,6 +3091,7 @@ summary:focus-visible {
   left: 0;
   right: 0;
   top: calc(100% + 6px);
+  z-index: 90;
   padding: 6px;
   border-radius: 10px;
   border: 1px solid rgba(105, 153, 219, 0.36);

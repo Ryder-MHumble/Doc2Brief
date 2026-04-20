@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import './index.css'
 import './ui-cleanup.css'
 import { GenerateSection } from './components/GenerateSection'
@@ -69,10 +69,36 @@ export default function App() {
     warnings,
   } = useWorkbenchController()
 
-  const supportContactRef = useRef(null)
+  const [contactCopyState, setContactCopyState] = useState('idle')
+  const copyResetTimerRef = useRef(null)
 
-  const handleSupportContactClick = () => {
-    supportContactRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  useEffect(() => {
+    return () => {
+      if (copyResetTimerRef.current) {
+        window.clearTimeout(copyResetTimerRef.current)
+      }
+    }
+  }, [])
+
+  const handleSupportContactClick = async () => {
+    if (copyResetTimerRef.current) {
+      window.clearTimeout(copyResetTimerRef.current)
+    }
+
+    let copied = false
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText('孙铭浩')
+        copied = true
+      }
+    } catch (error) {
+      copied = false
+    }
+
+    setContactCopyState(copied ? 'copied' : 'failed')
+    copyResetTimerRef.current = window.setTimeout(() => {
+      setContactCopyState('idle')
+    }, copied ? 1800 : 2400)
   }
 
   return (
@@ -86,9 +112,21 @@ export default function App() {
           </div>
         </div>
         <div className="topbar-actions">
-          <button className="icon-button topbar-contact-button" onClick={handleSupportContactClick} type="button">
+          <button
+            className={`icon-button topbar-contact-button ${
+              contactCopyState === 'copied' ? 'is-copied' : contactCopyState === 'failed' ? 'is-failed' : ''
+            }`}
+            onClick={handleSupportContactClick}
+            type="button"
+          >
             <span aria-hidden="true">✦</span>
-            <span>需求反馈：孙铭浩</span>
+            <span>
+              {contactCopyState === 'copied'
+                ? '已复制：孙铭浩'
+                : contactCopyState === 'failed'
+                  ? '复制失败，请手动复制：孙铭浩'
+                  : '需求反馈：孙铭浩'}
+            </span>
           </button>
         </div>
       </header>
@@ -129,13 +167,6 @@ export default function App() {
             isReportReady={isReportReady}
             onGenerateAction={handleGenerateAction}
           />
-
-          <div aria-label="反馈与支持" className="support-contact-note" ref={supportContactRef} role="note">
-            <p className="support-contact-note__title font-headline">反馈与支持</p>
-            <p className="support-contact-note__text">
-              如遇使用问题或有新增需求，请联系 <strong>孙铭浩</strong>，我们会尽快跟进处理。
-            </p>
-          </div>
 
           {errorMessage ? <div className="status-banner status-banner--error">{errorMessage}</div> : null}
           {warnings.length > 0 ? (

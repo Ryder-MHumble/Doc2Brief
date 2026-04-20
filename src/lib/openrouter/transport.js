@@ -99,7 +99,7 @@ async function requestDirect(payload, options = {}) {
         Authorization: `Bearer ${OPENROUTER_API_KEY}`,
         'Content-Type': 'application/json',
         'HTTP-Referer': window.location.origin,
-        'X-Title': 'file2web-frontend',
+        'X-Title': 'Doc2Brief-frontend',
       },
       body: JSON.stringify(payload),
       ...fetchOptions,
