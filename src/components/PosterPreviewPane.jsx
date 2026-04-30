@@ -83,22 +83,24 @@ export function PosterPreviewPane({
         ) : null}
 
         {previewState === 'generating' ? (
-          <div className="poster-progress-panel">
-            <div className="poster-progress-panel__title">海报生成中</div>
-            <div className="poster-progress-panel__desc">系统正在抽取内容、整理宣传 brief，并调用图片模型生成海报。</div>
-            <div className="generating-progress-track">
-              <span style={{ width: `${Math.max(progress.percent, 8)}%` }} />
-            </div>
-            <div className="progress-step-list">
-              {steps.map((item) => (
-                <div className={`progress-step progress-step--${item.status}`} key={item.id}>
-                  <div className="progress-step__badge">{item.status === 'running' ? <span className="step-spinner" /> : item.title.replace('步骤 ', '')}</div>
-                  <div className="progress-step__body">
-                    <strong>{item.description}</strong>
-                    <span>{item.label}</span>
+          <div className="poster-progress-shell">
+            <div className="poster-progress-panel">
+              <div className="poster-progress-panel__title">海报生成中</div>
+              <div className="poster-progress-panel__desc">系统正在抽取内容、整理宣传 brief，并调用图片模型生成海报。</div>
+              <div className="generating-progress-track">
+                <span style={{ width: `${Math.max(progress.percent, 8)}%` }} />
+              </div>
+              <div className="progress-step-list">
+                {steps.map((item) => (
+                  <div className={`progress-step progress-step--${item.status}`} key={item.id}>
+                    <div className="progress-step__badge">{item.status === 'running' ? <span className="step-spinner" /> : item.title.replace('步骤 ', '')}</div>
+                    <div className="progress-step__body">
+                      <strong>{item.description}</strong>
+                      <span>{item.label}</span>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
         ) : null}

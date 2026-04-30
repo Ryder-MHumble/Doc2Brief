@@ -3340,6 +3340,7 @@ summary:focus-visible {
 }
 
 .poster-empty-state,
+.poster-progress-shell,
 .poster-preview-layout {
   width: 100%;
   min-height: min(760px, calc(100vh - 210px));
@@ -3370,9 +3371,13 @@ summary:focus-visible {
   line-height: 1.7;
 }
 
+.poster-progress-shell {
+  display: grid;
+  place-items: center;
+}
+
 .poster-progress-panel {
-  max-width: 760px;
-  margin: auto;
+  width: min(100%, 760px);
   display: grid;
   gap: 16px;
   padding: 20px 22px;
