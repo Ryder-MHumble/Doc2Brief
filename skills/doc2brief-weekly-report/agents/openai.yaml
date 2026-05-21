@@ -1,0 +1,4 @@
+interface:
+  display_name: "Doc2Brief周报生成"
+  short_description: "调用Doc2Brief生成和更新可访问的模板化周报链接"
+  default_prompt: "使用Doc2Brief把上传文档或文本生成可访问周报链接；如果是修改已有周报，请更新原报告链接。"

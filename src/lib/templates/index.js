@@ -1,2 +1,2 @@
-export { templateCatalog } from './catalog'
-export { renderTemplateHtml } from './renderer'
+export { templateCatalog } from './catalog.js'
+export { renderTemplateHtml } from './renderer.js'

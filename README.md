@@ -1,271 +1,383 @@
 # Doc2Brief
 
-Doc2Brief 是一个 `file / text -> weekly report HTML / poster` 生成平台，面向“周报、简报、管理汇报、宣传海报”场景，强调稳定结构化、模板化渲染与可交付输出。
+> 把文件或文本转换成可访问、可编辑、可复用的模板化周报链接。
 
-## 1. 核心定位
+![React](https://img.shields.io/badge/React-19-20232a?logo=react)
+![Vite](https://img.shields.io/badge/Vite-8-646cff?logo=vite)
+![Node](https://img.shields.io/badge/Node.js-18%2B-339933?logo=node.js)
+![Agent Ready](https://img.shields.io/badge/Agent-Skill%20%2B%20CLI-black)
 
-- 输入：上传文件或直接粘贴正文
-- 处理：抽取文本 -> 结构化整理 -> 模板映射 / 海报 brief 编排
-- 输出：可预览、可切换模板、可导出 HTML 的周报页面，或可下载的宣传海报
+![Doc2Brief Banner](data/img/Banner.png)
 
-当前版本优先保障主链路可跑通：
-`上传 -> 抽取 -> 结构化 -> 模板预览 -> HTML 导出`
+Doc2Brief 是一个 `file / text -> weekly report HTML / poster` 生成平台。它优先解决一个真实工作流：用户把周报文档或零散文字交给系统，系统自动抽取、结构化、匹配主题模板、富化版面内容，最后交付一个可直接访问的周报链接。
 
-并新增海报链路：
-`上传 -> 抽取 -> 海报 brief -> 图片模型 -> 海报下载`
-
-## 2. 功能总览
-
-### 2.1 输入能力
-
-- 文件上传：`PDF / DOCX / DOC / TXT / MD / CSV`
-- 文本输入：直接粘贴正文
-- 字数控制：支持 `MAX_SOURCE_CHARS` 截断保护（默认 `18000`）
-
-### 2.2 生成模式
-
-- `周报模式`
-  - 支持 `structured-template` / `llm-html`
-  - 输出模板化周报页面与 HTML 导出
-- `海报模式`
-  - 支持研究院对内 / 对外宣传海报生成
-  - 先提炼 brief，再调用 OpenRouter 图片模型输出单张海报
-
-### 2.3 周报生成模式
-
-- `structured-template`（推荐）
-  - 先结构化抽取，再映射模板渲染
-  - 输出稳定，适合正式场景
-- `llm-html`
-  - 模型直接生成完整 HTML
-  - 表达更自由，同时带质量闸门与自动回退
-
-### 2.4 海报模式
-
-- 海报场景：
-  - 对外成果宣传
-  - 院内宣传快报
-  - 活动通知海报
-  - 制度通知宣导
-  - 招聘招募海报
-  - 学术会议海报
-- 内置风格：
-  - 学院旗舰版
-  - 制度极简版
-  - 科研快讯版
-  - 创新发布版
-  - 活动典礼版
-  - 招募动员版
-- 输出控制：
-  - 比例：`4:5 / 3:4 / 1:1 / 16:9 / 9:16`
-  - 尺寸：`1K / 2K / 4K`
-  - 敏感表达模式：适合正式通知、成果宣传和内宣场景
-
-海报生成采用两段式链路：
-
-- `rawText -> poster brief JSON`
-- `brief + style pack -> image prompt -> OpenRouter 图片模型`
-
-海报模式具备回退机制：
-
-- 未配置 `OPENROUTER_API_KEY`：回退到本地 SVG 草图
-- 模型调用失败：保留 brief，并回退到本地草图，便于继续联调与验收
-
-### 2.5 模板系统（内置）
-
-当前内置 9 套模板（`template/01` ~ `template/09`）：
-
-- 新野兽派战情版
-- 瑞士网格版
-- 电子报刊版
-- 杂志封面版
-- 国风卷轴版
-- 控制台仪表盘版
-- 新闻简报版
-- 学术期刊版
-- 分屏杂志版
-
-每套模板均由以下资源组成：
-
-- `index.html`
-- `style.css`
-- `app.js`
-
-运行时通过占位符注入：
-
-- `__TEMPLATE_STYLE__`
-- `__TEMPLATE_SCRIPT__`
-- `__TEMPLATE_DATA__`
-
-### 2.6 上下文编排
-
-- 风格：正式稳重 / 数据导向 / 叙事表达
-- 部门：支持多部门语义配置（如科研、行政、战略等）
-- 受众：院长/主任、分管领导、执行负责人、风控负责人
-- 敏感表达模式：自动降低措辞强度，适配正式汇报
-
-### 2.7 输出与交付
-
-- 页面预览：桌面 / 手机双视图
-- 报告动作：全屏、复制链接、导出 HTML
-- 最近报告：本地缓存最近生成记录
-- 海报动作：海报预览、下载图片、最近生成记录
-
-## 3. 端到端处理链路
+当前主链路：
 
 ```text
-文件/文本输入
-  -> 文件抽取（PDF/DOCX/TXT/MD/CSV）
-  -> 原文清洗与截断
-  -> AI 编排（结构化 / HTML 直出 / 海报 brief）
-  -> 模板注入与渲染 或 图片模型生成
-  -> 周报预览与导出 / 海报预览与下载
+文件/文本 -> 抽取 -> 结构化 -> 自动模板匹配 -> 模板渲染 -> 发布链接 -> 同链接更新
 ```
 
-关键回退机制：
-
-- 未配置 API Key：自动回退到本地结构化
-- 结构化异常：自动重试 + JSON 修复
-- HTML 直出质量不达标：自动修复，不通过则回退“结构化+模板”方案
-- 海报图片生成失败：自动回退到本地 SVG 草图
-
-## 4. 可观测性设计
-
-系统内置两类可观测输出，便于联调和验收：
-
-- 业务层 JSON（`业务JSON`）
-  - 记录模块输入、关键中间结果、输出摘要
-- 系统级日志（`系统日志` / `系统日志-错误`）
-  - 记录模块启动、关键调用、耗时、异常、重试、降级、最终状态
-
-主要覆盖模块：
-
-- 文件抽取
-- 模型编排（结构化、润色、HTML 直出、修复、降级）
-- 海报编排（brief、图片生成、草图回退）
-- 转换编排（生成流程主控）
-
-## 5. 技术栈
-
-- 前端框架：React 19
-- 构建工具：Vite 8
-- 文档抽取：
-  - `mammoth`（DOCX）
-  - `pdfjs-dist`（PDF）
-- LLM 网关：OpenRouter（默认经服务端代理转发，可选前端直连）
-
-## 6. 快速开始
-
-### 6.1 环境要求
-
-- Node.js 18+
-- npm 9+
-
-### 6.2 安装依赖
+## 30 秒开始
 
 ```bash
 npm install
+npm run build
+npm run start:prod
 ```
 
-### 6.3 配置环境变量
+服务默认运行在：
+
+```text
+http://127.0.0.1:5173
+```
+
+打开网页后可上传 `PDF / DOCX / DOC / TXT / MD / CSV`，也可以直接粘贴正文生成周报或海报。
+
+Agent / CLI 直接调用：
 
 ```bash
-cp .env.example .env
+node bin/doc2brief.js generate \
+  --input ./weekly.md \
+  --base-url http://127.0.0.1:5173 \
+  --json
 ```
 
-按需填写 `OPENROUTER_API_KEY` 等字段。
+返回结果包含：
 
-### 6.4 启动开发环境
+```json
+{
+  "action": "generate",
+  "reportId": "rpt_xxx",
+  "shareUrl": "http://127.0.0.1:5173/r/rpt_xxx",
+  "templateId": "template-06",
+  "templateName": "控制台仪表盘周报"
+}
+```
+
+## 为什么做这个项目
+
+很多“AI 周报生成”只停留在 prompt 直出 HTML，效果难稳定复用。Doc2Brief 的核心取舍是：模板系统内置，模型或本地解析只负责把内容整理成结构化数据，再由模板运行时稳定渲染。
+
+这让它更适合：
+
+- 团队周报、部门简报、管理汇报
+- 科研、行政、战略、运营等不同条线的固定汇报格式
+- Agent 自动生成和反复修改同一份报告
+- 内网或弱网环境下的本地回退生成
+
+不适合：
+
+- 完全自由创作型网页设计
+- 强依赖复杂图表编辑器的可视化大屏
+- 需要多人协同权限体系的正式 CMS
+
+## 能力总览
+
+| 能力 | 当前状态 | 说明 |
+| --- | --- | --- |
+| 文件抽取 | 已支持 | `PDF / DOCX / DOC / TXT / MD / CSV`，旧版 `.doc` 建议转 `.docx` |
+| 周报模板生成 | 已支持 | 先结构化，再套内置模板，默认推荐 |
+| LLM HTML 直出 | 已支持 | 更自由，但有质量闸门和模板化回退 |
+| Agent CLI | 已支持 | `generate` 新建链接，`update` 覆盖同一链接 |
+| Agent Skill | 已支持 | `skills/doc2brief-weekly-report/SKILL.md` |
+| 海报模式 | 已支持 | brief 提炼 + 图片模型，失败回退本地 SVG 草图 |
+| 分享链接 | 已支持 | `/r/<reportId>` 访问已发布 HTML |
+| 同链接编辑 | 已支持 | `POST /api/reports/update` 覆盖原 HTML，不创建新文件和新链接 |
+| 可观测性 | 已支持 | 业务层 JSON + 系统级日志 |
+
+## 模板图库
+
+Doc2Brief 内置 9 套周报模板。Agent CLI 默认 `--template auto`，会根据文本内容自动匹配；编辑已有报告时默认沿用原模板，避免同一个链接下视觉风格突变。
+
+| 模板 | 预览 | 适合场景 | 业务价值 |
+| --- | --- | --- | --- |
+| `template-01` 新野兽派战情周报 | <img src="docs/assets/templates/template-01.png" width="260" alt="新野兽派战情周报"> | 冲刺、攻关、专项战役、风险闭环 | 用高对比战情版式突出阶段成果和关键卡点 |
+| `template-02` 瑞士网格周报 | <img src="docs/assets/templates/template-02.png" width="260" alt="瑞士网格周报"> | 数据汇报、经营复盘、指标跟踪 | 用网格秩序提高数字和结论的可读性 |
+| `template-03` 电子报刊周报 | <img src="docs/assets/templates/template-03.png" width="260" alt="电子报刊周报"> | 正式通报、综合周报、栏目化汇编 | 保留报刊栏栅和导读结构，适合正式阅读 |
+| `template-04` 杂志封面周报 | <img src="docs/assets/templates/template-04.png" width="260" alt="杂志封面周报"> | 对外展示、品牌汇报、专题复盘 | 增强封面感和传播感，适合展示型材料 |
+| `template-05` 国风卷轴周报 | <img src="docs/assets/templates/template-05.png" width="260" alt="国风卷轴周报"> | 特色汇报、文化活动、仪式感材料 | 用卷轴结构提升识别度和正式感 |
+| `template-06` 控制台仪表盘周报 | <img src="docs/assets/templates/template-06.png" width="260" alt="控制台仪表盘周报"> | 项目推进、运营周会、上线联调 | 用看板方式呈现进度、状态和风险 |
+| `template-07` 新闻简报周报 | <img src="docs/assets/templates/template-07.png" width="260" alt="新闻简报周报"> | 快讯、活动动态、内参速览 | 用头条和双列结构承载高密度信息 |
+| `template-08` 学术期刊周报 | <img src="docs/assets/templates/template-08.png" width="260" alt="学术期刊周报"> | 科研、课题、论文、实验和归档材料 | 用摘要、正文、脚注感增强严谨性 |
+| `template-09` 分屏杂志周报 | <img src="docs/assets/templates/template-09.png" width="260" alt="分屏杂志周报"> | 综合管理、多部门协同、资源协调 | 左侧 KPI 和右侧长内容并行，适合管理例会 |
+
+重新生成图库截图：
+
+```bash
+npm run gallery:templates
+```
+
+## Agent Skill
+
+仓库内置了可分发的 Agent skill：
+
+```text
+skills/doc2brief-weekly-report/SKILL.md
+```
+
+安装到本机 Codex skill 目录：
+
+```bash
+mkdir -p "${CODEX_HOME:-$HOME/.codex}/skills"
+cp -R skills/doc2brief-weekly-report "${CODEX_HOME:-$HOME/.codex}/skills/"
+```
+
+典型触发话术：
+
+```text
+使用 Doc2Brief 把这个周报文档生成一个可访问链接。
+```
+
+```text
+基于这个周报链接继续修改内容，不要创建新的链接。
+```
+
+Skill 的关键规则：
+
+- 新建报告时调用 `node bin/doc2brief.js generate`
+- 修改已有报告时调用 `node bin/doc2brief.js update`
+- 如果用户提供了 `/r/<reportId>` 链接或 `reportId`，必须更新原链接
+- `update` 会覆盖原 HTML 文件并返回同一个 `shareUrl`
+- Agent 工作流使用 `--json`，stdout 保持机器可读，业务 JSON 和系统日志走 stderr
+
+## CLI
+
+### 新建报告
+
+```bash
+node bin/doc2brief.js generate \
+  --input ./weekly.md \
+  --base-url http://127.0.0.1:5173 \
+  --json
+```
+
+直接传文本：
+
+```bash
+node bin/doc2brief.js generate \
+  --text "本周完成智能问答平台灰度上线，下周推进验收。" \
+  --json
+```
+
+指定模板：
+
+```bash
+node bin/doc2brief.js generate \
+  --input ./weekly.md \
+  --template template-08 \
+  --json
+```
+
+### 修改同一报告链接
+
+```bash
+node bin/doc2brief.js update \
+  --report-id rpt_xxx \
+  --text "补充：新增跨部门资源协调章节，并将上线风险降级为中风险。" \
+  --base-url http://127.0.0.1:5173 \
+  --json
+```
+
+也可以直接传 URL：
+
+```bash
+node bin/doc2brief.js update \
+  --url http://127.0.0.1:5173/r/rpt_xxx \
+  --input ./weekly-revised.md \
+  --json
+```
+
+CLI 支持输入：
+
+- `txt`
+- `md`
+- `csv`
+- `html`
+- `docx`
+- `pdf`
+
+## API
+
+### 发布新报告
+
+```http
+POST /api/reports/publish
+```
+
+请求体：
+
+```json
+{
+  "title": "智能创新中心周报",
+  "html": "<!doctype html>...",
+  "generationMode": "agent-skill",
+  "templateId": "template-06",
+  "generatedAt": "2026/05/21 09:00:00",
+  "sourceType": "cli-text"
+}
+```
+
+### 更新已有报告
+
+```http
+POST /api/reports/update
+```
+
+请求体：
+
+```json
+{
+  "reportId": "rpt_xxx",
+  "title": "智能创新中心周报",
+  "html": "<!doctype html>...",
+  "generationMode": "agent-skill",
+  "templateId": "template-06"
+}
+```
+
+### 查询报告元数据
+
+```http
+GET /api/reports/meta?reportId=rpt_xxx
+```
+
+### 访问报告
+
+```http
+GET /r/rpt_xxx
+```
+
+## Web 使用
+
+开发环境：
 
 ```bash
 npm run dev
 ```
 
-默认地址：
-
-- `http://127.0.0.1:5173`
-
-如果你需要在 `vite` 开发环境里验证海报模式的真实 OpenRouter 代理，有两种方式：
-
-1. 单独启动生产服务端代理，并在 `.env` 中设置：
-
-```bash
-VITE_REPORT_API_BASE_URL=http://127.0.0.1:5173
-```
-
-2. 直接构建后启动一体化服务：
+生产一体化服务：
 
 ```bash
 npm run build
 npm run start:prod
 ```
 
-### 6.5 构建产物
+页面能力：
+
+- 周报模式：模板生成 / LLM HTML 直出
+- 海报模式：宣传海报 brief + 图片生成
+- 模板切换：生成前预览，生成后导出 HTML
+- 分享链接：发布后通过 `/r/<reportId>` 访问
+- 用量监控：`/dashboard` 或 `/ops/usage`
+
+## 生成链路
+
+```text
+文件/文本输入
+  -> 文件抽取（PDF/DOCX/TXT/MD/CSV）
+  -> 原文清洗与截断
+  -> 结构化解析或模型编排
+  -> 自动模板匹配
+  -> 模板数据富化
+  -> HTML 渲染
+  -> 发布或覆盖报告链接
+```
+
+回退策略：
+
+- 未配置 API Key：周报链路可走本地结构化解析
+- 结构化异常：自动重试和 JSON 修复
+- HTML 直出质量不达标：回退“结构化 + 模板渲染”
+- 海报图片生成失败：回退本地 SVG 草图
+
+## 可观测性
+
+系统输出两类日志，便于 Agent 和人工排查：
+
+- `业务JSON`：模块输入、关键中间结果、输出摘要
+- `系统日志` / `系统日志-错误`：模块启动、关键调用、耗时、异常、重试、降级、最终状态
+
+覆盖模块：
+
+- 文件抽取
+- 模型编排
+- 模板匹配
+- 报告发布
+- 报告更新
+- 海报编排
+- API 用量监控
+
+## 环境变量
+
+OpenRouter：
+
+- `OPENROUTER_API_KEY`
+- `OPENROUTER_BASE_URL`
+- `OPENROUTER_HTML_MODEL`
+- `OPENROUTER_STRUCTURED_MODEL`
+- `OPENROUTER_POLISH_MODEL`
+- `OPENROUTER_POSTER_BRIEF_MODEL`
+- `OPENROUTER_POSTER_IMAGE_MODEL`
+- `OPENROUTER_HTML_MAX_TOKENS`
+- `OPENROUTER_PROMPT_PROFILE`
+
+服务与存储：
+
+- `REPORT_SERVER_HOST`：默认 `0.0.0.0`
+- `REPORT_SERVER_PORT`：默认 `5173`
+- `PUBLIC_SHARE_BASE_URL`：外部访问域名，不配置时自动根据请求推导
+- `REPORT_BODY_LIMIT_BYTES`：发布/更新请求体上限，默认 `6291456`
+- `REPORT_RETENTION_DAYS`：报告保留天数，默认 `30`
+- `REPORT_MAX_COUNT`：报告最大保留条数，默认 `500`
+- `REPORT_CLEANUP_ON_STARTUP`：启动时是否清理
+- `REPORT_CLEANUP_ON_PUBLISH`：发布后是否后台清理
+
+Agent / CLI：
+
+- `DOC2BRIEF_BASE_URL`：CLI 默认服务地址
+- `MAX_SOURCE_CHARS`：参与生成的最大字符数，默认 `18000`
+
+用量监控：
+
+- `USAGE_RETENTION_DAYS`
+- `USAGE_MAX_RECORDS`
+- `USAGE_CLEANUP_ON_WRITE`
+- `OPENROUTER_MODEL_PRICING_JSON`
+
+硅基流动兜底：
+
+- `SILICONFLOW_API_KEY`
+- `SILICONFLOW_BASE_URL`
+- `SILICONFLOW_MODEL`
+
+## 验证
+
+Skill 结构校验：
+
+```bash
+python3 ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/doc2brief-weekly-report
+```
+
+Agent 主链路集成验证：
+
+```bash
+npm run verify:agent-skill
+```
+
+该验证会真实执行：
+
+```text
+启动服务 -> CLI 生成报告 -> 发布链接 -> 查询元数据 -> CLI 更新同一 reportId -> 访问同一链接
+```
+
+前端构建：
 
 ```bash
 npm run build
 ```
 
-输出目录：
+模板截图：
 
-- `dist/`
-
-### 6.6 API 用量监控页面
-
-服务启动后可访问：
-
-- `/dashboard`
-- `/ops/usage`（兼容别名）
-
-页面支持实时订阅（SSE）+ 轮询兜底，会按周期展示请求总数、token 总量、费用总额、成功率、时延、模型费用分布，以及最近请求明细。
-
-可用接口：
-
-- `GET /api/dashboard/live`：实时快照（汇总 + 最近记录）
-- `GET /api/dashboard/stream`：SSE 实时推送
-- `GET /api/dashboard/summary`：汇总接口（兼容）
-- `GET /api/dashboard/records`：明细接口（兼容）
-
-## 7. 环境变量说明
-
-### 7.1 OpenRouter（推荐命名）
-
-- `OPENROUTER_API_KEY`：API Key
-- `OPENROUTER_BASE_URL`：网关地址，默认 `https://openrouter.ai/api/v1`
-- `OPENROUTER_HTML_MODEL`：HTML 直出模型
-- `OPENROUTER_STRUCTURED_MODEL`：结构化抽取模型
-- `OPENROUTER_POLISH_MODEL`：结构化润色模型（可选，留空则关闭额外润色调用）
-- `OPENROUTER_POSTER_BRIEF_MODEL`：海报 brief 提炼模型
-- `OPENROUTER_POSTER_IMAGE_MODEL`：海报图片模型，默认 `google/gemini-3.1-flash-image-preview`
-- `OPENROUTER_HTML_MAX_TOKENS`：HTML 模式最大 token（可选）
-- `OPENROUTER_PROMPT_PROFILE`：Prompt 策略（`auto / v1 / v2`，默认 `auto`）
-
-### 7.2 兼容历史命名（可选）
-
-- `MINIMAX_API_KEY`
-- `MINIMAX_BASE_URL`
-- `MINIMAX_HTML_MODEL`
-- `MINIMAX_STRUCTURED_MODEL`
-- `MINIMAX_POLISH_MODEL`
-- `OPENROUTER_MODEL` / `MINIMAX_MODEL`（结构化模型兜底）
-
-### 7.3 其他
-
-- `MAX_SOURCE_CHARS`：参与生成的最大字符数（默认 `18000`）
-- `REPORT_BODY_LIMIT_BYTES`：发布接口请求体上限（默认 `6291456`）
-- `REPORT_RETENTION_DAYS`：报告保留天数，超过即清理（默认 `30`，`0` 表示不按天数清理）
-- `REPORT_MAX_COUNT`：报告最大保留条数（默认 `500`，`0` 表示不按数量清理）
-- `REPORT_CLEANUP_ON_STARTUP`：服务启动时是否执行清理（默认 `true`）
-- `REPORT_CLEANUP_ON_PUBLISH`：每次发布后是否后台触发清理（默认 `true`）
-- `VITE_OPENROUTER_PROXY_DISABLED`：前端是否禁用服务端 OpenRouter 代理（`1/true` 表示禁用）
-- `VITE_OPENROUTER_ALLOW_DIRECT_FALLBACK`：代理失败时是否允许前端自动直连（默认关闭，避免用量漏记）
-- `OPENROUTER_PROXY_ENABLED`：服务端 OpenRouter 代理开关（默认 `true`）
-- `OPENROUTER_PROXY_BODY_LIMIT_BYTES`：代理接口请求体上限（默认 `2097152`）
-- `SILICONFLOW_API_KEY`：硅基流动 API Key（可选；配置后启用自动兜底）
-- `SILICONFLOW_BASE_URL`：硅基流动网关地址（默认 `https://api.siliconflow.cn/v1`）
-- `SILICONFLOW_MODEL`：硅基流动默认模型（默认 `Pro/moonshotai/Kimi-K2.6`）
-- 自动切换策略：每天默认优先 OpenRouter；OpenRouter 失败后自动切到硅基流动，并在当天优先走硅基流动；次日自动重置为 OpenRouter 优先。
-- `USAGE_RETENTION_DAYS`：用量记录保留天数（默认 `90`）
-- `USAGE_MAX_RECORDS`：用量记录最大保留条数（默认 `20000`）
-- `USAGE_CLEANUP_ON_WRITE`：每次记录写入后是否异步清理（默认 `true`）
-- `OPENROUTER_MODEL_PRICING_JSON`：模型价格映射（可选，单位 USD / 1M tokens），用于估算费用
+```bash
+npm run gallery:templates
+```

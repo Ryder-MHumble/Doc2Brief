@@ -1,4 +1,4 @@
-import { buildSharedData } from './shared-data'
+import { buildSharedData } from './shared-data.js'
 
 export function buildTemplatePayload(templateMeta, document, generatedAt) {
   const shared = buildSharedData(document, generatedAt, templateMeta)

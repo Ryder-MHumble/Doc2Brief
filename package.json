@@ -3,11 +3,16 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "bin": {
+    "doc2brief": "bin/doc2brief.js"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "start:prod": "node server/app.js"
+    "start:prod": "node server/app.js",
+    "gallery:templates": "node scripts/generate-template-gallery.mjs",
+    "verify:agent-skill": "node scripts/verify-agent-skill-flow.mjs"
   },
   "dependencies": {
     "mammoth": "^1.11.0",

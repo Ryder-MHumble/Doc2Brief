@@ -1,12 +1,12 @@
-import { loadTemplateAsset } from './assets'
-import { templateCatalog } from './catalog'
-import { normalizeDocument } from './document-normalizer'
-import { buildTemplatePayload } from './view-models'
+import { loadTemplateAsset } from './assets.js'
+import { templateCatalog } from './catalog.js'
+import { normalizeDocument } from './document-normalizer.js'
+import { buildTemplatePayload } from './view-models.js'
 
 export async function renderTemplateHtml(templateId, document, generatedAt, options = {}) {
-  const { runtimeMode = 'preview' } = options
+  const { runtimeMode = 'preview', assetLoader = loadTemplateAsset } = options
   const templateMeta = templateCatalog.find((item) => item.id === templateId)
-  const asset = await loadTemplateAsset(templateId)
+  const asset = await assetLoader(templateId)
 
   if (!templateMeta || !asset) {
     return buildFallbackHtml(document, generatedAt)

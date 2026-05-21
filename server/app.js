@@ -267,6 +267,10 @@ function createReportId() {
   return `rpt_${prefix}_${random}`
 }
 
+function isValidReportId(reportId) {
+  return /^[A-Za-z0-9_-]{10,120}$/.test(String(reportId || ''))
+}
+
 function sanitizeShareHtml(rawHtml) {
   let html = String(rawHtml || '')
   html = html.replace(/<script\b[^>]*\bsrc\s*=\s*(['"])[^'"]+\1[^>]*>\s*<\/script>/gi, '')
@@ -1183,6 +1187,140 @@ async function handlePublishReport(req, res) {
   }
 }
 
+async function handleReportMeta(req, res, urlObj) {
+  applyCorsHeaders(res)
+  if (req.method === 'OPTIONS') {
+    res.statusCode = 204
+    res.end()
+    return
+  }
+
+  if (req.method !== 'GET') {
+    writeJson(res, 405, { code: 'METHOD_NOT_ALLOWED', message: '仅支持 GET' })
+    return
+  }
+
+  const reportId = String(urlObj.searchParams.get('reportId') || '').trim()
+  if (!isValidReportId(reportId)) {
+    writeJson(res, 400, { code: 'INVALID_REPORT_ID', message: 'reportId 格式无效' })
+    return
+  }
+
+  try {
+    const indexPayload = await loadReportIndex()
+    const meta = indexPayload.reports?.[reportId]
+    if (!meta?.fileRelativePath) {
+      writeJson(res, 404, { code: 'REPORT_NOT_FOUND', message: '报告不存在或已被清理' })
+      return
+    }
+
+    printBusinessJson('报告元数据', '输出', {
+      reportId,
+      title: meta.title,
+      templateId: meta.templateId,
+      fileRelativePath: meta.fileRelativePath,
+    })
+    writeJson(res, 200, {
+      report: meta,
+      shareUrl: buildShareUrl(req, reportId),
+    })
+  } catch (error) {
+    printSystemLog('报告元数据', '读取失败', { reportId, message: error.message }, true)
+    writeJson(res, 500, { code: 'META_FAILED', message: error.message || '读取报告元数据失败' })
+  }
+}
+
+async function handleUpdateReport(req, res) {
+  applyCorsHeaders(res)
+  if (req.method === 'OPTIONS') {
+    res.statusCode = 204
+    res.end()
+    return
+  }
+
+  if (req.method !== 'POST') {
+    writeJson(res, 405, { code: 'METHOD_NOT_ALLOWED', message: '仅支持 POST' })
+    return
+  }
+
+  try {
+    const body = await readJsonBody(req)
+    const reportId = String(body.reportId || '').trim()
+    const rawHtml = String(body.html || '')
+    const title = String(body.title || '未命名周报').trim() || '未命名周报'
+    const generationMode = String(body.generationMode || 'unknown')
+    const templateId = String(body.templateId || '')
+
+    if (!isValidReportId(reportId)) {
+      writeJson(res, 400, { code: 'INVALID_REPORT_ID', message: 'reportId 格式无效' })
+      return
+    }
+
+    printSystemLog('报告更新', '开始更新', {
+      reportId,
+      title,
+      generationMode,
+      templateId,
+      inputBytes: Buffer.byteLength(rawHtml, 'utf-8'),
+    })
+
+    if (!rawHtml.trim()) {
+      writeJson(res, 400, { code: 'EMPTY_HTML', message: 'html 内容不能为空' })
+      return
+    }
+
+    const indexPayload = await loadReportIndex()
+    const previousMeta = indexPayload.reports?.[reportId]
+    if (!previousMeta?.fileRelativePath) {
+      writeJson(res, 404, { code: 'REPORT_NOT_FOUND', message: '报告不存在或已被清理' })
+      return
+    }
+
+    const htmlFilePath = resolveReportFilePath(previousMeta.fileRelativePath)
+    if (!htmlFilePath) {
+      writeJson(res, 403, { code: 'INVALID_REPORT_PATH', message: '报告文件路径非法' })
+      return
+    }
+
+    const sanitizedHtml = sanitizeShareHtml(rawHtml)
+    await fs.writeFile(htmlFilePath, sanitizedHtml, 'utf-8')
+
+    const updatedAt = new Date().toISOString()
+    const metaPayload = {
+      ...previousMeta,
+      title,
+      generationMode,
+      templateId,
+      generatedAt: String(body.generatedAt || previousMeta.generatedAt || ''),
+      sourceType: String(body.sourceType || previousMeta.sourceType || ''),
+      updatedAt,
+      contentBytes: Buffer.byteLength(sanitizedHtml, 'utf-8'),
+    }
+    const metaFilePath = path.join(path.dirname(htmlFilePath), `${reportId}.json`)
+    await fs.writeFile(metaFilePath, JSON.stringify(metaPayload, null, 2), 'utf-8')
+
+    indexPayload.reports[reportId] = metaPayload
+    await saveReportIndex(indexPayload)
+
+    const shareUrl = buildShareUrl(req, reportId)
+    printBusinessJson('报告更新', '输出', {
+      reportId,
+      title,
+      shareUrl,
+      contentBytes: metaPayload.contentBytes,
+      fileRelativePath: metaPayload.fileRelativePath,
+    })
+    writeJson(res, 200, {
+      reportId,
+      shareUrl,
+      updatedAt,
+    })
+  } catch (error) {
+    printSystemLog('报告更新', '更新失败', { message: error.message }, true)
+    writeJson(res, 500, { code: 'UPDATE_FAILED', message: error.message || '更新失败' })
+  }
+}
+
 async function handleReportVisit(req, res, pathname) {
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     writeJson(res, 405, { code: 'METHOD_NOT_ALLOWED', message: '仅支持 GET/HEAD' })
@@ -1190,7 +1328,7 @@ async function handleReportVisit(req, res, pathname) {
   }
 
   const reportId = decodeURIComponent(pathname.slice('/r/'.length))
-  if (!/^[A-Za-z0-9_-]{10,120}$/.test(reportId)) {
+  if (!isValidReportId(reportId)) {
     writeHtml(res, 404, buildErrorPage('周报不存在', '链接格式无效，请确认 URL 是否完整。'))
     return
   }
@@ -2147,6 +2285,16 @@ const server = http.createServer(async (req, res) => {
 
     if (pathname === '/api/reports/publish') {
       await handlePublishReport(req, res)
+      return
+    }
+
+    if (pathname === '/api/reports/update') {
+      await handleUpdateReport(req, res)
+      return
+    }
+
+    if (pathname === '/api/reports/meta') {
+      await handleReportMeta(req, res, urlObj)
       return
     }
 

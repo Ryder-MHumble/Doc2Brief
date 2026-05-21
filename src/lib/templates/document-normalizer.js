@@ -1,4 +1,4 @@
-import { fallbackSections } from './catalog'
+import { fallbackSections } from './catalog.js'
 
 export function normalizeDocument(document) {
   return {
