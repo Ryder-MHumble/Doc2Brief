@@ -7,9 +7,11 @@ description: Use when Codex needs to generate, publish, or edit a Doc2Brief week
 
 ## Overview
 
-Use the repository CLI to turn a weekly-report document or pasted text into a published Doc2Brief report link. The CLI automatically chooses a built-in template, enriches structured report fields for that template, renders HTML, and publishes it through the running Doc2Brief service.
+Use the Doc2Brief service API to turn a weekly-report document or pasted text into a published Doc2Brief report link. The service chooses a built-in template, calls the server-side model capability when available, enriches structured report fields for that template, renders HTML, and publishes it.
 
 For edits to an existing report, always update the original `reportId` or `/r/<reportId>` URL. Do not generate a new report unless the user explicitly asks for a separate new report.
+
+Never read, print, copy, or pass through model API keys. This skill only calls the Doc2Brief service; keys stay on the server.
 
 ## Prerequisites
 
@@ -31,12 +33,33 @@ Default service URL: `http://10.1.132.21:5173`
 
 If the service runs elsewhere, pass `--base-url <url>` to every CLI command or set `DOC2BRIEF_BASE_URL`.
 
+When working inside the project root, prefer the repository CLI because it can extract PDF/DOCX:
+
+```bash
+node bin/doc2brief.js help
+```
+
+For plain text, Markdown, CSV, or HTML, the skill-local HTTP client is also available:
+
+```bash
+node skills/doc2brief-weekly-report/scripts/weekly_report_client.mjs help
+```
+
 ## Generate A New Report
 
 Use `generate` when the user provides a new document or text and wants a new accessible report link.
 
 ```bash
 node bin/doc2brief.js generate \
+  --input ./weekly.md \
+  --base-url http://10.1.132.21:5173 \
+  --json
+```
+
+Equivalent skill-local API client:
+
+```bash
+node skills/doc2brief-weekly-report/scripts/weekly_report_client.mjs generate \
   --input ./weekly.md \
   --base-url http://10.1.132.21:5173 \
   --json
@@ -88,7 +111,23 @@ node bin/doc2brief.js update \
   --json
 ```
 
+For instruction-only edits, call update with `--instruction`; the service reads the existing report HTML and uses server-side model capability to update the same stored report:
+
+```bash
+node skills/doc2brief-weekly-report/scripts/weekly_report_client.mjs update \
+  --url http://10.1.132.21:5173/r/rpt_xxx \
+  --instruction "补充跨部门资源协调章节，并压缩摘要到三句话以内。" \
+  --json
+```
+
 The command reads the existing report metadata, preserves the original template unless the user explicitly passes `--template`, writes the new HTML back to the same stored file, and returns the same `shareUrl`.
+
+Service endpoints used by this skill:
+
+- `POST /api/weekly-reports/generate`
+- `POST /api/weekly-reports/update`
+
+Do not call `/api/reports/publish` directly for agent weekly-report generation; it only stores already-rendered HTML and skips template matching/content enrichment.
 
 ## Template Selection
 
@@ -130,6 +169,7 @@ Old `.doc` files are not supported directly; ask the user to convert them to `.d
 - For a new report request, do not call update unless the user provided an existing report ID or URL.
 - Use `--json` for agent workflows so stdout stays parseable. Business JSON and system logs are printed on stderr.
 - If the service is not running, start it or ask the user for the deployed service URL.
+- Do not include API keys in command arguments, logs, skill files, or user-facing responses.
 
 ## Verification
 

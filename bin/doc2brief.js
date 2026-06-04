@@ -3,9 +3,6 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import process from 'node:process'
 import mammoth from 'mammoth'
-import { buildAgentWeeklyReport } from '../src/lib/weekly-report-agent.js'
-import { renderTemplateHtml } from '../src/lib/templates/renderer.js'
-import { loadTemplateAssetFromFile } from '../src/lib/templates/node-assets.js'
 
 const DEFAULT_BASE_URL = 'http://127.0.0.1:5173'
 const MAX_SOURCE_CHARS = Number(process.env.MAX_SOURCE_CHARS || 18000)
@@ -41,37 +38,22 @@ async function handleGenerate(options) {
   const baseUrl = normalizeBaseUrl(options.baseUrl || process.env.DOC2BRIEF_BASE_URL || DEFAULT_BASE_URL)
   const rawText = await resolveInputText(options)
 
-  const result = await buildReportHtml({
-    rawText,
-    requestedTemplateId: options.template || 'auto',
-    titleOverride: options.title || '',
-    sensitiveMode: Boolean(options.sensitive),
+  const generated = await requestJson(`${baseUrl}/api/weekly-reports/generate`, {
+    method: 'POST',
+    body: {
+      text: rawText,
+      templateId: options.template || 'auto',
+      title: options.title || '',
+      sensitiveMode: Boolean(options.sensitive),
+      sourceType: 'cli-text',
+    },
   })
 
   if (options.output) {
-    await fs.writeFile(path.resolve(options.output), result.html, 'utf-8')
+    await writePublishedHtml(options.output, generated.shareUrl)
   }
 
-  const published = await publishReport({
-    baseUrl,
-    html: result.html,
-    title: result.document.title,
-    templateId: result.templateMeta.id,
-    generatedAt: result.generatedAt,
-    sourceType: result.sourceType,
-  })
-
-  const payload = {
-    action: 'generate',
-    reportId: published.reportId,
-    shareUrl: published.shareUrl,
-    templateId: result.templateMeta.id,
-    templateName: result.templateMeta.title,
-    matchReason: result.selection.reason,
-    title: result.document.title,
-    htmlLength: result.html.length,
-    generatedAt: result.generatedAt,
-  }
+  const payload = normalizeApiResult('generate', generated)
   printBusinessJson('Doc2Brief CLI', '生成输出', payload)
   writeResult(payload, options)
 }
@@ -83,81 +65,69 @@ async function handleUpdate(options) {
     throw new Error('update 命令必须提供 --report-id 或 --url')
   }
 
-  const previousMeta = await tryFetchReportMeta(baseUrl, reportId)
-  const rawText = await resolveInputText(options)
-  const result = await buildReportHtml({
-    rawText,
-    requestedTemplateId: options.template || '',
-    previousTemplateId: previousMeta?.templateId || '',
-    titleOverride: options.title || previousMeta?.title || '',
-    sensitiveMode: Boolean(options.sensitive),
+  const rawText = await resolveOptionalInputText(options)
+  const instruction = String(options.instruction || options.instructions || options.edit || '').trim()
+
+  const updated = await requestJson(`${baseUrl}/api/weekly-reports/update`, {
+    method: 'POST',
+    body: {
+      reportId,
+      text: rawText,
+      instruction,
+      templateId: options.template || '',
+      title: options.title || '',
+      sensitiveMode: Boolean(options.sensitive),
+      sourceType: 'cli-text',
+    },
   })
 
   if (options.output) {
-    await fs.writeFile(path.resolve(options.output), result.html, 'utf-8')
+    await writePublishedHtml(options.output, updated.shareUrl)
   }
 
-  const updated = await updateReport({
-    baseUrl,
-    reportId,
-    html: result.html,
-    title: result.document.title,
-    templateId: result.templateMeta.id,
-    generatedAt: result.generatedAt,
-    sourceType: result.sourceType,
-  })
-
-  const payload = {
-    action: 'update',
-    reportId: updated.reportId,
-    shareUrl: updated.shareUrl,
-    templateId: result.templateMeta.id,
-    templateName: result.templateMeta.title,
-    matchReason: result.selection.reason,
-    title: result.document.title,
-    htmlLength: result.html.length,
-    updatedAt: updated.updatedAt,
-  }
+  const payload = normalizeApiResult('update', updated)
   printBusinessJson('Doc2Brief CLI', '更新输出', payload)
   writeResult(payload, options)
 }
 
-async function buildReportHtml(params) {
-  const sourceText = String(params.rawText || '').slice(0, MAX_SOURCE_CHARS)
-  const generatedAt = new Date().toLocaleString('zh-CN', { hour12: false })
-  const { document, templateMeta, selection } = buildAgentWeeklyReport({
-    rawText: sourceText,
-    requestedTemplateId: params.requestedTemplateId,
-    previousTemplateId: params.previousTemplateId,
-    titleOverride: params.titleOverride,
-    sensitiveMode: params.sensitiveMode,
-  })
-  const html = await renderTemplateHtml(templateMeta.id, document, generatedAt, {
-    runtimeMode: 'full',
-    assetLoader: loadTemplateAssetFromFile,
-  })
-
-  printBusinessJson('Doc2Brief CLI', '模板匹配', {
-    templateId: templateMeta.id,
-    templateName: templateMeta.title,
-    reason: selection.reason,
-    rawLength: sourceText.length,
-  })
-
-  return {
-    document,
-    templateMeta,
-    selection,
-    generatedAt,
-    html,
-    sourceType: 'cli-text',
+async function writePublishedHtml(outputPath, shareUrl) {
+  const response = await fetch(shareUrl)
+  if (!response.ok) {
+    throw new Error(`读取已发布周报失败：HTTP ${response.status}`)
   }
+  await fs.writeFile(path.resolve(outputPath), await response.text(), 'utf-8')
+}
+
+function normalizeApiResult(action, data) {
+  return {
+    action,
+    reportId: data.reportId,
+    shareUrl: data.shareUrl,
+    templateId: data.templateId,
+    templateName: data.templateName,
+    matchReason: data.matchReason,
+    title: data.title,
+    htmlLength: data.htmlLength,
+    modelUsed: data.modelUsed,
+    llmUsed: Boolean(data.llmUsed),
+    warnings: Array.isArray(data.warnings) ? data.warnings : [],
+    generatedAt: data.generatedAt,
+    createdAt: data.createdAt,
+    updatedAt: data.updatedAt,
+  }
+}
+
+async function resolveOptionalInputText(options) {
+  if (options.text || options.input) {
+    return resolveInputText(options)
+  }
+  return ''
 }
 
 async function resolveInputText(options) {
   const manualText = String(options.text || '').trim()
   if (manualText) {
-    return manualText
+    return manualText.slice(0, MAX_SOURCE_CHARS)
   }
 
   if (!options.input) {
@@ -169,16 +139,16 @@ async function resolveInputText(options) {
   printSystemLog('Doc2Brief CLI', '读取输入', { inputPath, suffix })
 
   if (['txt', 'md', 'csv', 'html'].includes(suffix)) {
-    return fs.readFile(inputPath, 'utf-8')
+    return (await fs.readFile(inputPath, 'utf-8')).slice(0, MAX_SOURCE_CHARS)
   }
 
   if (suffix === 'docx') {
     const result = await mammoth.extractRawText({ path: inputPath })
-    return result.value
+    return String(result.value || '').slice(0, MAX_SOURCE_CHARS)
   }
 
   if (suffix === 'pdf') {
-    return extractPdfText(inputPath)
+    return (await extractPdfText(inputPath)).slice(0, MAX_SOURCE_CHARS)
   }
 
   throw new Error('CLI 当前支持 TXT、MD、CSV、HTML、DOCX、PDF 输入；旧版 DOC 请先转为 DOCX')
@@ -200,57 +170,6 @@ async function extractPdfText(inputPath) {
   }
 
   return pageTexts.join('\n')
-}
-
-async function publishReport(payload) {
-  const endpoint = `${payload.baseUrl}/api/reports/publish`
-  printSystemLog('Doc2Brief CLI', '发布报告', { endpoint, title: payload.title, templateId: payload.templateId })
-  return requestJson(endpoint, {
-    method: 'POST',
-    body: {
-      title: payload.title,
-      html: payload.html,
-      generationMode: 'agent-skill',
-      templateId: payload.templateId,
-      generatedAt: payload.generatedAt,
-      sourceType: payload.sourceType,
-    },
-  })
-}
-
-async function updateReport(payload) {
-  const endpoint = `${payload.baseUrl}/api/reports/update`
-  printSystemLog('Doc2Brief CLI', '更新报告', {
-    endpoint,
-    reportId: payload.reportId,
-    title: payload.title,
-    templateId: payload.templateId,
-  })
-  return requestJson(endpoint, {
-    method: 'POST',
-    body: {
-      reportId: payload.reportId,
-      title: payload.title,
-      html: payload.html,
-      generationMode: 'agent-skill',
-      templateId: payload.templateId,
-      generatedAt: payload.generatedAt,
-      sourceType: payload.sourceType,
-    },
-  })
-}
-
-async function tryFetchReportMeta(baseUrl, reportId) {
-  try {
-    const data = await requestJson(`${baseUrl}/api/reports/meta?reportId=${encodeURIComponent(reportId)}`)
-    return data.report || null
-  } catch (error) {
-    printSystemLog('Doc2Brief CLI', '读取报告元数据失败，改用自动模板匹配', {
-      reportId,
-      message: error.message,
-    })
-    return null
-  }
 }
 
 async function requestJson(endpoint, options = {}) {
@@ -340,11 +259,13 @@ function printHelp() {
   doc2brief generate --input ./weekly.md --base-url http://127.0.0.1:5173 --json
   doc2brief generate --text "本周完成..." --template auto --json
   doc2brief update --report-id rpt_xxx --input ./weekly-edited.md --json
+  doc2brief update --report-id rpt_xxx --instruction "补充风险章节" --json
   doc2brief update --url http://127.0.0.1:5173/r/rpt_xxx --text "修改后的内容" --json
 
 核心参数：
   --input       输入文件，支持 TXT/MD/CSV/HTML/DOCX/PDF
   --text        直接输入文本
+  --instruction update 时仅给修改指令，由服务端修改原链接内容
   --template    template-01 到 template-09，默认 auto
   --report-id   update 时指定已有报告 ID
   --url         update 时也可传已有周报链接

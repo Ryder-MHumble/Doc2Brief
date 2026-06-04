@@ -5,6 +5,9 @@ import http from 'node:http'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { brotliCompressSync, constants as zlibConstants, createBrotliCompress, createGzip, gzipSync } from 'node:zlib'
+import { buildAgentWeeklyReport, enrichDocumentForTemplate } from '../src/lib/weekly-report-agent.js'
+import { loadTemplateAssetFromFile } from '../src/lib/templates/node-assets.js'
+import { renderTemplateHtml } from '../src/lib/templates/renderer.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -40,6 +43,16 @@ const openrouterProxyApiKey = String(process.env.OPENROUTER_API_KEY || process.e
 const siliconflowProxyBaseUrl = normalizeBaseUrl(process.env.SILICONFLOW_BASE_URL || 'https://api.siliconflow.cn/v1')
 const siliconflowProxyApiKey = String(process.env.SILICONFLOW_API_KEY || '').trim()
 const siliconflowProxyModel = String(process.env.SILICONFLOW_MODEL || 'Pro/moonshotai/Kimi-K2.6').trim()
+const weeklyReportAgentLlmEnabled = parseBooleanFlag(process.env.WEEKLY_REPORT_AGENT_LLM_ENABLED, true)
+const weeklyReportAgentModel = String(
+  process.env.WEEKLY_REPORT_AGENT_MODEL ||
+    process.env.OPENROUTER_STRUCTURED_MODEL ||
+    process.env.MINIMAX_STRUCTURED_MODEL ||
+    process.env.OPENROUTER_MODEL ||
+    process.env.MINIMAX_MODEL ||
+    'minimax/minimax-m2.7',
+).trim()
+const weeklyReportAgentMaxSourceChars = parseNonNegativeInt(process.env.MAX_SOURCE_CHARS, 18000)
 const openrouterModelPricing = parseModelPricingMap(
   process.env.OPENROUTER_MODEL_PRICING_JSON || process.env.MINIMAX_MODEL_PRICING_JSON || '',
 )
@@ -353,6 +366,115 @@ function resolveReportFilePath(relativePath) {
     return null
   }
   return absolute
+}
+
+async function createReportRecord(req, payload) {
+  const rawHtml = String(payload.html || '')
+  if (!rawHtml.trim()) {
+    const error = new Error('html 内容不能为空')
+    error.code = 'EMPTY_HTML'
+    throw error
+  }
+
+  const title = String(payload.title || '未命名周报').trim() || '未命名周报'
+  const reportId = createReportId()
+  const dayKey = new Date().toISOString().slice(0, 10)
+  const dayDir = path.join(reportsRoot, dayKey)
+  const htmlFileName = `${reportId}.html`
+  const metaFileName = `${reportId}.json`
+  const htmlFilePath = path.join(dayDir, htmlFileName)
+  const metaFilePath = path.join(dayDir, metaFileName)
+  const sanitizedHtml = sanitizeShareHtml(rawHtml)
+
+  await fs.mkdir(dayDir, { recursive: true })
+  await fs.writeFile(htmlFilePath, sanitizedHtml, 'utf-8')
+
+  const createdAt = new Date().toISOString()
+  const metaPayload = {
+    id: reportId,
+    title,
+    generationMode: String(payload.generationMode || 'unknown'),
+    templateId: String(payload.templateId || ''),
+    createdAt,
+    generatedAt: String(payload.generatedAt || ''),
+    sourceType: String(payload.sourceType || ''),
+    fileRelativePath: path.join(dayKey, htmlFileName),
+    contentBytes: Buffer.byteLength(sanitizedHtml, 'utf-8'),
+  }
+  await fs.writeFile(metaFilePath, JSON.stringify(metaPayload, null, 2), 'utf-8')
+
+  const indexPayload = await loadReportIndex()
+  indexPayload.reports[reportId] = metaPayload
+  await saveReportIndex(indexPayload)
+
+  if (reportCleanupOnPublish) {
+    void runReportCleanup('publish')
+  }
+
+  return {
+    reportId,
+    shareUrl: buildShareUrl(req, reportId),
+    createdAt,
+    meta: metaPayload,
+  }
+}
+
+async function updateReportRecord(req, payload) {
+  const reportId = String(payload.reportId || '').trim()
+  if (!isValidReportId(reportId)) {
+    const error = new Error('reportId 格式无效')
+    error.code = 'INVALID_REPORT_ID'
+    throw error
+  }
+
+  const rawHtml = String(payload.html || '')
+  if (!rawHtml.trim()) {
+    const error = new Error('html 内容不能为空')
+    error.code = 'EMPTY_HTML'
+    throw error
+  }
+
+  const indexPayload = await loadReportIndex()
+  const previousMeta = indexPayload.reports?.[reportId]
+  if (!previousMeta?.fileRelativePath) {
+    const error = new Error('报告不存在或已被清理')
+    error.code = 'REPORT_NOT_FOUND'
+    throw error
+  }
+
+  const htmlFilePath = resolveReportFilePath(previousMeta.fileRelativePath)
+  if (!htmlFilePath) {
+    const error = new Error('报告文件路径非法')
+    error.code = 'INVALID_REPORT_PATH'
+    throw error
+  }
+
+  const sanitizedHtml = sanitizeShareHtml(rawHtml)
+  await fs.writeFile(htmlFilePath, sanitizedHtml, 'utf-8')
+
+  const updatedAt = new Date().toISOString()
+  const metaPayload = {
+    ...previousMeta,
+    title: String(payload.title || previousMeta.title || '未命名周报').trim() || '未命名周报',
+    generationMode: String(payload.generationMode || previousMeta.generationMode || 'unknown'),
+    templateId: String(payload.templateId || previousMeta.templateId || ''),
+    generatedAt: String(payload.generatedAt || previousMeta.generatedAt || ''),
+    sourceType: String(payload.sourceType || previousMeta.sourceType || ''),
+    updatedAt,
+    contentBytes: Buffer.byteLength(sanitizedHtml, 'utf-8'),
+  }
+  const metaFilePath = path.join(path.dirname(htmlFilePath), `${reportId}.json`)
+  await fs.writeFile(metaFilePath, JSON.stringify(metaPayload, null, 2), 'utf-8')
+
+  indexPayload.reports[reportId] = metaPayload
+  await saveReportIndex(indexPayload)
+
+  return {
+    reportId,
+    shareUrl: buildShareUrl(req, reportId),
+    updatedAt,
+    meta: metaPayload,
+  }
 }
 
 function getMetaCreatedAtMs(meta) {
@@ -1100,6 +1222,408 @@ async function serveStatic(req, res, pathname) {
   } catch {
     writeJson(res, 500, { code: 'INDEX_NOT_FOUND', message: 'index.html 不存在，请重新构建前端' })
   }
+}
+
+async function handleWeeklyReportGenerate(req, res) {
+  applyCorsHeaders(res)
+  if (req.method === 'OPTIONS') {
+    res.statusCode = 204
+    res.end()
+    return
+  }
+  if (req.method !== 'POST') {
+    writeJson(res, 405, { code: 'METHOD_NOT_ALLOWED', message: '仅支持 POST' })
+    return
+  }
+
+  try {
+    const body = await readJsonBody(req)
+    const artifact = await buildWeeklyReportArtifact(req, {
+      body,
+      previousTemplateId: '',
+    })
+    const published = await createReportRecord(req, {
+      title: artifact.document.title,
+      html: artifact.html,
+      generationMode: 'agent-skill',
+      templateId: artifact.templateMeta.id,
+      generatedAt: artifact.generatedAt,
+      sourceType: String(body.sourceType || 'agent-text'),
+    })
+    const payload = buildWeeklyReportResponsePayload('generate', artifact, published)
+    printBusinessJson('Agent周报生成', '输出', payload)
+    writeJson(res, 200, payload)
+  } catch (error) {
+    const code = error.code || 'WEEKLY_REPORT_GENERATE_FAILED'
+    printSystemLog('Agent周报生成', '生成失败', { code, message: error.message }, true)
+    writeJson(res, resolveWeeklyReportErrorStatus(code), { code, message: error.message || '周报生成失败' })
+  }
+}
+
+async function handleWeeklyReportUpdate(req, res) {
+  applyCorsHeaders(res)
+  if (req.method === 'OPTIONS') {
+    res.statusCode = 204
+    res.end()
+    return
+  }
+  if (req.method !== 'POST') {
+    writeJson(res, 405, { code: 'METHOD_NOT_ALLOWED', message: '仅支持 POST' })
+    return
+  }
+
+  try {
+    const body = await readJsonBody(req)
+    const reportId = resolveReportIdFromBody(body)
+    if (!isValidReportId(reportId)) {
+      writeJson(res, 400, { code: 'INVALID_REPORT_ID', message: 'reportId 格式无效' })
+      return
+    }
+
+    const indexPayload = await loadReportIndex()
+    const previousMeta = indexPayload.reports?.[reportId]
+    if (!previousMeta?.fileRelativePath) {
+      writeJson(res, 404, { code: 'REPORT_NOT_FOUND', message: '报告不存在或已被清理' })
+      return
+    }
+
+    const artifact = await buildWeeklyReportUpdateArtifact(req, {
+      body,
+      reportId,
+      previousMeta,
+    })
+    const updated = await updateReportRecord(req, {
+      reportId,
+      title: artifact.document.title,
+      html: artifact.html,
+      generationMode: 'agent-skill',
+      templateId: artifact.templateMeta.id,
+      generatedAt: artifact.generatedAt,
+      sourceType: String(body.sourceType || previousMeta.sourceType || 'agent-text'),
+    })
+    const payload = buildWeeklyReportResponsePayload('update', artifact, updated)
+    printBusinessJson('Agent周报更新', '输出', payload)
+    writeJson(res, 200, payload)
+  } catch (error) {
+    const code = error.code || 'WEEKLY_REPORT_UPDATE_FAILED'
+    printSystemLog('Agent周报更新', '更新失败', { code, message: error.message }, true)
+    writeJson(res, resolveWeeklyReportErrorStatus(code), { code, message: error.message || '周报更新失败' })
+  }
+}
+
+async function buildWeeklyReportUpdateArtifact(req, params) {
+  const { body, reportId, previousMeta } = params
+  const sourceText = normalizeWeeklyReportSourceText(body)
+  if (sourceText) {
+    return buildWeeklyReportArtifact(req, {
+      body,
+      previousTemplateId: previousMeta.templateId || '',
+      previousTitle: previousMeta.title || '',
+    })
+  }
+
+  const instruction = String(body.instruction || body.instructions || body.edit || '').trim()
+  if (!instruction) {
+    const error = new Error('更新已有周报必须提供 text/rawText/content 或 instruction')
+    error.code = 'EMPTY_TEXT'
+    throw error
+  }
+  if (!shouldUseWeeklyReportLlm()) {
+    const error = new Error('仅提供修改指令时需要启用服务端模型供应商；也可以直接提供修改后的完整文本')
+    error.code = 'MODEL_REQUIRED'
+    throw error
+  }
+
+  const htmlFilePath = resolveReportFilePath(previousMeta.fileRelativePath)
+  if (!htmlFilePath) {
+    const error = new Error('报告文件路径非法')
+    error.code = 'INVALID_REPORT_PATH'
+    throw error
+  }
+
+  const previousHtml = await fs.readFile(htmlFilePath, 'utf-8')
+  const editedHtml = await editWeeklyReportHtmlWithLlm(req, {
+    reportId,
+    previousHtml,
+    instruction,
+  })
+  const templateMeta = findWeeklyTemplateMeta(previousMeta.templateId)
+  const generatedAt = new Date().toLocaleString('zh-CN', { hour12: false })
+
+  return {
+    rawText: instruction,
+    document: {
+      title: previousMeta.title || '未命名周报',
+      subtitle: '按修改指令更新的周报',
+      summary: instruction,
+      sections: [
+        {
+          title: '修改说明',
+          description: '本次更新基于已有周报内容和用户修改指令完成。',
+          items: [{ title: '更新要求', body: instruction, tag: '编辑' }],
+        },
+      ],
+    },
+    templateMeta,
+    selection: { reason: '根据用户修改指令直接更新已有 HTML，保留原报告链接。', scores: [] },
+    html: editedHtml,
+    generatedAt,
+    modelUsed: weeklyReportAgentModel,
+    llmUsed: true,
+    warnings: [],
+  }
+}
+
+async function buildWeeklyReportArtifact(req, params) {
+  const { body, previousTemplateId = '', previousTitle = '' } = params
+  const rawText = normalizeWeeklyReportSourceText(body)
+  if (!rawText) {
+    const error = new Error('text/rawText/content 不能为空')
+    error.code = 'EMPTY_TEXT'
+    throw error
+  }
+
+  const sensitiveMode = parseBooleanFlag(body.sensitiveMode ?? body.sensitive, false)
+  const requestedTemplateId = String(body.templateId || body.template || 'auto')
+  const titleOverride = String(body.title || previousTitle || '')
+  const local = buildAgentWeeklyReport({
+    rawText,
+    sensitiveMode,
+    requestedTemplateId,
+    previousTemplateId,
+    titleOverride,
+  })
+
+  let document = local.document
+  let modelUsed = 'fallback-local'
+  let llmUsed = false
+  const warnings = []
+
+  if (shouldUseWeeklyReportLlm()) {
+    try {
+      const llmDocument = await generateWeeklyReportDocumentWithLlm(req, {
+        rawText,
+        sensitiveMode,
+        templateMeta: local.templateMeta,
+        body,
+      })
+      document = enrichDocumentForTemplate({ ...llmDocument, sensitive_mode: sensitiveMode }, local.templateMeta, rawText)
+      modelUsed = weeklyReportAgentModel
+      llmUsed = true
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '模型结构化失败'
+      warnings.push(`服务端模型生成失败，已使用本地结构化结果：${message}`)
+      printSystemLog('Agent周报生成', '模型降级', { message }, true)
+    }
+  } else {
+    warnings.push('服务端模型未启用或未配置供应商，已使用本地结构化结果。')
+  }
+
+  const generatedAt = new Date().toLocaleString('zh-CN', { hour12: false })
+  const html = await renderTemplateHtml(local.templateMeta.id, document, generatedAt, {
+    runtimeMode: 'full',
+    assetLoader: loadTemplateAssetFromFile,
+  })
+
+  printBusinessJson('Agent周报编排', '输出', {
+    title: document.title,
+    templateId: local.templateMeta.id,
+    templateName: local.templateMeta.title,
+    matchReason: local.selection.reason,
+    modelUsed,
+    llmUsed,
+    rawLength: rawText.length,
+    htmlLength: html.length,
+    warningCount: warnings.length,
+  })
+
+  return {
+    rawText,
+    document,
+    templateMeta: local.templateMeta,
+    selection: local.selection,
+    html,
+    generatedAt,
+    modelUsed,
+    llmUsed,
+    warnings,
+  }
+}
+
+async function generateWeeklyReportDocumentWithLlm(req, params) {
+  const { rawText, sensitiveMode, templateMeta, body } = params
+  const payload = {
+    model: weeklyReportAgentModel,
+    messages: buildWeeklyReportStructuredMessages({
+      rawText,
+      sensitiveMode,
+      templateMeta,
+      style: body.style || body.stylePreference || '',
+      department: body.department || '',
+      audience: body.audience || '',
+      customRequirement: body.customRequirement || body.requirement || '',
+    }),
+    temperature: 0.1,
+    max_tokens: chooseWeeklyReportMaxTokens(rawText),
+  }
+  const responseJson = await requestInternalChatCompletion(req, payload, 'Agent周报模型')
+  return parseJsonObjectFromText(extractChatCompletionContent(responseJson))
+}
+
+async function editWeeklyReportHtmlWithLlm(req, params) {
+  const { reportId, previousHtml, instruction } = params
+  const payload = {
+    model: weeklyReportAgentModel,
+    messages: [
+      {
+        role: 'system',
+        content: [
+          '你是 Doc2Brief 的周报 HTML 编辑器。',
+          '根据用户修改指令，在已有 HTML 上做最小必要修改。',
+          '必须输出完整 HTML 文档本体，不要输出解释、Markdown 或代码块。',
+          '保留原模板结构、CSS、脚本和视觉风格；只改用户要求的文字或内容区块。',
+          '不得新增外链脚本，不得写入 API Key、密钥或系统环境变量。',
+        ].join('\n'),
+      },
+      {
+        role: 'user',
+        content: [`报告ID：${reportId}`, `修改指令：${instruction}`, '已有 HTML：', previousHtml.slice(0, 60000)].join('\n\n'),
+      },
+    ],
+    temperature: 0,
+    max_tokens: 12000,
+  }
+  const responseJson = await requestInternalChatCompletion(req, payload, 'Agent周报模型')
+  return stripHtmlCodeFence(extractChatCompletionContent(responseJson))
+}
+
+function buildWeeklyReportStructuredMessages(params) {
+  const { rawText, sensitiveMode, templateMeta, style, department, audience, customRequirement } = params
+  const schema =
+    '{"title":"","subtitle":"","summary":"","department_focus":"","audience_focus":"","highlights":[{"label":"","value":"","detail":""}],"metrics":[{"name":"","value":"","trend":"","note":""}],"key_points":[""],"progress_items":[{"stream":"","status":"","outcome":"","owner":""}],"risk_items":[{"risk":"","level":"","mitigation":"","owner":""}],"next_actions":[{"task":"","deadline":"","owner":"","dependency":""}],"decision_requests":[""],"resource_requests":[""],"sections":[{"title":"","description":"","items":[{"title":"","body":"","tag":""}]}]}'
+  return [
+    {
+      role: 'system',
+      content: [
+        '你是 Doc2Brief 的周报结构化与内容富化编辑。',
+        '把用户提供的周报文档或文字整理为可套用内置模板的 JSON。',
+        '必须只输出一个合法 JSON 对象，不要 Markdown、解释、代码块或前后缀。',
+        `JSON 字段固定如下：${schema}`,
+        '只能基于原文提炼和改写，不得编造数字、人名、结论或状态。',
+        '在不改变事实的前提下补齐摘要、重点、指标、风险、下周动作和章节标题。',
+        sensitiveMode ? '敏感表达模式开启：措辞克制、客观、可追溯。' : '标准表达模式：表达可以更清晰有展示感，但事实必须可追溯。',
+        `模板：${templateMeta.id}｜${templateMeta.title}｜${templateMeta.bestFor}`,
+        `模板重点：${templateMeta.focus}`,
+        `模板模块：${templateMeta.moduleBlueprint.join(' -> ')}`,
+        style ? `风格偏好：${style}` : '风格偏好：自动。',
+        department ? `部门：${department}` : '部门：自动识别。',
+        audience ? `受众：${audience}` : '受众：相关负责人。',
+        customRequirement ? `额外要求：${customRequirement}` : '额外要求：无。',
+      ].join('\n'),
+    },
+    { role: 'user', content: ['请结构化并富化以下周报原文：', rawText].join('\n\n') },
+  ]
+}
+
+function buildWeeklyReportResponsePayload(action, artifact, record) {
+  return {
+    action,
+    reportId: record.reportId,
+    shareUrl: record.shareUrl,
+    templateId: artifact.templateMeta.id,
+    templateName: artifact.templateMeta.title,
+    matchReason: artifact.selection.reason,
+    title: artifact.document.title,
+    htmlLength: artifact.html.length,
+    modelUsed: artifact.modelUsed,
+    llmUsed: artifact.llmUsed,
+    warnings: artifact.warnings,
+    generatedAt: artifact.generatedAt,
+    createdAt: record.createdAt,
+    updatedAt: record.updatedAt,
+  }
+}
+
+function normalizeWeeklyReportSourceText(body) {
+  return String(body.text || body.rawText || body.content || '')
+    .trim()
+    .slice(0, weeklyReportAgentMaxSourceChars)
+}
+
+function shouldUseWeeklyReportLlm() {
+  return weeklyReportAgentLlmEnabled && (openrouterProxyApiKey || siliconflowProxyApiKey)
+}
+
+function chooseWeeklyReportMaxTokens(rawText) {
+  const length = String(rawText || '').length
+  if (length <= 2000) return 3000
+  if (length <= 6000) return 4200
+  if (length <= 12000) return 5600
+  return 7200
+}
+
+function resolveReportIdFromBody(body) {
+  const explicit = String(body.reportId || '').trim()
+  if (explicit) return explicit
+  const url = String(body.url || body.shareUrl || '').trim()
+  const match = url.match(/\/r\/([^/?#]+)/)
+  return match ? decodeURIComponent(match[1]) : ''
+}
+
+function findWeeklyTemplateMeta(templateId) {
+  return buildAgentWeeklyReport({ rawText: '', requestedTemplateId: templateId || 'template-03' }).templateMeta
+}
+
+function extractChatCompletionContent(payload) {
+  const choices = payload?.choices
+  if (!Array.isArray(choices) || choices.length === 0) {
+    throw new Error('模型响应缺少 choices')
+  }
+  const content = choices[0]?.message?.content ?? choices[0]?.text ?? payload.output_text ?? payload.response
+  const text = extractTextLike(content).trim()
+  if (!text) {
+    throw new Error('模型响应缺少可解析文本')
+  }
+  return text
+}
+
+function extractTextLike(value) {
+  if (typeof value === 'string') return value
+  if (Array.isArray(value)) return value.map((item) => extractTextLike(item)).join('')
+  if (!value || typeof value !== 'object') return ''
+  for (const key of ['text', 'content', 'value', 'output_text', 'message']) {
+    const next = extractTextLike(value[key])
+    if (next) return next
+  }
+  return ''
+}
+
+function parseJsonObjectFromText(value) {
+  const text = String(value || '')
+    .trim()
+    .replace(/^```(?:json)?\s*/i, '')
+    .replace(/\s*```$/i, '')
+  const start = text.indexOf('{')
+  const end = text.lastIndexOf('}')
+  if (start < 0 || end <= start) {
+    throw new Error('模型未返回 JSON 对象')
+  }
+  return JSON.parse(text.slice(start, end + 1))
+}
+
+function stripHtmlCodeFence(value) {
+  return String(value || '')
+    .trim()
+    .replace(/^```(?:html)?\s*/i, '')
+    .replace(/\s*```$/i, '')
+}
+
+function resolveWeeklyReportErrorStatus(code) {
+  if (code === 'EMPTY_TEXT' || code === 'EMPTY_HTML' || code === 'INVALID_REPORT_ID') return 400
+  if (code === 'REPORT_NOT_FOUND') return 404
+  if (code === 'INVALID_REPORT_PATH') return 403
+  if (code === 'MODEL_REQUIRED') return 503
+  return 500
 }
 
 async function handlePublishReport(req, res) {
@@ -2014,6 +2538,74 @@ async function handleUsagePage(req, res) {
   writeHtmlWithCompression(req, res, 200, buildUsageMonitorPage(), 'no-cache')
 }
 
+async function requestInternalChatCompletion(req, payload, moduleName = '模型代理') {
+  if (!openrouterProxyEnabled) {
+    throw new Error('OpenRouter 代理未启用')
+  }
+  if (!openrouterProxyApiKey && !siliconflowProxyApiKey) {
+    throw new Error('服务端未配置可用模型供应商 API Key')
+  }
+
+  const startedAt = Date.now()
+  const { provider, upstreamResponse, responseText, requestModelResolved } = await requestWithAutoProviderSwitch(payload, req)
+  let responseJson = null
+  try {
+    responseJson = responseText ? JSON.parse(responseText) : null
+  } catch {
+    responseJson = null
+  }
+
+  const usage = extractUsageMetrics(responseJson)
+  const durationMs = Date.now() - startedAt
+  const cost = resolveUsageCost(
+    requestModelResolved,
+    usage.promptTokens,
+    usage.completionTokens,
+    responseJson,
+    upstreamResponse.headers,
+  )
+  const usageRecord = {
+    id: createReportId(),
+    ts: Date.now(),
+    createdAt: new Date().toISOString(),
+    model: usage.model || requestModelResolved,
+    provider,
+    statusCode: upstreamResponse.status,
+    durationMs,
+    requestMaxTokens: parseNonNegativeInt(payload.max_tokens, 0),
+    requestMessageCount: Array.isArray(payload.messages) ? payload.messages.length : 0,
+    requestChars: Buffer.byteLength(JSON.stringify(payload.messages || []), 'utf-8'),
+    promptTokens: usage.promptTokens,
+    completionTokens: usage.completionTokens,
+    totalTokens: usage.totalTokens,
+    finishReason: usage.finishReason,
+    costUsd: Number(cost.costUsd.toFixed(6)),
+    costSource: cost.costSource,
+    error: upstreamResponse.ok ? '' : String(responseJson?.error?.message || responseText || '').slice(0, 280),
+  }
+  await appendUsageRecord(usageRecord)
+  if (usageAutoCleanupOnWrite) {
+    void runUsageCleanup('write')
+  }
+
+  printBusinessJson('API用量', '请求记录', {
+    id: usageRecord.id,
+    provider: usageRecord.provider,
+    model: usageRecord.model,
+    statusCode: usageRecord.statusCode,
+    durationMs: usageRecord.durationMs,
+    totalTokens: usageRecord.totalTokens,
+    costUsd: usageRecord.costUsd,
+    costSource: usageRecord.costSource,
+    caller: moduleName,
+  })
+
+  if (!responseJson) {
+    throw new Error('模型响应不是合法 JSON')
+  }
+  return responseJson
+}
+
 async function handleOpenRouterProxy(req, res) {
   applyCorsHeaders(res)
   if (req.method === 'OPTIONS') {
@@ -2280,6 +2872,16 @@ const server = http.createServer(async (req, res) => {
   try {
     if (pathname === '/api/openrouter/chat/completions') {
       await handleOpenRouterProxy(req, res)
+      return
+    }
+
+    if (pathname === '/api/weekly-reports/generate') {
+      await handleWeeklyReportGenerate(req, res)
+      return
+    }
+
+    if (pathname === '/api/weekly-reports/update') {
+      await handleWeeklyReportUpdate(req, res)
       return
     }
 

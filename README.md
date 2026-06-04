@@ -78,11 +78,11 @@ node bin/doc2brief.js generate \
 | 文件抽取 | 已支持 | `PDF / DOCX / DOC / TXT / MD / CSV`，旧版 `.doc` 建议转 `.docx` |
 | 周报模板生成 | 已支持 | 先结构化，再套内置模板，默认推荐 |
 | LLM HTML 直出 | 已支持 | 更自由，但有质量闸门和模板化回退 |
-| Agent CLI | 已支持 | `generate` 新建链接，`update` 覆盖同一链接 |
+| Agent API / CLI | 已支持 | `/api/weekly-reports/generate` 新建链接，`/api/weekly-reports/update` 覆盖同一链接 |
 | Agent Skill | 已支持 | `skills/doc2brief-weekly-report/SKILL.md` |
 | 海报模式 | 已支持 | brief 提炼 + 图片模型，失败回退本地 SVG 草图 |
 | 分享链接 | 已支持 | `/r/<reportId>` 访问已发布 HTML |
-| 同链接编辑 | 已支持 | `POST /api/reports/update` 覆盖原 HTML，不创建新文件和新链接 |
+| 同链接编辑 | 已支持 | Agent 更新走 `/api/weekly-reports/update`，底层覆盖原 HTML，不创建新文件和新链接 |
 | 可观测性 | 已支持 | 业务层 JSON + 系统级日志 |
 
 ## 模板图库
@@ -134,11 +134,13 @@ cp -R skills/doc2brief-weekly-report "${CODEX_HOME:-$HOME/.codex}/skills/"
 
 Skill 的关键规则：
 
-- 新建报告时调用 `node bin/doc2brief.js generate`
-- 修改已有报告时调用 `node bin/doc2brief.js update`
+- 新建报告时调用 `node bin/doc2brief.js generate`，底层走 `POST /api/weekly-reports/generate`
+- 修改已有报告时调用 `node bin/doc2brief.js update`，底层走 `POST /api/weekly-reports/update`
 - 如果用户提供了 `/r/<reportId>` 链接或 `reportId`，必须更新原链接
 - `update` 会覆盖原 HTML 文件并返回同一个 `shareUrl`
 - Agent 工作流使用 `--json`，stdout 保持机器可读，业务 JSON 和系统日志走 stderr
+- Skill 内置轻量 HTTP client：`skills/doc2brief-weekly-report/scripts/weekly_report_client.mjs`
+- Skill 和 CLI 都不读取或输出模型 API Key，模型调用发生在服务端
 
 ## CLI
 
@@ -198,7 +200,60 @@ CLI 支持输入：
 
 ## API
 
-### 发布新报告
+### Agent 生成新周报
+
+```http
+POST /api/weekly-reports/generate
+```
+
+请求体：
+
+```json
+{
+  "text": "本周完成智能问答平台灰度上线，下周推进验收。",
+  "templateId": "auto",
+  "sensitiveMode": false
+}
+```
+
+返回：
+
+```json
+{
+  "action": "generate",
+  "reportId": "rpt_xxx",
+  "shareUrl": "http://127.0.0.1:5173/r/rpt_xxx",
+  "templateId": "template-06",
+  "templateName": "控制台仪表盘周报",
+  "llmUsed": true
+}
+```
+
+### Agent 更新已有周报
+
+```http
+POST /api/weekly-reports/update
+```
+
+请求体：
+
+```json
+{
+  "reportId": "rpt_xxx",
+  "text": "修改后的完整周报正文"
+}
+```
+
+也可以只传修改指令；此时服务端会读取原 HTML 并调用模型修改同一个报告文件：
+
+```json
+{
+  "url": "http://127.0.0.1:5173/r/rpt_xxx",
+  "instruction": "补充跨部门资源协调章节，并压缩摘要到三句话以内。"
+}
+```
+
+### 低层 HTML 发布接口
 
 ```http
 POST /api/reports/publish
@@ -217,7 +272,7 @@ POST /api/reports/publish
 }
 ```
 
-### 更新已有报告
+### 低层 HTML 更新接口
 
 ```http
 POST /api/reports/update
@@ -336,6 +391,8 @@ Agent / CLI：
 
 - `DOC2BRIEF_BASE_URL`：CLI 默认服务地址
 - `MAX_SOURCE_CHARS`：参与生成的最大字符数，默认 `18000`
+- `WEEKLY_REPORT_AGENT_LLM_ENABLED`：Agent 周报 API 是否调用服务端模型，默认 `true`；未配置供应商时自动本地降级
+- `WEEKLY_REPORT_AGENT_MODEL`：Agent 周报 API 使用的模型，默认沿用结构化模型配置
 
 用量监控：
 
@@ -367,7 +424,7 @@ npm run verify:agent-skill
 该验证会真实执行：
 
 ```text
-启动服务 -> CLI 生成报告 -> 发布链接 -> 查询元数据 -> CLI 更新同一 reportId -> 访问同一链接
+启动服务 -> Agent API 生成报告 -> CLI 生成报告 -> 查询元数据 -> Agent API 更新同一 reportId -> CLI 更新同一 reportId -> 访问同一链接
 ```
 
 前端构建：

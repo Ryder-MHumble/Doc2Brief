@@ -32,6 +32,7 @@ async function main() {
       REPORT_SERVER_PORT: String(serverPort),
       REPORT_CLEANUP_ON_PUBLISH: 'false',
       REPORT_CLEANUP_ON_STARTUP: 'false',
+      WEEKLY_REPORT_AGENT_LLM_ENABLED: 'false',
     },
     stdio: ['ignore', 'pipe', 'pipe'],
   })
@@ -47,7 +48,19 @@ async function main() {
     const outputPath = path.join(tempDir, 'weekly.html')
     await writeFile(inputPath, sampleText, 'utf-8')
 
-    const generated = await runCli([
+    const generated = await postJson('/api/weekly-reports/generate', {
+      text: sampleText,
+      sourceType: 'integration-text',
+      templateId: 'auto',
+    })
+
+    assert.equal(generated.action, 'generate')
+    assert.match(generated.reportId, /^rpt_[A-Za-z0-9_-]+$/)
+    assert.equal(generated.shareUrl, `${baseUrl}/r/${generated.reportId}`)
+    assert.match(generated.templateId, /^template-\d{2}$/)
+    assert.ok(generated.htmlLength > 1000)
+
+    const cliGenerated = await runCli([
       'generate',
       '--input',
       inputPath,
@@ -58,10 +71,22 @@ async function main() {
       '--json',
     ])
 
-    assert.match(generated.reportId, /^rpt_[A-Za-z0-9_-]+$/)
-    assert.equal(generated.shareUrl, `${baseUrl}/r/${generated.reportId}`)
-    assert.match(generated.templateId, /^template-\d{2}$/)
-    assert.ok(generated.htmlLength > 1000)
+    assert.equal(cliGenerated.action, 'generate')
+    assert.match(cliGenerated.reportId, /^rpt_[A-Za-z0-9_-]+$/)
+    assert.match(cliGenerated.templateId, /^template-\d{2}$/)
+
+    const skillGenerated = await runSkillClient([
+      'generate',
+      '--text',
+      sampleText,
+      '--base-url',
+      baseUrl,
+      '--json',
+    ])
+
+    assert.equal(skillGenerated.action, 'generate')
+    assert.match(skillGenerated.reportId, /^rpt_[A-Za-z0-9_-]+$/)
+    assert.match(skillGenerated.templateId, /^template-\d{2}$/)
 
     const generatedHtml = await readFile(outputPath, 'utf-8')
     assert.match(generatedHtml, /智能创新中心周报/)
@@ -70,16 +95,10 @@ async function main() {
     const visitedBefore = await fetchText(`/r/${encodeURIComponent(generated.reportId)}`)
     assert.match(visitedBefore, /智能创新中心周报/)
 
-    const updated = await runCli([
-      'update',
-      '--report-id',
-      generated.reportId,
-      '--text',
-      updatedText,
-      '--base-url',
-      baseUrl,
-      '--json',
-    ])
+    const updated = await postJson('/api/weekly-reports/update', {
+      reportId: generated.reportId,
+      text: updatedText,
+    })
 
     assert.equal(updated.reportId, generated.reportId)
     assert.equal(updated.shareUrl, generated.shareUrl)
@@ -90,6 +109,34 @@ async function main() {
 
     const visitedAfter = await fetchText(`/r/${encodeURIComponent(generated.reportId)}`)
     assert.match(visitedAfter, /跨部门资源协调/)
+
+    const skillUpdated = await runSkillClient([
+      'update',
+      '--report-id',
+      generated.reportId,
+      '--text',
+      updatedText,
+      '--base-url',
+      baseUrl,
+      '--json',
+    ])
+
+    assert.equal(skillUpdated.reportId, generated.reportId)
+    assert.equal(skillUpdated.shareUrl, generated.shareUrl)
+
+    const cliUpdated = await runCli([
+      'update',
+      '--report-id',
+      generated.reportId,
+      '--text',
+      updatedText,
+      '--base-url',
+      baseUrl,
+      '--json',
+    ])
+
+    assert.equal(cliUpdated.reportId, generated.reportId)
+    assert.equal(cliUpdated.shareUrl, generated.shareUrl)
   } finally {
     server.kill('SIGTERM')
   }
@@ -97,6 +144,12 @@ async function main() {
 
 async function runCli(args) {
   const result = await runProcess('node', ['bin/doc2brief.js', ...args])
+  assert.equal(result.code, 0, result.stderr || result.stdout)
+  return JSON.parse(result.stdout)
+}
+
+async function runSkillClient(args) {
+  const result = await runProcess('node', ['skills/doc2brief-weekly-report/scripts/weekly_report_client.mjs', ...args])
   assert.equal(result.code, 0, result.stderr || result.stdout)
   return JSON.parse(result.stdout)
 }
@@ -144,6 +197,22 @@ async function fetchJson(pathname) {
     assert.fail(await response.text())
   }
   return response.json()
+}
+
+async function postJson(pathname, body) {
+  const response = await fetch(`${baseUrl}${pathname}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  })
+  const text = await response.text()
+  const data = text ? JSON.parse(text) : {}
+  if (!response.ok) {
+    assert.fail(text)
+  }
+  return data
 }
 
 async function fetchText(pathname) {
