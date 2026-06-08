@@ -1134,3 +1134,16 @@ body {
     page-break-inside: avoid;
   }
 }
+
+.it-body a,
+.it-meta a,
+.pull-quote a,
+.pull-sub a,
+.special-text a,
+.pc-body a {
+  color: var(--brand-primary);
+  font-weight: 700;
+  text-decoration: none;
+  border-bottom: 1px solid currentColor;
+  overflow-wrap: anywhere;
+}

@@ -809,3 +809,13 @@ body {
     scroll-behavior: auto !important;
   }
 }
+
+.tc-body a,
+.ev-body a,
+.kb-sub a {
+  color: var(--red);
+  font-weight: 700;
+  text-decoration: none;
+  border-bottom: 1px solid currentColor;
+  overflow-wrap: anywhere;
+}

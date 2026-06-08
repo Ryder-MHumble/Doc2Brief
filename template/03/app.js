@@ -10,6 +10,18 @@
       .replaceAll('"', '&quot;')
       .replaceAll("'", '&#39;')
 
+  const renderRichText = (value) => {
+    const escaped = escapeHtml(value)
+    const withMarkdownLinks = escaped.replace(
+      /\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g,
+      '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>',
+    )
+    return withMarkdownLinks.replace(
+      /(^|[\s>])((?:https?:\/\/)[^\s<]+)/g,
+      '$1<a href="$2" target="_blank" rel="noopener noreferrer">$2</a>',
+    )
+  }
+
   const readPayload = () => {
     const node = document.getElementById('template-data')
     if (!node) {
@@ -53,8 +65,8 @@
           (item) => `
             <div class="it">
               <div class="it-title"><span class="it-mark">■</span>${escapeHtml(item.title || '待补充事项')}</div>
-              <p class="it-body">${escapeHtml(item.body || '暂无补充说明。')}</p>
-              ${item.meta ? `<span class="it-meta">${escapeHtml(item.meta)}</span>` : ''}
+              <p class="it-body">${renderRichText(item.body || '暂无补充说明。')}</p>
+              ${item.meta ? `<span class="it-meta">${renderRichText(item.meta)}</span>` : ''}
             </div>
           `,
         )
@@ -81,9 +93,9 @@
   const renderPullquoteBlock = (block) => `
     <div class="jc ${escapeHtml(block.span || 'c2')} jc-pull j-reveal">
       <div class="pull-eye">${escapeHtml(block.eye || '本周焦点')}</div>
-      <div class="pull-quote">${escapeHtml(block.quote || '暂无焦点').replace(/\n/g, '<br />')}</div>
+      <div class="pull-quote">${renderRichText(block.quote || '暂无焦点').replace(/\n/g, '<br />')}</div>
       <div class="pull-rule"></div>
-      <div class="pull-sub">${escapeHtml(block.sub || '暂无补充说明。')}</div>
+      <div class="pull-sub">${renderRichText(block.sub || '暂无补充说明。')}</div>
     </div>
   `
 
@@ -98,7 +110,7 @@
       <div class="special-label">${escapeHtml(item.label || '▶ 风险提示')}</div>
       <div class="special-body">
         <div class="special-title">${escapeHtml(item.title || '待补充标题')}</div>
-        <p class="special-text">${escapeHtml(item.text || '暂无补充说明。')}</p>
+        <p class="special-text">${renderRichText(item.text || '暂无补充说明。')}</p>
         <div class="special-tags">
           ${toArray(item.tags)
             .map((tag) => `<span class="special-tag">${escapeHtml(tag)}</span>`)
@@ -115,7 +127,7 @@
         <span class="pc-deadline">截止 ${escapeHtml(item.deadline || '待补充')}</span>
       </div>
       <div class="pc-title">${escapeHtml(item.title || '待补充标题')}</div>
-      <p class="pc-body">${escapeHtml(item.body || '暂无补充说明。')}</p>
+      <p class="pc-body">${renderRichText(item.body || '暂无补充说明。')}</p>
       <span class="pc-owner">负责人：${escapeHtml(item.owner || '待分配')}</span>
     </div>
   `

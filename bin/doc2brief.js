@@ -42,7 +42,7 @@ async function handleGenerate(options) {
     method: 'POST',
     body: {
       text: rawText,
-      templateId: options.template || 'auto',
+      templateId: normalizeTemplateOption(options.template || 'auto'),
       title: options.title || '',
       sensitiveMode: Boolean(options.sensitive),
       sourceType: 'cli-text',
@@ -74,7 +74,7 @@ async function handleUpdate(options) {
       reportId,
       text: rawText,
       instruction,
-      templateId: options.template || '',
+      templateId: normalizeTemplateOption(options.template || ''),
       title: options.title || '',
       sensitiveMode: Boolean(options.sensitive),
       sourceType: 'cli-text',
@@ -181,6 +181,7 @@ async function requestJson(endpoint, options = {}) {
     body: options.body ? JSON.stringify(options.body) : undefined,
   })
   const rawText = await response.text()
+  const contentType = response.headers.get('content-type') || ''
   let data = {}
   if (rawText) {
     try {
@@ -189,10 +190,28 @@ async function requestJson(endpoint, options = {}) {
       data = { message: rawText }
     }
   }
+  if (!contentType.includes('application/json') || typeof data !== 'object' || Array.isArray(data)) {
+    throw new Error(buildApiMismatchMessage(endpoint, response.status, rawText))
+  }
   if (!response.ok) {
-    throw new Error(data.message || `HTTP ${response.status}`)
+    throw new Error(buildApiErrorMessage(endpoint, response.status, data.message))
   }
   return data
+}
+
+function buildApiMismatchMessage(endpoint, status, rawText) {
+  const snippet = String(rawText || '').replace(/\s+/g, ' ').slice(0, 120)
+  const looksLikeSpa = /^<!doctype html|<html[\s>]/i.test(String(rawText || '').trim())
+  const reason = looksLikeSpa ? '服务返回了前端 SPA HTML' : '服务返回了非 JSON 内容'
+  return `${reason}，未命中 Doc2Brief weekly-report API；请检查部署版本或服务入口是否与 main 分支一致。endpoint=${endpoint} status=${status} body=${snippet}`
+}
+
+function buildApiErrorMessage(endpoint, status, message) {
+  const text = String(message || '').trim()
+  if (status === 405 && /GET\/HEAD\/POST\/OPTIONS|仅支持/.test(text)) {
+    return `Doc2Brief weekly-report API 未按预期响应，疑似部署版本或路由入口不匹配。endpoint=${endpoint} status=${status} message=${text}`
+  }
+  return text || `HTTP ${status}`
 }
 
 function resolveReportId(options) {
@@ -203,6 +222,27 @@ function resolveReportId(options) {
   const url = String(options.url || '').trim()
   const match = url.match(/\/r\/([^/?#]+)/)
   return match ? decodeURIComponent(match[1]) : ''
+}
+
+function normalizeTemplateOption(value) {
+  const raw = String(value || '').trim()
+  const normalized = raw.toLowerCase()
+  const aliases = {
+    '': '',
+    auto: 'auto',
+    swiss: 'template-02',
+    'swiss-grid': 'template-02',
+    '瑞士': 'template-02',
+    '瑞士网格': 'template-02',
+    '瑞士版式': 'template-02',
+    newspaper: 'template-03',
+    editorial: 'template-03',
+    'editorial-newspaper': 'template-03',
+    '电子报刊': 'template-03',
+    '电子报刊风格': 'template-03',
+    '报刊': 'template-03',
+  }
+  return aliases[normalized] || raw
 }
 
 function parseOptions(argv) {

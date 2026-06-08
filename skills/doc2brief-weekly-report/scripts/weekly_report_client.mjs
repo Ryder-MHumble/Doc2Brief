@@ -24,7 +24,7 @@ async function main() {
     const text = await resolveInputText(options)
     const result = await requestJson(`${baseUrl}/api/weekly-reports/generate`, {
       text,
-      templateId: options.template || options.templateId || 'auto',
+      templateId: normalizeTemplateOption(options.template || options.templateId || 'auto'),
       title: options.title || '',
       sensitiveMode: Boolean(options.sensitive),
       sourceType: 'skill-client-text',
@@ -44,7 +44,7 @@ async function main() {
       reportId,
       text,
       instruction,
-      templateId: options.template || options.templateId || '',
+      templateId: normalizeTemplateOption(options.template || options.templateId || ''),
       title: options.title || '',
       sensitiveMode: Boolean(options.sensitive),
       sourceType: 'skill-client-text',
@@ -84,6 +84,7 @@ async function requestJson(endpoint, body) {
     body: JSON.stringify(body),
   })
   const rawText = await response.text()
+  const contentType = response.headers.get('content-type') || ''
   let data = {}
   if (rawText) {
     try {
@@ -92,10 +93,28 @@ async function requestJson(endpoint, body) {
       data = { message: rawText }
     }
   }
+  if (!contentType.includes('application/json') || typeof data !== 'object' || Array.isArray(data)) {
+    throw new Error(buildApiMismatchMessage(endpoint, response.status, rawText))
+  }
   if (!response.ok) {
-    throw new Error(data.message || `HTTP ${response.status}`)
+    throw new Error(buildApiErrorMessage(endpoint, response.status, data.message))
   }
   return data
+}
+
+function buildApiMismatchMessage(endpoint, status, rawText) {
+  const snippet = String(rawText || '').replace(/\s+/g, ' ').slice(0, 120)
+  const looksLikeSpa = /^<!doctype html|<html[\s>]/i.test(String(rawText || '').trim())
+  const reason = looksLikeSpa ? '服务返回了前端 SPA HTML' : '服务返回了非 JSON 内容'
+  return `${reason}，未命中 Doc2Brief weekly-report API；请检查部署版本或服务入口是否与 main 分支一致。endpoint=${endpoint} status=${status} body=${snippet}`
+}
+
+function buildApiErrorMessage(endpoint, status, message) {
+  const text = String(message || '').trim()
+  if (status === 405 && /GET\/HEAD\/POST\/OPTIONS|仅支持/.test(text)) {
+    return `Doc2Brief weekly-report API 未按预期响应，疑似部署版本或路由入口不匹配。endpoint=${endpoint} status=${status} message=${text}`
+  }
+  return text || `HTTP ${status}`
 }
 
 function resolveReportId(options) {
@@ -106,6 +125,27 @@ function resolveReportId(options) {
   const url = String(options.url || options.shareUrl || '').trim()
   const match = url.match(/\/r\/([^/?#]+)/)
   return match ? decodeURIComponent(match[1]) : ''
+}
+
+function normalizeTemplateOption(value) {
+  const raw = String(value || '').trim()
+  const normalized = raw.toLowerCase()
+  const aliases = {
+    '': '',
+    auto: 'auto',
+    swiss: 'template-02',
+    'swiss-grid': 'template-02',
+    '瑞士': 'template-02',
+    '瑞士网格': 'template-02',
+    '瑞士版式': 'template-02',
+    newspaper: 'template-03',
+    editorial: 'template-03',
+    'editorial-newspaper': 'template-03',
+    '电子报刊': 'template-03',
+    '电子报刊风格': 'template-03',
+    '报刊': 'template-03',
+  }
+  return aliases[normalized] || raw
 }
 
 function parseOptions(argv) {
@@ -147,7 +187,7 @@ function printHelp() {
 
 用法：
   node scripts/weekly_report_client.mjs generate --text "本周完成..." --json
-  node scripts/weekly_report_client.mjs generate --input ./weekly.md --base-url http://10.1.132.21:5173 --json
+  node scripts/weekly_report_client.mjs generate --input ./weekly.md --template 瑞士网格 --base-url http://10.1.132.21:5173 --json
   node scripts/weekly_report_client.mjs update --report-id rpt_xxx --instruction "补充风险章节" --json
   node scripts/weekly_report_client.mjs update --url http://10.1.132.21:5173/r/rpt_xxx --text "修改后的完整正文" --json
 

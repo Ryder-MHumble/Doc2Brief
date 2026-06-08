@@ -10,6 +10,18 @@
       .replaceAll('"', '&quot;')
       .replaceAll("'", '&#39;')
 
+  const renderRichText = (value) => {
+    const escaped = escapeHtml(value)
+    const withMarkdownLinks = escaped.replace(
+      /\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g,
+      '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>',
+    )
+    return withMarkdownLinks.replace(
+      /(^|[\s>])((?:https?:\/\/)[^\s<]+)/g,
+      '$1<a href="$2" target="_blank" rel="noopener noreferrer">$2</a>',
+    )
+  }
+
   const readPayload = () => {
     const node = document.getElementById('template-data')
     if (!node) throw new Error('缺少 template-data 节点')
@@ -55,12 +67,12 @@
   }
 
   const renderWorkCard = (item) => `
-    <div class="tc">
-      <div class="tc-status ${statusClass(item)}">● ${escapeHtml(item.status || statusLabel(item))}</div>
-      <div class="tc-title">${escapeHtml(item.title || '待补充事项')}</div>
-      <div class="tc-body">${escapeHtml(item.body || '暂无补充说明。')}</div>
-      <div class="tc-prog"><div class="tcp-bars">${renderProgressBlocks(item.progress || 0)}</div><div class="tcp-pct">${escapeHtml(String(item.progress || 0))}%</div></div>
-    </div>
+      <div class="tc">
+        <div class="tc-status ${statusClass(item)}">● ${escapeHtml(item.status || statusLabel(item))}</div>
+        <div class="tc-title">${escapeHtml(item.title || '待补充事项')}</div>
+        <div class="tc-body">${renderRichText(item.body || '暂无补充说明。')}</div>
+        <div class="tc-prog"><div class="tcp-bars">${renderProgressBlocks(item.progress || 0)}</div><div class="tcp-pct">${escapeHtml(String(item.progress || 0))}%</div></div>
+      </div>
   `
 
   try {
@@ -104,7 +116,7 @@
             <div class="kb">
               <div class="kb-n" data-target="${escapeHtml(String(item.target || 0))}">${escapeHtml(part.value)}${part.unit ? `<span class="kb-unit">${escapeHtml(part.unit)}</span>` : ''}</div>
               <div class="kb-label">${escapeHtml(item.label || '指标')}</div>
-              <div class="kb-sub">${escapeHtml(item.detail || '')}</div>
+              <div class="kb-sub">${renderRichText(item.detail || '')}</div>
             </div>
           `
         })
@@ -119,7 +131,7 @@
           (item, index) => `
             <div class="ev">
               <div class="ev-cat"><div class="ev-cat-label" style="color:${colors[index % colors.length]}">${escapeHtml(item.tag || '要点')}</div><div class="ev-cat-num">${String(index + 1).padStart(2, '0')}</div></div>
-              <div class="ev-info"><div class="ev-title">${escapeHtml(item.title || '待补充标题')}</div><div class="ev-body">${escapeHtml(item.body || '暂无补充说明。')}</div></div>
+              <div class="ev-info"><div class="ev-title">${escapeHtml(item.title || '待补充标题')}</div><div class="ev-body">${renderRichText(item.body || '暂无补充说明。')}</div></div>
             </div>
           `,
         )

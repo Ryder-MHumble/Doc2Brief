@@ -9,6 +9,8 @@ description: Use when Codex needs to generate, publish, or edit a Doc2Brief week
 
 Use the Doc2Brief service API to turn a weekly-report document or pasted text into a published Doc2Brief report link. The service chooses a built-in template, calls the server-side model capability when available, enriches structured report fields for that template, renders HTML, and publishes it.
 
+Template fidelity is mandatory: when the user asks for a named Doc2Brief style, call the project CLI/API with that template instead of hand-writing "similar" HTML. The rendered output must reuse the Doc2Brief template runtime and assets. Do not manually recreate Swiss Grid, Electronic Newspaper, or any other built-in template unless the service is unavailable and the user explicitly accepts a degraded fallback.
+
 For edits to an existing report, always update the original `reportId` or `/r/<reportId>` URL. Do not generate a new report unless the user explicitly asks for a separate new report.
 
 Never read, print, copy, or pass through model API keys. This skill only calls the Doc2Brief service; keys stay on the server.
@@ -33,7 +35,7 @@ Default service URL: `http://10.1.132.21:5173`
 
 If the service runs elsewhere, pass `--base-url <url>` to every CLI command or set `DOC2BRIEF_BASE_URL`.
 
-When working inside the project root, prefer the repository CLI because it can extract PDF/DOCX:
+When working inside the project root, prefer the repository CLI because it can extract PDF/DOCX and routes generation through the real Doc2Brief template renderer:
 
 ```bash
 node bin/doc2brief.js help
@@ -52,6 +54,7 @@ Use `generate` when the user provides a new document or text and wants a new acc
 ```bash
 node bin/doc2brief.js generate \
   --input ./weekly.md \
+  --template template-02 \
   --base-url http://10.1.132.21:5173 \
   --json
 ```
@@ -61,6 +64,7 @@ Equivalent skill-local API client:
 ```bash
 node skills/doc2brief-weekly-report/scripts/weekly_report_client.mjs generate \
   --input ./weekly.md \
+  --template template-02 \
   --base-url http://10.1.132.21:5173 \
   --json
 ```
@@ -143,11 +147,18 @@ Default to `--template auto`. The CLI matches the report text against the built-
 - `template-08`: 科研、课题、论文、实验、归档材料
 - `template-09`: 综合管理、多部门协同、资源协调
 
-Only force a template when the user explicitly asks for a specific style:
+Force a template when the user explicitly asks for a specific style. Important aliases:
+
+- “瑞士网格” / “瑞士版式” / “Swiss Grid” -> `template-02`
+- “电子报刊” / “报刊风格” / “Editorial Newspaper” -> `template-03`
+
+For example:
 
 ```bash
-node bin/doc2brief.js generate --input ./weekly.md --template template-08 --json
+node bin/doc2brief.js generate --input ./weekly.md --template template-03 --json
 ```
+
+For AI news, intelligence briefs, research digests, or other non-department weekly-report scenarios, still use the same structured generation pipeline. Map the content into summary, highlights, metrics, sections, key points, and next actions. Preserve original source links in the input text; if a template cannot render clickable links, keep each source as a visible title + URL text rather than dropping attribution.
 
 ## Input Files
 
@@ -169,6 +180,7 @@ Old `.doc` files are not supported directly; ask the user to convert them to `.d
 - For a new report request, do not call update unless the user provided an existing report ID or URL.
 - Use `--json` for agent workflows so stdout stays parseable. Business JSON and system logs are printed on stderr.
 - If the service is not running, start it or ask the user for the deployed service URL.
+- If `/api/weekly-reports/generate` or `/api/weekly-reports/update` returns front-end SPA HTML, non-JSON content, or a route-style 405 response, report a deployment/version mismatch. Do not silently fall back to manually publishing hand-written HTML, because that bypasses template matching and causes low-fidelity output.
 - Do not include API keys in command arguments, logs, skill files, or user-facing responses.
 
 ## Verification
