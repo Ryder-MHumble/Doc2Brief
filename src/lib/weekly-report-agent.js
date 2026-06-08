@@ -127,7 +127,7 @@ export function selectWeeklyReportTemplate(params) {
 }
 
 export function enrichDocumentForTemplate(document, templateMeta, rawText) {
-  const sections = ensureSections(document.sections, rawText)
+  const sections = ensureSourceLinkSection(ensureSections(document.sections, rawText), rawText)
   const keyPoints = ensureKeyPoints(document.key_points, sections, document.summary)
   const metrics = ensureMetrics(document.metrics, document.highlights, sections, rawText)
   const highlights = ensureHighlights(document.highlights, metrics, sections, rawText)
@@ -156,6 +156,55 @@ export function enrichDocumentForTemplate(document, templateMeta, rawText) {
       bestFor: templateMeta.bestFor,
     },
   }
+}
+
+function ensureSourceLinkSection(sections, rawText) {
+  const links = extractSourceLinks(rawText)
+  if (links.length === 0) {
+    return sections
+  }
+
+  const existing = sections.some((section) =>
+    /原始链接|来源|参考链接|source/i.test(`${section.title || ''} ${section.description || ''}`),
+  )
+  if (existing) {
+    return sections
+  }
+
+  return [
+    ...sections,
+    {
+      title: '原始链接',
+      description: '保留本次报告引用的原始来源，便于后续核验与追溯。',
+      items: links.slice(0, 8).map((item, index) => ({
+        title: item.label || `来源 ${index + 1}`,
+        body: `[${item.label || `来源 ${index + 1}`}](${item.url})`,
+        tag: '来源',
+      })),
+    },
+  ]
+}
+
+function extractSourceLinks(rawText) {
+  const text = String(rawText || '')
+  const links = []
+  const seen = new Set()
+  const add = (label, url) => {
+    const cleanUrl = String(url || '').trim().replace(/[，。；、）)\]]+$/, '')
+    if (!/^https?:\/\//i.test(cleanUrl) || seen.has(cleanUrl)) {
+      return
+    }
+    seen.add(cleanUrl)
+    links.push({ label: String(label || cleanUrl).trim(), url: cleanUrl })
+  }
+
+  for (const match of text.matchAll(/\[([^\]]{1,80})\]\((https?:\/\/[^)\s]+)\)/g)) {
+    add(match[1], match[2])
+  }
+  for (const match of text.matchAll(/(^|[\s：:])((?:https?:\/\/)[^\s<>"'，。；、）)\]]+)/g)) {
+    add('原始链接', match[2])
+  }
+  return links
 }
 
 function ensureSections(sections, rawText) {
