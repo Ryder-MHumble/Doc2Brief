@@ -40,9 +40,6 @@ const openrouterProxyBaseUrl = normalizeBaseUrl(
   process.env.OPENROUTER_BASE_URL || process.env.MINIMAX_BASE_URL || 'https://openrouter.ai/api/v1',
 )
 const openrouterProxyApiKey = String(process.env.OPENROUTER_API_KEY || process.env.MINIMAX_API_KEY || '').trim()
-const siliconflowProxyBaseUrl = normalizeBaseUrl(process.env.SILICONFLOW_BASE_URL || 'https://api.siliconflow.cn/v1')
-const siliconflowProxyApiKey = String(process.env.SILICONFLOW_API_KEY || '').trim()
-const siliconflowProxyModel = String(process.env.SILICONFLOW_MODEL || 'Pro/moonshotai/Kimi-K2.6').trim()
 const weeklyReportAgentLlmEnabled = parseBooleanFlag(process.env.WEEKLY_REPORT_AGENT_LLM_ENABLED, true)
 const weeklyReportAgentModel = String(
   process.env.WEEKLY_REPORT_AGENT_MODEL ||
@@ -50,16 +47,12 @@ const weeklyReportAgentModel = String(
     process.env.MINIMAX_STRUCTURED_MODEL ||
     process.env.OPENROUTER_MODEL ||
     process.env.MINIMAX_MODEL ||
-    'minimax/minimax-m2.7',
+    'stepfun/step-3.7-flash',
 ).trim()
 const weeklyReportAgentMaxSourceChars = parseNonNegativeInt(process.env.MAX_SOURCE_CHARS, 18000)
 const openrouterModelPricing = parseModelPricingMap(
   process.env.OPENROUTER_MODEL_PRICING_JSON || process.env.MINIMAX_MODEL_PRICING_JSON || '',
 )
-let modelProviderSwitch = {
-  dayKey: '',
-  preferredProvider: 'openrouter',
-}
 let reportCleanupTask = null
 let usageCleanupTask = null
 let usageRecordsCache = []
@@ -1551,7 +1544,7 @@ function normalizeWeeklyReportSourceText(body) {
 }
 
 function shouldUseWeeklyReportLlm() {
-  return weeklyReportAgentLlmEnabled && (openrouterProxyApiKey || siliconflowProxyApiKey)
+  return weeklyReportAgentLlmEnabled && Boolean(openrouterProxyApiKey)
 }
 
 function chooseWeeklyReportMaxTokens(rawText) {
@@ -2542,12 +2535,12 @@ async function requestInternalChatCompletion(req, payload, moduleName = '模型�
   if (!openrouterProxyEnabled) {
     throw new Error('OpenRouter 代理未启用')
   }
-  if (!openrouterProxyApiKey && !siliconflowProxyApiKey) {
-    throw new Error('服务端未配置可用模型供应商 API Key')
+  if (!openrouterProxyApiKey) {
+    throw new Error('服务端未配置 OpenRouter API Key')
   }
 
   const startedAt = Date.now()
-  const { provider, upstreamResponse, responseText, requestModelResolved } = await requestWithAutoProviderSwitch(payload, req)
+  const { provider, upstreamResponse, responseText, requestModelResolved } = await requestOpenRouterProvider(payload, req)
   let responseJson = null
   try {
     responseJson = responseText ? JSON.parse(responseText) : null
@@ -2621,8 +2614,8 @@ async function handleOpenRouterProxy(req, res) {
     writeJson(res, 503, { code: 'PROXY_DISABLED', message: 'OpenRouter 代理未启用' })
     return
   }
-  if (!openrouterProxyApiKey && !siliconflowProxyApiKey) {
-    writeJson(res, 503, { code: 'MISSING_API_KEY', message: '服务端未配置可用模型供应商 API Key' })
+  if (!openrouterProxyApiKey) {
+    writeJson(res, 503, { code: 'MISSING_API_KEY', message: '服务端未配置 OpenRouter API Key' })
     return
   }
 
@@ -2645,10 +2638,7 @@ async function handleOpenRouterProxy(req, res) {
     requestMessageCount = Array.isArray(payload.messages) ? payload.messages.length : 0
     requestChars = Buffer.byteLength(JSON.stringify(payload.messages || []), 'utf-8')
 
-    const { provider, upstreamResponse, responseText, requestModelResolved } = await requestWithAutoProviderSwitch(
-      payload,
-      req,
-    )
+    const { provider, upstreamResponse, responseText, requestModelResolved } = await requestOpenRouterProvider(payload, req)
     responseProvider = provider
     requestModel = requestModelResolved
 
@@ -2729,55 +2719,21 @@ async function handleOpenRouterProxy(req, res) {
   }
 }
 
-async function requestWithAutoProviderSwitch(payload, req) {
-  const providerOrder = resolveProviderOrderForToday()
-  const failedAttempts = []
-
-  for (const provider of providerOrder) {
-    try {
-      const result = await requestProvider(provider, payload, req)
-      if (provider !== providerOrder[0]) {
-        markPreferredProvider(provider, `前序供应商失败后自动切换成功`, {
-          from: providerOrder[0],
-          to: provider,
-        })
-      }
-      return result
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
-      failedAttempts.push({ provider, message })
-      printSystemLog('模型代理', '供应商请求失败', { provider, message }, true)
-    }
+async function requestOpenRouterProvider(payload, req) {
+  if (!openrouterProxyApiKey) {
+    throw new Error('OpenRouter 未配置 API Key')
   }
 
-  const detail = failedAttempts.map((item) => `${item.provider}: ${item.message}`).join(' | ')
-  throw new Error(`所有供应商请求失败：${detail}`)
-}
-
-async function requestProvider(provider, payload, req) {
-  const providerConfig = resolveProviderConfig(provider)
-  if (!providerConfig) {
-    throw new Error(`供应商未配置：${provider}`)
-  }
-
-  const requestPayload =
-    provider === 'siliconflow'
-      ? {
-          ...payload,
-          model: siliconflowProxyModel || payload.model,
-        }
-      : payload
+  const requestPayload = payload
   const requestModelResolved = String(requestPayload.model || payload.model || 'unknown')
   const requestHeaders = {
-    Authorization: `Bearer ${providerConfig.apiKey}`,
+    Authorization: `Bearer ${openrouterProxyApiKey}`,
     'Content-Type': 'application/json',
-  }
-  if (provider === 'openrouter') {
-    requestHeaders['HTTP-Referer'] = resolveForwardedOrigin(req)
-    requestHeaders['X-Title'] = 'Docs2Brief'
+    'HTTP-Referer': resolveForwardedOrigin(req),
+    'X-Title': 'Docs2Brief',
   }
 
-  const upstreamResponse = await fetch(`${providerConfig.baseUrl}/chat/completions`, {
+  const upstreamResponse = await fetch(`${openrouterProxyBaseUrl}/chat/completions`, {
     method: 'POST',
     headers: requestHeaders,
     body: JSON.stringify(requestPayload),
@@ -2785,80 +2741,15 @@ async function requestProvider(provider, payload, req) {
   const responseText = await upstreamResponse.text()
   if (!upstreamResponse.ok) {
     const detail = responseText ? `，响应=${responseText.slice(0, 300)}` : ''
-    throw new Error(`${provider} 请求失败：${upstreamResponse.status}${detail}`)
+    throw new Error(`openrouter 请求失败：${upstreamResponse.status}${detail}`)
   }
 
   return {
-    provider,
+    provider: 'openrouter',
     upstreamResponse,
     responseText,
     requestModelResolved,
   }
-}
-
-function resolveProviderConfig(provider) {
-  if (provider === 'openrouter' && openrouterProxyApiKey) {
-    return {
-      name: 'openrouter',
-      baseUrl: openrouterProxyBaseUrl,
-      apiKey: openrouterProxyApiKey,
-    }
-  }
-  if (provider === 'siliconflow' && siliconflowProxyApiKey) {
-    return {
-      name: 'siliconflow',
-      baseUrl: siliconflowProxyBaseUrl,
-      apiKey: siliconflowProxyApiKey,
-    }
-  }
-  return null
-}
-
-function resolveProviderOrderForToday() {
-  refreshProviderSwitchForToday()
-  const availableProviders = []
-  if (openrouterProxyApiKey) {
-    availableProviders.push('openrouter')
-  }
-  if (siliconflowProxyApiKey) {
-    availableProviders.push('siliconflow')
-  }
-
-  if (availableProviders.length <= 1) {
-    return availableProviders
-  }
-
-  if (modelProviderSwitch.preferredProvider === 'siliconflow') {
-    return ['siliconflow', 'openrouter']
-  }
-  return ['openrouter', 'siliconflow']
-}
-
-function refreshProviderSwitchForToday() {
-  const dayKey = new Date().toISOString().slice(0, 10)
-  if (modelProviderSwitch.dayKey !== dayKey) {
-    modelProviderSwitch = {
-      dayKey,
-      preferredProvider: 'openrouter',
-    }
-    printSystemLog('模型代理', '新的一天重置优先级', {
-      dayKey,
-      preferredProvider: modelProviderSwitch.preferredProvider,
-    })
-  }
-}
-
-function markPreferredProvider(provider, reason, payload = {}) {
-  if (modelProviderSwitch.preferredProvider === provider) {
-    return
-  }
-  modelProviderSwitch.preferredProvider = provider
-  printSystemLog('模型代理', '切换优先供应商', {
-    dayKey: modelProviderSwitch.dayKey,
-    preferredProvider: provider,
-    reason,
-    ...payload,
-  })
 }
 
 const server = http.createServer(async (req, res) => {
@@ -2981,9 +2872,6 @@ async function startServer() {
       usageMaxRecords,
       openrouterProxyEnabled,
       openrouterProxyBaseUrl,
-      siliconflowProxyBaseUrl,
-      siliconflowProxyEnabled: Boolean(siliconflowProxyApiKey),
-      siliconflowProxyModel: siliconflowProxyModel || '(unset)',
     })
   })
 }

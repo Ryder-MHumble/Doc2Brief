@@ -375,6 +375,7 @@ OpenRouter：
 - `OPENROUTER_POSTER_IMAGE_MODEL`
 - `OPENROUTER_HTML_MAX_TOKENS`
 - `OPENROUTER_PROMPT_PROFILE`
+- 默认文本模型：`stepfun/step-3.7-flash`
 
 服务与存储：
 
@@ -392,7 +393,7 @@ Agent / CLI：
 - `DOC2BRIEF_BASE_URL`：CLI 默认服务地址
 - `MAX_SOURCE_CHARS`：参与生成的最大字符数，默认 `18000`
 - `WEEKLY_REPORT_AGENT_LLM_ENABLED`：Agent 周报 API 是否调用服务端模型，默认 `true`；未配置供应商时自动本地降级
-- `WEEKLY_REPORT_AGENT_MODEL`：Agent 周报 API 使用的模型，默认沿用结构化模型配置
+- `WEEKLY_REPORT_AGENT_MODEL`：Agent 周报 API 使用的模型，默认沿用结构化模型配置，未配置时使用 `stepfun/step-3.7-flash`
 
 用量监控：
 
@@ -400,12 +401,6 @@ Agent / CLI：
 - `USAGE_MAX_RECORDS`
 - `USAGE_CLEANUP_ON_WRITE`
 - `OPENROUTER_MODEL_PRICING_JSON`
-
-硅基流动兜底：
-
-- `SILICONFLOW_API_KEY`
-- `SILICONFLOW_BASE_URL`
-- `SILICONFLOW_MODEL`
 
 ## 验证
 
